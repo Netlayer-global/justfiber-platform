@@ -53,7 +53,9 @@ export const updateCustomerSchema = z.object({
   invoiceSummary: z.record(z.any()).optional(),
   radiusService: z.object({
     currentIpv4: z.string().max(64).nullable().optional(),
-    ipv4Pool: z.string().max(128).nullable().optional()
+    ipv4Pool: z.string().max(128).nullable().optional(),
+    bngNodeCode: z.string().max(64).nullable().optional(),
+    autoSelectBng: z.boolean().optional()
   }).optional()
 });
 

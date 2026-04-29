@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_state.dart';
 import '../../core/theme.dart';
 
+const _appVersion = '1.0.0';
+
 class ProfileTab extends StatelessWidget {
   const ProfileTab({super.key});
 
@@ -12,9 +14,20 @@ class ProfileTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = InstallerStateScope.of(context);
     final profile = appState.profile;
-    final dashboard = appState.dashboard;
+    final jobs = appState.jobs;
     final isAvailable =
         profile.availabilityStatus.toLowerCase() == 'available';
+
+    final completedToday =
+        jobs.where((j) => j.status.toLowerCase().contains('complet')).length;
+    final pending =
+        jobs.where((j) => j.status.toLowerCase() == 'assigned').length;
+    final active = jobs
+        .where((j) =>
+            j.status.toLowerCase().contains('enroute') ||
+            j.status.toLowerCase().contains('onsite') ||
+            j.status.toLowerCase().contains('progress'))
+        .length;
 
     return CustomScrollView(
       slivers: [
@@ -34,7 +47,6 @@ class ProfileTab extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
                 child: Column(
                   children: [
-                    // Avatar + name
                     Container(
                       width: 72,
                       height: 72,
@@ -71,11 +83,10 @@ class ProfileTab extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       profile.installerCode,
-                      style: GoogleFonts.inter(
-                          color: Colors.white60, fontSize: 13),
+                      style:
+                          GoogleFonts.inter(color: Colors.white60, fontSize: 13),
                     ),
                     const SizedBox(height: 12),
-                    // Availability pill
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 6),
@@ -128,27 +139,26 @@ class ProfileTab extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(18, 20, 18, 40),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
-              // ── Today's Stats ───────────────────────────────────
+              // ── Performance ─────────────────────────────────────
               _sectionLabel('TODAY\'S PERFORMANCE'),
               const SizedBox(height: 12),
               Row(
                 children: [
                   _StatCard(
-                      label: 'New',
-                      value:
-                          '${dashboard.todayNewInstallationJobs}',
-                      icon: Icons.add_circle_rounded,
-                      color: kPrimary),
-                  const SizedBox(width: 10),
-                  _StatCard(
                       label: 'Pending',
-                      value: '${dashboard.pendingJobs}',
+                      value: '$pending',
                       icon: Icons.pending_actions_rounded,
                       color: const Color(0xFFF59E0B)),
                   const SizedBox(width: 10),
                   _StatCard(
+                      label: 'Active',
+                      value: '$active',
+                      icon: Icons.electric_bolt_rounded,
+                      color: const Color(0xFF0EA5E9)),
+                  const SizedBox(width: 10),
+                  _StatCard(
                       label: 'Done',
-                      value: '${dashboard.completedJobs}',
+                      value: '$completedToday',
                       icon: Icons.task_alt_rounded,
                       color: const Color(0xFF10B981)),
                 ],
@@ -156,7 +166,7 @@ class ProfileTab extends StatelessWidget {
 
               const SizedBox(height: 24),
 
-              // ── Personal Info ───────────────────────────────────
+              // ── Personal Info ────────────────────────────────────
               _sectionLabel('INSTALLER INFO'),
               const SizedBox(height: 12),
               Container(
@@ -191,13 +201,20 @@ class ProfileTab extends StatelessWidget {
                           ? const Color(0xFF4ADE80)
                           : const Color(0xFFFCA5A5),
                     ),
+                    const Divider(height: 1, color: kDivider, indent: 56),
+                    _InfoRow(
+                      icon: Icons.info_outline_rounded,
+                      label: 'App Version',
+                      value: 'v$_appVersion',
+                      valueColor: kSubtle,
+                    ),
                   ],
                 ),
               ),
 
               const SizedBox(height: 24),
 
-              // ── Leave Management ────────────────────────────────
+              // ── Availability Management ──────────────────────────
               _sectionLabel('AVAILABILITY MANAGEMENT'),
               const SizedBox(height: 12),
               Container(
@@ -234,11 +251,10 @@ class ProfileTab extends StatelessWidget {
                           ? OutlinedButton.icon(
                               onPressed: appState.busy
                                   ? null
-                                  : () =>
-                                      _confirmLeave(context, appState),
+                                  : () => _showLeaveDialog(
+                                      context, appState),
                               style: OutlinedButton.styleFrom(
-                                foregroundColor:
-                                    const Color(0xFFFCA5A5),
+                                foregroundColor: const Color(0xFFFCA5A5),
                                 side: const BorderSide(
                                     color: Color(0x55EF4444)),
                                 padding: const EdgeInsets.symmetric(
@@ -263,16 +279,14 @@ class ProfileTab extends StatelessWidget {
                                   ? null
                                   : () => appState.endLeave(),
                               style: FilledButton.styleFrom(
-                                backgroundColor:
-                                    const Color(0xFF10B981),
+                                backgroundColor: const Color(0xFF10B981),
                                 padding: const EdgeInsets.symmetric(
                                     vertical: 13),
                                 shape: RoundedRectangleBorder(
                                     borderRadius:
                                         BorderRadius.circular(12)),
                               ),
-                              icon: const Icon(
-                                  Icons.login_rounded,
+                              icon: const Icon(Icons.login_rounded,
                                   size: 18),
                               label: Text(
                                 appState.busy
@@ -289,7 +303,7 @@ class ProfileTab extends StatelessWidget {
 
               const SizedBox(height: 24),
 
-              // ── Workflow Guide ──────────────────────────────────
+              // ── Workflow Guide ───────────────────────────────────
               _sectionLabel('INSTALLATION WORKFLOW'),
               const SizedBox(height: 12),
               Container(
@@ -303,7 +317,7 @@ class ProfileTab extends StatelessWidget {
                   children: [
                     _WorkflowRow('1', 'Accept job & start travel'),
                     Divider(height: 16, color: kDivider),
-                    _WorkflowRow('2', 'Mark onsite arrival (GPS check-in)'),
+                    _WorkflowRow('2', 'Mark onsite arrival — GPS check-in'),
                     Divider(height: 16, color: kDivider),
                     _WorkflowRow('3', 'Scan ONT serial + optical readings'),
                     Divider(height: 16, color: kDivider),
@@ -316,7 +330,7 @@ class ProfileTab extends StatelessWidget {
 
               const SizedBox(height: 24),
 
-              // ── Logout ──────────────────────────────────────────
+              // ── Logout ───────────────────────────────────────────
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
@@ -332,6 +346,15 @@ class ProfileTab extends StatelessWidget {
                   label: Text('Sign Out',
                       style: GoogleFonts.inter(
                           fontWeight: FontWeight.w700, fontSize: 14)),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+              Center(
+                child: Text(
+                  'JustFiber Field Ops · v$_appVersion',
+                  style:
+                      GoogleFonts.inter(color: kSubtle, fontSize: 11),
                 ),
               ),
             ]),
@@ -351,28 +374,57 @@ class ProfileTab extends StatelessWidget {
         ),
       );
 
-  Future<void> _confirmLeave(
+  Future<void> _showLeaveDialog(
       BuildContext context, InstallerAppState appState) async {
-    final confirm = await showDialog<bool>(
+    final reasonCtrl = TextEditingController();
+    final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: kSurface,
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Start Leave?',
+        title: Text('Start Leave',
             style: GoogleFonts.inter(
                 color: Colors.white, fontWeight: FontWeight.w800)),
-        content: Text(
-            'You will stop receiving new job assignments while on leave.',
-            style: GoogleFonts.inter(color: kMuted, fontSize: 13)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'You will stop receiving new assignments while on leave.',
+              style: GoogleFonts.inter(color: kMuted, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: kSurface2,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: kBorder),
+              ),
+              child: TextField(
+                controller: reasonCtrl,
+                style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Reason (e.g. Sick leave, Personal)',
+                  hintStyle:
+                      GoogleFonts.inter(color: kSubtle, fontSize: 13),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 12),
+                ),
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child:
-                Text('Cancel', style: GoogleFonts.inter(color: kMuted)),
+            onPressed: () => Navigator.of(ctx).pop(null),
+            child: Text('Cancel',
+                style: GoogleFonts.inter(color: kMuted)),
           ),
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
+            onPressed: () =>
+                Navigator.of(ctx).pop(reasonCtrl.text.trim()),
             child: Text('Start Leave',
                 style: GoogleFonts.inter(
                     color: const Color(0xFFEF4444),
@@ -381,7 +433,10 @@ class ProfileTab extends StatelessWidget {
         ],
       ),
     );
-    if (confirm == true) await appState.startLeave(reason: 'Leave');
+    if (result != null) {
+      await appState.startLeave(
+          reason: result.isEmpty ? 'Leave' : result);
+    }
   }
 
   Future<void> _confirmLogout(
@@ -395,13 +450,14 @@ class ProfileTab extends StatelessWidget {
         title: Text('Sign out?',
             style: GoogleFonts.inter(
                 color: Colors.white, fontWeight: FontWeight.w800)),
-        content: Text('You will need to sign in again to access jobs.',
+        content: Text(
+            'You will need to sign in again to access jobs.',
             style: GoogleFonts.inter(color: kMuted, fontSize: 13)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child:
-                Text('Cancel', style: GoogleFonts.inter(color: kMuted)),
+            child: Text('Cancel',
+                style: GoogleFonts.inter(color: kMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -449,8 +505,7 @@ class _StatCard extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                       fontSize: 20)),
               Text(label,
-                  style:
-                      GoogleFonts.inter(color: kMuted, fontSize: 10)),
+                  style: GoogleFonts.inter(color: kMuted, fontSize: 10)),
             ],
           ),
         ),
@@ -472,13 +527,15 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
             Icon(icon, color: kMuted, size: 18),
             const SizedBox(width: 12),
             Text(label,
-                style: GoogleFonts.inter(color: kMuted, fontSize: 13)),
+                style:
+                    GoogleFonts.inter(color: kMuted, fontSize: 13)),
             const Spacer(),
             Text(value,
                 style: GoogleFonts.inter(
@@ -490,14 +547,14 @@ class _InfoRow extends StatelessWidget {
               GestureDetector(
                 onTap: () {
                   Clipboard.setData(ClipboardData(text: value));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text('$label copied'),
-                        duration: const Duration(seconds: 1)),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('$label copied'),
+                    duration: const Duration(seconds: 1),
+                    behavior: SnackBarBehavior.floating,
+                  ));
                 },
-                child:
-                    const Icon(Icons.copy_rounded, color: kSubtle, size: 14),
+                child: const Icon(Icons.copy_rounded,
+                    color: kSubtle, size: 14),
               ),
             ],
           ],
@@ -518,7 +575,8 @@ class _WorkflowRow extends StatelessWidget {
             decoration: BoxDecoration(
               color: kPrimary.withValues(alpha: 0.15),
               shape: BoxShape.circle,
-              border: Border.all(color: kPrimary.withValues(alpha: 0.3)),
+              border:
+                  Border.all(color: kPrimary.withValues(alpha: 0.3)),
             ),
             child: Center(
               child: Text(number,

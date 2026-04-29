@@ -164,7 +164,20 @@ class BillingHistoryScreen extends StatelessWidget {
                         ),
                       )
                     else
-                      _PaymentReceiptCard(payment: latestPayment),
+                      _PaymentReceiptCard(
+                        payment: latestPayment,
+                        onOpen: (latestPayment.pdfUrl.isNotEmpty ||
+                                latestPayment.viewUrl.isNotEmpty)
+                            ? () => _openDocument(
+                                  context,
+                                  appState,
+                                  'Receipt',
+                                  latestPayment.pdfUrl.isNotEmpty
+                                      ? latestPayment.pdfUrl
+                                      : latestPayment.viewUrl,
+                                )
+                            : null,
+                      ),
 
                     const SizedBox(height: 20),
 
@@ -882,8 +895,9 @@ class _ReceiptCard extends StatelessWidget {
 // ── Payment receipt card ──────────────────────────────────────────────────────
 
 class _PaymentReceiptCard extends StatelessWidget {
-  const _PaymentReceiptCard({required this.payment});
+  const _PaymentReceiptCard({required this.payment, this.onOpen});
   final BillingPaymentItem payment;
+  final VoidCallback? onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -986,6 +1000,25 @@ class _PaymentReceiptCard extends StatelessWidget {
                 _row2('Transaction ID',
                     payment.transactionId.isEmpty ? '—' : payment.transactionId,
                     mono: true),
+                if (onOpen != null) ...[
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: onOpen,
+                      icon: const Icon(Icons.receipt_long_rounded, size: 16),
+                      label: const Text('View Receipt'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF4ADE80),
+                        side: BorderSide(
+                            color: const Color(0xFF4ADE80).withValues(alpha: 0.4)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

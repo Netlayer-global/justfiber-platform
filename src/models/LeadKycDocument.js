@@ -2,7 +2,9 @@ import mongoose from "mongoose";
 
 const leadKycDocumentSchema = new mongoose.Schema(
   {
-    leadId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
+    leadId: { type: mongoose.Schema.Types.ObjectId, index: true },
+    connectionBookingId: { type: mongoose.Schema.Types.ObjectId, index: true },
+    mobile: { type: String, index: true },
     documentType: { type: String, required: true },
     documentNumber: String,
     frontImageUrl: String,

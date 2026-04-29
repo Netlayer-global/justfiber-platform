@@ -244,16 +244,16 @@ function CustomersContent() {
   }, [customers, lookup])
 
   return (
-    <div className="space-y-6">
-      <section className="card p-6">
+    <div className="page-shell">
+      <section className="page-header">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <div className="text-sm font-semibold text-purple-700">Customer Ops</div>
-            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-900">Customers</h1>
-            <p className="mt-2 max-w-3xl text-sm text-slate-500">
+            <div className="eyebrow-brand">Customer Ops</div>
+            <h1 className="page-title">Customers</h1>
+            <p className="page-description">
               Full customer list for the active zone. Open, edit, or create from one place.
             </p>
-            <div className="mt-3 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+            <div className="status-chip-neutral mt-3">
               Zone: {activeZone.label}
             </div>
           </div>

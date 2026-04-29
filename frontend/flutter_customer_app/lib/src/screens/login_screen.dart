@@ -95,16 +95,9 @@ class _LoginScreenState extends State<LoginScreen> {
     final top = MediaQuery.of(context).padding.top;
 
     return Scaffold(
-      backgroundColor: kBg,
+      backgroundColor: Colors.black,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF0E0818), kBg],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            stops: [0.0, 0.45],
-          ),
-        ),
+        color: Colors.black,
         child: SafeArea(
           child: SingleChildScrollView(
             child: ConstrainedBox(

@@ -499,81 +499,96 @@ const worker = new Worker(
         const pppoe = prepared.pppoe || buildPppoeCredentials(jobRecord.customerId, planProvisioning);
         const wifi = prepared.wifi || buildWifiCredentials(planProvisioning, jobRecord.customerId);
         const vlanId = prepared.vlanId || planProvisioning.vlanId || existingDevice?.wanInfo?.vlanId || 100;
+        const resumeStage = String(job.data.resumeStage || jobRecord.activation?.resumeStage || "radius");
+        const shouldRunRadiusStage = !["genie_push", "readback"].includes(resumeStage);
+        const shouldRunGenieStage = resumeStage !== "readback";
 
-        updateActivationStage(
-          jobRecord,
-          "radius_create_pending",
-          "Creating PPPoE user in FreeRADIUS"
-        );
-        await radiusServiceManager.createSubscriberAccess({
-          serviceId: jobRecord.serviceId,
-          customerId: jobRecord.customerId,
-          radiusUsername: pppoe.username,
-          radiusPassword: pppoe.password,
-          accessProfileCode:
-            bootstrap?.plan?.provisioning?.accessProfileCode ||
-            bootstrap?.accessProfile?.code ||
-            jobRecord.customerSnapshot?.planCode,
-          billingProfileCode: bootstrap?.billingProfile?.code,
-          bngNodeCode: bootstrap?.bngNode?.nodeCode,
-          metadata: {
-            source: "installer_activation",
-            networkProfile: {
-              speedMbps:
-                bootstrap?.plan?.speedMbps ||
-                bootstrap?.accessProfile?.downMbps ||
-                jobRecord.customerSnapshot?.speedMbps ||
-                0,
-              uploadSpeedMbps:
-                bootstrap?.plan?.uploadSpeedMbps ||
-                bootstrap?.accessProfile?.upMbps ||
-                jobRecord.customerSnapshot?.uploadSpeedMbps ||
-                0,
-              burstDownloadMbps:
-                bootstrap?.plan?.burstDownloadMbps ||
-                bootstrap?.accessProfile?.burstDownMbps ||
-                jobRecord.customerSnapshot?.burstDownloadMbps ||
-                null,
-              burstUploadMbps:
-                bootstrap?.plan?.burstUploadMbps ||
-                bootstrap?.accessProfile?.burstUpMbps ||
-                jobRecord.customerSnapshot?.burstUploadMbps ||
-                null,
-              dataPolicy: bootstrap?.plan?.dataPolicy || jobRecord.customerSnapshot?.dataPolicy || "unlimited",
-              dataLimitGb: Number(bootstrap?.plan?.dataLimitGb || jobRecord.customerSnapshot?.dataLimitGb || 0) || null,
-              fupSpeedMbps: Number(bootstrap?.plan?.fupSpeedMbps || jobRecord.customerSnapshot?.fupSpeedMbps || 0) || null,
-              fairUsageResetPolicy: bootstrap?.plan?.fairUsageResetPolicy || jobRecord.customerSnapshot?.fairUsageResetPolicy || "monthly",
-              latencyClass: bootstrap?.plan?.latencyClass || jobRecord.customerSnapshot?.latencyClass || "standard",
-              contentionRatio: bootstrap?.plan?.contentionRatio || jobRecord.customerSnapshot?.contentionRatio || null
+        if (shouldRunRadiusStage) {
+          updateActivationStage(
+            jobRecord,
+            "radius_create_pending",
+            "Creating PPPoE user in FreeRADIUS"
+          );
+          await radiusServiceManager.createSubscriberAccess({
+            serviceId: jobRecord.serviceId,
+            customerId: jobRecord.customerId,
+            radiusUsername: pppoe.username,
+            radiusPassword: pppoe.password,
+            accessProfileCode:
+              bootstrap?.plan?.provisioning?.accessProfileCode ||
+              bootstrap?.accessProfile?.code ||
+              jobRecord.customerSnapshot?.planCode,
+            billingProfileCode: bootstrap?.billingProfile?.code,
+            bngNodeCode: bootstrap?.bngNode?.nodeCode,
+            metadata: {
+              source: "installer_activation",
+              networkProfile: {
+                speedMbps:
+                  bootstrap?.plan?.speedMbps ||
+                  bootstrap?.accessProfile?.downMbps ||
+                  jobRecord.customerSnapshot?.speedMbps ||
+                  0,
+                uploadSpeedMbps:
+                  bootstrap?.plan?.uploadSpeedMbps ||
+                  bootstrap?.accessProfile?.upMbps ||
+                  jobRecord.customerSnapshot?.uploadSpeedMbps ||
+                  0,
+                burstDownloadMbps:
+                  bootstrap?.plan?.burstDownloadMbps ||
+                  bootstrap?.accessProfile?.burstDownMbps ||
+                  jobRecord.customerSnapshot?.burstDownloadMbps ||
+                  null,
+                burstUploadMbps:
+                  bootstrap?.plan?.burstUploadMbps ||
+                  bootstrap?.accessProfile?.burstUpMbps ||
+                  jobRecord.customerSnapshot?.burstUploadMbps ||
+                  null,
+                dataPolicy: bootstrap?.plan?.dataPolicy || jobRecord.customerSnapshot?.dataPolicy || "unlimited",
+                dataLimitGb: Number(bootstrap?.plan?.dataLimitGb || jobRecord.customerSnapshot?.dataLimitGb || 0) || null,
+                fupSpeedMbps: Number(bootstrap?.plan?.fupSpeedMbps || jobRecord.customerSnapshot?.fupSpeedMbps || 0) || null,
+                fairUsageResetPolicy: bootstrap?.plan?.fairUsageResetPolicy || jobRecord.customerSnapshot?.fairUsageResetPolicy || "monthly",
+                latencyClass: bootstrap?.plan?.latencyClass || jobRecord.customerSnapshot?.latencyClass || "standard",
+                contentionRatio: bootstrap?.plan?.contentionRatio || jobRecord.customerSnapshot?.contentionRatio || null
+              }
             }
-          }
-        });
-        updateActivationStage(jobRecord, "radius_create_done", "PPPoE user created in FreeRADIUS");
-        try {
-          updateActivationStage(jobRecord, "genie_push_pending", "Pushing access config to GenieACS");
-          await genieacsClient.pushAccessConfig({
-            deviceId,
-            brand,
-            pppoeUsername: pppoe.username,
-            pppoePassword: pppoe.password,
-            vlanId,
-            natEnabled: true,
-            ssid24: wifi.ssid24,
-            ssid5: wifi.ssid5,
-            wifiPassword: wifi.password
           });
-          updateActivationStage(jobRecord, "genie_push_done", "Access config pushed to GenieACS");
-        } catch (configError) {
-          jobRecord.activation = {
-            ...(jobRecord.activation || {}),
-            configFallback: false,
-            configFallbackError: configError.message
-          };
-          updateActivationStage(jobRecord, "genie_fallback", "Config push failed; legacy Genie preset fallback skipped", {
-            lastConfigError: configError.message
+          updateActivationStage(jobRecord, "radius_create_done", "PPPoE user created in FreeRADIUS");
+        } else {
+          updateActivationStage(jobRecord, "radius_resume_skip", "Skipping FreeRADIUS step during granular resume", {
+            resumeStage
           });
         }
-        if ((brand === "nokia" || brand === "dasan") && wifi.password) {
+        if (shouldRunGenieStage) {
+          try {
+            updateActivationStage(jobRecord, "genie_push_pending", "Pushing access config to GenieACS");
+            await genieacsClient.pushAccessConfig({
+              deviceId,
+              brand,
+              pppoeUsername: pppoe.username,
+              pppoePassword: pppoe.password,
+              vlanId,
+              natEnabled: true,
+              ssid24: wifi.ssid24,
+              ssid5: wifi.ssid5,
+              wifiPassword: wifi.password
+            });
+            updateActivationStage(jobRecord, "genie_push_done", "Access config pushed to GenieACS");
+          } catch (configError) {
+            jobRecord.activation = {
+              ...(jobRecord.activation || {}),
+              configFallback: false,
+              configFallbackError: configError.message
+            };
+            updateActivationStage(jobRecord, "genie_fallback", "Config push failed; legacy Genie preset fallback skipped", {
+              lastConfigError: configError.message
+            });
+          }
+        } else {
+          updateActivationStage(jobRecord, "genie_resume_skip", "Skipping config push during read-back resume", {
+            resumeStage
+          });
+        }
+        if (shouldRunGenieStage && (brand === "nokia" || brand === "dasan") && wifi.password) {
           await genieacsClient.rebootDevice(deviceId);
           jobRecord.timeline.push({
             event: "job.device_reboot_requested",

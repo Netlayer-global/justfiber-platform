@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
@@ -9,6 +11,7 @@ class ApiClient {
 
   final String baseUrl;
   static const Duration _requestTimeout = Duration(seconds: 22);
+  static const Duration _retryDelay = Duration(milliseconds: 700);
   Future<String?> Function()? onUnauthorized;
 
   Uri _uri(String path) =>
@@ -45,13 +48,59 @@ class ApiClient {
       }
     } on FormatException {
       throw Exception('Invalid server URL. Check app API configuration.');
-    } on http.ClientException {
+    } on TimeoutException {
+      if (allowRetry && method == 'GET') {
+        await Future<void>.delayed(_retryDelay);
+        return _request(
+          path,
+          method: method,
+          token: token,
+          body: body,
+          allowRetry: false,
+        );
+      }
       throw Exception(
-          'Unable to connect to server. Check network or server status.');
+          'Server is responding slowly. Please retry on a stable network.');
+    } on SocketException {
+      if (allowRetry && method == 'GET') {
+        await Future<void>.delayed(_retryDelay);
+        return _request(
+          path,
+          method: method,
+          token: token,
+          body: body,
+          allowRetry: false,
+        );
+      }
+      throw Exception(
+          'No internet connection or server is unreachable. Please try again.');
+    } on http.ClientException {
+      if (allowRetry && method == 'GET') {
+        await Future<void>.delayed(_retryDelay);
+        return _request(
+          path,
+          method: method,
+          token: token,
+          body: body,
+          allowRetry: false,
+        );
+      }
+      throw Exception('Unable to connect right now. Please retry in a moment.');
     } on Exception catch (error) {
       final message = error.toString().toLowerCase();
       if (message.contains('timeout')) {
-        throw Exception('Server took too long to respond. Please try again.');
+        if (allowRetry && method == 'GET') {
+          await Future<void>.delayed(_retryDelay);
+          return _request(
+            path,
+            method: method,
+            token: token,
+            body: body,
+            allowRetry: false,
+          );
+        }
+        throw Exception(
+            'Server took too long to respond. Please try again on a stable network.');
       }
       rethrow;
     }
@@ -821,6 +870,12 @@ class ApiClient {
     required String pinCode,
     required double lat,
     required double lng,
+    String? planCode,
+    String? planName,
+    int? durationMonths,
+    String? durationLabel,
+    String? preferredSlotCode,
+    String? preferredSlotLabel,
   }) async {
     final data = _asMap(
       await _request(
@@ -834,6 +889,14 @@ class ApiClient {
           'pinCode': pinCode,
           'lat': lat,
           'lng': lng,
+          if ((planCode ?? '').isNotEmpty) 'planCode': planCode,
+          if ((planName ?? '').isNotEmpty) 'planName': planName,
+          if (durationMonths != null) 'durationMonths': durationMonths,
+          if ((durationLabel ?? '').isNotEmpty) 'durationLabel': durationLabel,
+          if ((preferredSlotCode ?? '').isNotEmpty)
+            'preferredSlotCode': preferredSlotCode,
+          if ((preferredSlotLabel ?? '').isNotEmpty)
+            'preferredSlotLabel': preferredSlotLabel,
         },
       ),
     );
@@ -1418,6 +1481,38 @@ class ApiClient {
       opticalRxPower: double.tryParse('${data['opticalRxPower'] ?? 0}') ?? 0,
       quality: (data['quality'] ?? 'unknown').toString(),
     );
+  }
+
+  Future<BookingQuote?> fetchPendingPaymentBooking(
+      CustomerSession session) async {
+    final list = _asList(await _request(
+      '/api/v1/customer/bookings',
+      token: session.accessToken,
+    ));
+    for (final item in list) {
+      final map = item as Map<String, dynamic>;
+      final status = (map['status'] ?? '').toString().toLowerCase();
+      if (status == 'payment_pending') {
+        final selectedPlan = _asMap(map['selectedPlan']);
+        final tracking = _asMap(map['tracking']);
+        return BookingQuote(
+          bookingNumber: (map['bookingNumber'] ?? '').toString(),
+          status: status,
+          planName: (selectedPlan['planName'] ?? '').toString(),
+          amount:
+              double.tryParse('${selectedPlan['totalAmount'] ?? 0}') ?? 0,
+          currentStep:
+              (tracking['currentStep'] ?? 'booking_placed').toString(),
+          preferredDate: '',
+          preferredSlotLabel: '',
+          durationMonths:
+              int.tryParse('${selectedPlan['durationMonths'] ?? 1}') ?? 1,
+          durationLabel:
+              (selectedPlan['durationLabel'] ?? '1 month').toString(),
+        );
+      }
+    }
+    return null;
   }
 }
 

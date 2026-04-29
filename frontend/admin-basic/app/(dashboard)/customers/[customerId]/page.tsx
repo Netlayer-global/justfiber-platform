@@ -1,1106 +1,403 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useParams, usePathname, useRouter } from 'next/navigation'
-import { Loader, RefreshCw, Wifi, Router, Network, PlugZap, Trash2 } from 'lucide-react'
-import { toast } from 'sonner'
-import { adminAPI, openProtectedDocument } from '@/lib/api'
-import type { Customer, CustomerDevice, Device } from '@/lib/types'
-
-type TabKey = 'overview' | 'billing' | 'devices'
-
-type DeviceForm = {
-  ssid24: string
-  ssid5: string
-  password24: string
-  password5: string
-  pppoeUsername: string
-  pppoePassword: string
-  natEnabled: boolean
-}
-
-function formatValue(value: unknown, fallback = '-') {
-  if (value === null || value === undefined) return fallback
-  const text = String(value).trim()
-  return text || fallback
-}
-
-function formatDate(value: unknown, fallback = '-') {
-  if (!value) return fallback
-  const parsed = new Date(String(value))
-  return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleString()
-}
-
-function formatAmount(value: unknown) {
-  return `Rs ${Number(value || 0).toFixed(2)}`
-}
-
-function formatDataUsage(totalOctets: unknown) {
-  const value = Number(totalOctets || 0)
-  if (!value || value <= 0) return '-'
-  const gb = value / (1024 * 1024 * 1024)
-  if (gb >= 1) return `${gb.toFixed(2)} GB`
-  const mb = value / (1024 * 1024)
-  return `${mb.toFixed(0)} MB`
-}
-
-function formatDuration(seconds: unknown) {
-  const total = Number(seconds || 0)
-  if (!total || total <= 0) return '-'
-  const hours = Math.floor(total / 3600)
-  const minutes = Math.floor((total % 3600) / 60)
-  if (hours > 0) return `${hours}h ${minutes}m`
-  return `${minutes}m`
-}
-
-function triggerDownload(url: string, filename: string) {
-  if (typeof window === 'undefined') return
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  anchor.rel = 'noopener'
-  document.body.appendChild(anchor)
-  anchor.click()
-  document.body.removeChild(anchor)
-}
-
-function isLikelyIpv4(value: string) {
-  if (!value.trim()) return true
-  return /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/.test(value.trim())
-}
-
-function getPppoeLiveStatus(customer: Customer | null, device?: CustomerDevice | null) {
-  if (!customer) return { label: 'Unknown', tone: 'bg-slate-100 text-slate-600' }
-  const online = String(device?.onlineStatus || '').toLowerCase() === 'online'
-  const sessionUp = String(device?.wanInfo?.sessionStatus || '').toLowerCase() === 'up'
-  const hasIpv4 = Boolean(String(device?.wanInfo?.ipv4Address || device?.wanInfo?.ipAddress || '').trim())
-  if (online || sessionUp || hasIpv4) {
-    return { label: 'PPPoE Live', tone: 'bg-emerald-100 text-emerald-700' }
-  }
-  if (String(customer.radiusService?.status || '').toLowerCase() === 'active') {
-    return { label: 'Ready', tone: 'bg-amber-100 text-amber-700' }
-  }
-  return { label: 'Offline', tone: 'bg-slate-100 text-slate-600' }
-}
-
-function getRadiusVerificationStatus(customer: Customer | null) {
-  const verification = customer?.radiusService?.lastRadiusVerification
-  const derivedState = String(
-    customer?.radiusService?.lastRadiusDerivedState ||
-      verification?.derivedState ||
-      customer?.radiusService?.status ||
-      ''
-  ).toLowerCase()
-
-  if (verification?.error) {
-    return { label: 'Radius Check Failed', tone: 'bg-rose-100 text-rose-700' }
-  }
-  if (verification?.attempted && verification?.matchesExpectedState) {
-    if (derivedState === 'suspended') {
-      return { label: 'Radius Suspended', tone: 'bg-amber-100 text-amber-700' }
-    }
-    if (derivedState === 'active') {
-      return { label: 'Radius Active', tone: 'bg-emerald-100 text-emerald-700' }
-    }
-  }
-  if (verification?.attempted) {
-    return { label: 'Radius Mismatch', tone: 'bg-rose-100 text-rose-700' }
-  }
-  if (String(customer?.radiusService?.status || '').toLowerCase() === 'suspended') {
-    return { label: 'Radius Suspended', tone: 'bg-amber-100 text-amber-700' }
-  }
-  if (String(customer?.radiusService?.status || '').toLowerCase() === 'active') {
-    return { label: 'Radius Ready', tone: 'bg-sky-100 text-sky-700' }
-  }
-  return { label: 'Radius Unknown', tone: 'bg-slate-100 text-slate-600' }
-}
-
-function normalizeCustomer(raw: Customer): Customer {
-  return {
-    ...raw,
-    plan:
-      raw.plan && typeof raw.plan === 'object'
-        ? raw.plan
-        : {
-            id: '',
-            name: typeof raw.plan === 'string' ? raw.plan : 'Unassigned plan',
-          },
-    devices: Array.isArray(raw.devices) ? raw.devices : [],
-    invoices: Array.isArray(raw.invoices) ? raw.invoices : [],
-    payments: Array.isArray(raw.payments) ? raw.payments : [],
-    tickets: Array.isArray(raw.tickets) ? raw.tickets : [],
-    actions: Array.isArray(raw.actions) ? raw.actions : [],
-    billingNotes: Array.isArray(raw.billingNotes) ? raw.billingNotes : [],
-    serviceRequests: Array.isArray(raw.serviceRequests) ? raw.serviceRequests : [],
-    bookings: Array.isArray(raw.bookings) ? raw.bookings : [],
-  }
-}
+import { useParams, useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import {
+  ArrowLeft,
+  Cable,
+  CreditCard,
+  Edit,
+  FileText,
+  HardDrive,
+  Mail,
+  MapPin,
+  Phone,
+  Power,
+  RefreshCw,
+  Ticket,
+  Trash2,
+  Wifi,
+} from 'lucide-react'
+import { adminAPI } from '@/lib/api'
+import type { Customer } from '@/lib/types'
+import { formatCurrency, formatDate, relativeTime } from '@/lib/utils'
+import { Avatar } from '@/components/ui/avatar'
+import { Badge, StatusBadge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardTitle } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/empty-state'
+import { PageHeader } from '@/components/ui/page-header'
+import { SkeletonCard } from '@/components/ui/skeleton'
+import { Tabs } from '@/components/ui/tabs'
 
 export default function CustomerDetailPage() {
   const params = useParams<{ customerId: string }>()
   const router = useRouter()
-  const pathname = usePathname()
-  const customerId = params.customerId
-
+  const id = params?.customerId
   const [customer, setCustomer] = useState<Customer | null>(null)
-  const [kycDocs, setKycDocs] = useState<{ frontImageUrl?: string; backImageUrl?: string; selfieImageUrl?: string; documentNumber?: string; verificationStatus?: string } | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<TabKey>('overview')
-  const [busyKey, setBusyKey] = useState<string | null>(null)
-  const [deviceForms, setDeviceForms] = useState<Record<string, DeviceForm>>({})
-  const [attachDeviceQuery, setAttachDeviceQuery] = useState('')
-  const [attachCandidates, setAttachCandidates] = useState<Device[]>([])
-  const [staticIpForm, setStaticIpForm] = useState({ currentIpv4: '', ipv4Pool: '' })
-  const staticIpError = useMemo(() => {
-    if (staticIpForm.currentIpv4.trim() && !isLikelyIpv4(staticIpForm.currentIpv4)) return 'Enter a valid IPv4 address'
-    if (!staticIpForm.currentIpv4.trim() && staticIpForm.ipv4Pool.trim() && staticIpForm.ipv4Pool.trim().length < 2) return 'Pool name is too short'
-    return ''
-  }, [staticIpForm])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  useEffect(() => {
-    if (!customerId) return
-    void loadCustomer()
-  }, [customerId])
+  useEffect(() => { if (id) void load() }, [id])
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const tab = new URLSearchParams(window.location.search).get('tab')
-    if (tab === 'billing' || tab === 'devices' || tab === 'overview') {
-      setActiveTab(tab)
-    }
-  }, [customerId])
-
-  function selectTab(tab: TabKey) {
-    setActiveTab(tab)
-    const query = tab === 'overview' ? '' : `?tab=${tab}`
-    router.replace(`${pathname}${query}`)
-  }
-
-  async function runBusy<T>(key: string, work: () => Promise<T>) {
+  async function load() {
+    setLoading(true)
+    setError('')
     try {
-      setBusyKey(key)
-      return await work()
+      const res = await adminAPI.getCustomer(id as string)
+      if (res.success && res.data) setCustomer(res.data as Customer)
+      else setError(typeof res.error === 'string' ? res.error : 'Customer not found')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load customer')
     } finally {
-      setBusyKey((current) => (current === key ? null : current))
+      setLoading(false)
     }
   }
 
-  async function loadCustomer() {
-    try {
-      await runBusy('refresh', async () => {
-        setIsLoading(true)
-        const [res, kycRes] = await Promise.all([
-          adminAPI.getCustomer(customerId),
-          adminAPI.getCustomerLeadKyc(customerId).catch(() => ({ success: false, data: null })),
-        ])
-        if (!res.success || !res.data) {
-          toast.error(res.error || 'Failed to load customer')
-          return
-        }
-        if (kycRes.success && kycRes.data) {
-          setKycDocs(kycRes.data)
-        }
-        const nextCustomer = normalizeCustomer(res.data)
-        setCustomer(nextCustomer)
-        setStaticIpForm({
-          currentIpv4: String(nextCustomer.radiusService?.currentIpv4 || ''),
-          ipv4Pool: String(nextCustomer.radiusService?.ipv4Pool || ''),
-        })
-        const nextDeviceForms: Record<string, DeviceForm> = {}
-        ;(nextCustomer.devices || []).forEach((device) => {
-          nextDeviceForms[device.deviceId] = {
-            ssid24: String(device.wifiInfo?.ssid24Masked || device.wifiInfo?.ssid24 || ''),
-            ssid5: String(device.wifiInfo?.ssid5Masked || device.wifiInfo?.ssid5 || ''),
-            password24: '',
-            password5: '',
-            pppoeUsername: String(device.wanInfo?.pppoeUsernameMasked || device.wanInfo?.pppoeUsername || nextCustomer.pppoeUsername || ''),
-            pppoePassword: '',
-            natEnabled: device.wanInfo?.natEnabled !== false && device.wifiInfo?.natEnabled !== false,
-          }
-        })
-        setDeviceForms(nextDeviceForms)
-      })
-    } catch (error) {
-      console.error('[customer-detail] Failed to load customer:', error)
-      toast.error('Failed to load customer')
-    } finally {
-      setIsLoading(false)
-    }
+  async function handleDelete() {
+    if (!customer || !confirm(`Delete customer ${customer.name}? This cannot be undone.`)) return
+    const res = await adminAPI.deleteCustomer(customer.id)
+    if (res.success) router.push('/customers')
+    else alert((res.error as string) || 'Delete failed')
   }
 
-  function updateDeviceForm(deviceId: string, patch: Partial<DeviceForm>) {
-    setDeviceForms((current) => ({
-      ...current,
-      [deviceId]: {
-        ...current[deviceId],
-        ...patch,
-      },
-    }))
-  }
-
-  async function handleDisconnectSession() {
-    if (!customer) return
-    const nodeCode = customer.radiusService?.bngNodeCode
-    const username = customer.radiusService?.radiusUsername || customer.pppoeUsername
-    if (!nodeCode || !username) {
-      toast.error('Missing BNG node or PPPoE username')
-      return
-    }
-    await runBusy('disconnect-session', async () => {
-      const res = await adminAPI.sendBngNodeCoaDisconnect(nodeCode, {
-        radiusUsername: username,
-        reason: 'Customer detail disconnect',
-      })
-      if (!res.success || !res.data) {
-        toast.error(res.error || 'Failed to disconnect session')
-        return
-      }
-      if (res.data.result?.status !== 'sent') {
-        toast.error(res.data.result?.error || res.data.result?.reason || 'Failed to disconnect session')
-        return
-      }
-      const removedCount = Number(res.data.result?.routerApiDisconnect?.removedCount || 0)
-      toast.success(removedCount > 0 ? `Disconnected live session (${removedCount})` : 'Disconnect request sent')
-      await loadCustomer()
-    })
-  }
-
-  async function handleReconnectSession() {
-    if (!customer) return
-    const nodeCode = customer.radiusService?.bngNodeCode
-    const username = customer.radiusService?.radiusUsername || customer.pppoeUsername
-    if (!nodeCode || !username) {
-      toast.error('Missing BNG node or PPPoE username')
-      return
-    }
-    await runBusy('reconnect-session', async () => {
-      const res = await adminAPI.sendBngNodeCoaDisconnect(nodeCode, {
-        radiusUsername: username,
-        reason: 'Customer detail PPPoE reconnect',
-      })
-      if (!res.success || !res.data) {
-        toast.error(res.error || 'Failed to reconnect PPPoE')
-        return
-      }
-      if (res.data.result?.status !== 'sent') {
-        toast.error(res.data.result?.error || res.data.result?.reason || 'Failed to reconnect PPPoE')
-        return
-      }
-      const removedCount = Number(res.data.result?.routerApiDisconnect?.removedCount || 0)
-      toast.success(removedCount > 0 ? `PPPoE reconnected (${removedCount} live session cut)` : 'PPPoE reconnect sent')
-      await loadCustomer()
-    })
-  }
-
-  async function handleProvisionPppoe() {
-    if (!customer) return
-    await runBusy('provision-pppoe', async () => {
-      const res = await adminAPI.provisionCustomerPppoe(customer.id)
-      if (!res.success) {
-        toast.error(res.error || 'Failed to provision PPPoE')
-        return
-      }
-      const verified = res.data?.radiusVerification?.matchesExpectedState !== false
-      toast.success(verified ? 'PPPoE provisioned and verified' : 'PPPoE provisioned with verification warning')
-      await loadCustomer()
-    })
-  }
-
-  async function handleRepairRadius() {
-    if (!customer) return
-    await runBusy('repair-radius', async () => {
-      const res = await adminAPI.provisionCustomerPppoe(customer.id)
-      if (!res.success) {
-        toast.error(res.error || 'Failed to repair RADIUS')
-        return
-      }
-      const verified = res.data?.radiusVerification?.matchesExpectedState !== false
-      toast.success(verified ? 'RADIUS repaired and verified' : 'RADIUS repair completed with warning')
-      await loadCustomer()
-    })
-  }
-
-  async function handleSuspendPppoe() {
-    if (!customer) return
-    await runBusy('suspend-pppoe', async () => {
-      const res = await adminAPI.suspendCustomerPppoe(customer.id, 'Suspended from customer detail')
-      if (!res.success) {
-        toast.error(res.error || 'Failed to suspend PPPoE')
-        return
-      }
-      const verified = res.data?.radiusVerification?.matchesExpectedState !== false
-      toast.success(verified ? 'PPPoE suspended' : 'PPPoE suspended with verification warning')
-      await loadCustomer()
-    })
-  }
-
-  async function handleResumePppoe() {
-    if (!customer) return
-    await runBusy('resume-pppoe', async () => {
-      const res = await adminAPI.resumeCustomerPppoe(customer.id)
-      if (!res.success) {
-        toast.error(res.error || 'Failed to resume PPPoE')
-        return
-      }
-      const verified = res.data?.radiusVerification?.matchesExpectedState !== false
-      toast.success(verified ? 'PPPoE resumed' : 'PPPoE resumed with verification warning')
-      await loadCustomer()
-    })
-  }
-
-  async function handleSaveStaticIp() {
-    if (!customer) return
-    if (staticIpError) {
-      toast.error(staticIpError)
-      return
-    }
-    const currentIpv4 = staticIpForm.currentIpv4.trim()
-    const ipv4Pool = staticIpForm.ipv4Pool.trim()
-    await runBusy('save-static-ip', async () => {
-      const res = await adminAPI.updateCustomer(customer.id, {
-        radiusService: {
-          currentIpv4: currentIpv4 || null,
-          ipv4Pool: currentIpv4 ? null : (ipv4Pool || null),
-        },
-      })
-      if (!res.success) {
-        toast.error(res.error || 'Failed to save IP settings')
-        return
-      }
-      setCustomer((current) => current ? ({
-        ...current,
-        radiusService: {
-          ...(current.radiusService || {}),
-          currentIpv4: currentIpv4 || null,
-          ipv4Pool: currentIpv4 ? null : (ipv4Pool || null),
-        },
-      }) : current)
-      toast.success('IP settings saved')
-    })
-  }
-
-  async function handleDeviceWifiUpdate(device: CustomerDevice) {
-    const form = deviceForms[device.deviceId]
-    if (!form) return
-    await runBusy(`wifi-${device.deviceId}`, async () => {
-      const res = await adminAPI.updateDeviceWifi(device.deviceId, {
-        ssid24: form.ssid24 || undefined,
-        ssid5: form.ssid5 || undefined,
-        password24: form.password24 || undefined,
-        password5: form.password5 || undefined,
-      })
-      if (!res.success) {
-        toast.error(res.error || 'Failed to save Wi-Fi settings')
-        return
-      }
-      toast.success('Wi-Fi updated')
-      setDeviceForms((current) => ({
-        ...current,
-        [device.deviceId]: {
-          ...current[device.deviceId],
-          password24: '',
-          password5: '',
-        },
-      }))
-      await loadCustomer()
-    })
-  }
-
-  async function handleDeviceWanUpdate(device: CustomerDevice) {
-    const form = deviceForms[device.deviceId]
-    if (!form || !customer) return
-    await runBusy(`wan-${device.deviceId}`, async () => {
-      const res = await adminAPI.updateDeviceWifi(device.deviceId, {
-        pppoeUsername: form.pppoeUsername || undefined,
-        pppoePassword: form.pppoePassword || undefined,
-        natEnabled: form.natEnabled,
-      })
-      if (!res.success) {
-        toast.error(res.error || 'Failed to save WAN settings')
-        return
-      }
-      toast.success('WAN updated')
-      setCustomer((current) => current ? ({
-        ...current,
-        pppoeUsername: form.pppoeUsername || current.pppoeUsername,
-      }) : current)
-      setDeviceForms((current) => ({
-        ...current,
-        [device.deviceId]: {
-          ...current[device.deviceId],
-          pppoePassword: '',
-        },
-      }))
-      await loadCustomer()
-    })
-  }
-
-  async function openInvoicePdf(invoiceId: string) {
-    await runBusy(`invoice-${invoiceId}`, async () => {
-      try {
-        await openProtectedDocument(`/api/v1/admin/billing/invoices/${encodeURIComponent(invoiceId)}/pdf`)
-      } catch (error) {
-        console.error('[customer-detail] Failed to open invoice PDF:', error)
-        toast.error('Failed to open invoice PDF')
-      }
-    })
-  }
-
-  async function deleteInvoice(invoiceId: string) {
-    await runBusy(`delete-invoice-${invoiceId}`, async () => {
-      const res = await adminAPI.deleteInvoice(invoiceId)
-      if (!res.success) {
-        toast.error(res.error || 'Failed to delete invoice')
-        return
-      }
-      toast.success('Invoice deleted')
-      await loadCustomer()
-    })
-  }
-
-  async function handleDeleteCustomer() {
-    if (!customer) return
-    const confirmed = window.confirm(`Delete ${customer.name} (${customer.customerId || customer.id})?\n\nThis will remove linked invoices, tickets, payments, PPPoE service, and related records.`)
-    if (!confirmed) return
-    await runBusy('delete-customer', async () => {
-      const res = await adminAPI.deleteCustomer(customer.customerId || customer.id)
-      if (!res.success) {
-        toast.error(res.error || 'Failed to delete customer')
-        return
-      }
-      toast.success(`${customer.name} deleted`)
-      router.push('/customers')
-    })
-  }
-
-  async function loadAttachCandidates(search?: string) {
-    try {
-      const res = await adminAPI.getDevices(1, 30, { search: search?.trim() || undefined })
-      if (!res.success) {
-        toast.error(res.error || 'Failed to load router inventory')
-        return
-      }
-      const currentCustomerId = customer?.customerId || customer?.id
-      setAttachCandidates((res.data?.items || []).filter((device) => !device.customerId || device.customerId === currentCustomerId))
-    } catch (error) {
-      console.error('[customer-detail] Failed to load router inventory:', error)
-      toast.error('Failed to load router inventory')
-    }
-  }
-
-  async function handleAttachRouter(deviceId: string) {
-    if (!customer) return
-    await runBusy('attach-router', async () => {
-      const res = await adminAPI.attachCustomerDevice(customer.customerId || customer.id, deviceId)
-      if (!res.success || !res.data) {
-        toast.error(res.error || 'Failed to attach router')
-        return
-      }
-      setCustomer(normalizeCustomer(res.data))
-      toast.success(`Router ${deviceId} attached`)
-      await loadAttachCandidates(attachDeviceQuery)
-    })
-  }
-
-  async function copyValue(value: string, label: string) {
-    if (!value.trim()) {
-      toast.error(`No ${label.toLowerCase()} available`)
-      return
-    }
-    await navigator.clipboard.writeText(value)
-    toast.success(`${label} copied`)
-  }
-
-  const primaryDevice = useMemo(() => {
-    if (!customer?.devices?.length) return null
-    return customer.devices.find((device) => device.onlineStatus === 'online') || customer.devices[0]
-  }, [customer])
-
-  const sortedInvoices = useMemo(() => {
-    return [...(customer?.invoices || [])].sort(
-      (a, b) =>
-        new Date(String(b.issuedAt || b.createdAt || b.dueDate || 0)).getTime() -
-        new Date(String(a.issuedAt || a.createdAt || a.dueDate || 0)).getTime()
-    )
-  }, [customer?.invoices])
-
-  const recentInvoices = sortedInvoices.slice(0, 5)
-  const latestInvoice = sortedInvoices[0]
-  const latestPayment = useMemo(() => {
-    return [...(customer?.payments || [])].sort(
-      (a, b) =>
-        new Date(String(b.paidAt || b.createdAt || 0)).getTime() -
-        new Date(String(a.paidAt || a.createdAt || 0)).getTime()
-    )[0]
-  }, [customer?.payments])
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="card p-10 text-center">
-        <Loader className="mx-auto h-6 w-6 animate-spin text-[#5d87ff]" />
+      <div className="space-y-6">
+        <SkeletonCard />
+        <div className="grid gap-4 md:grid-cols-3">
+          <SkeletonCard /><SkeletonCard /><SkeletonCard />
+        </div>
       </div>
     )
   }
 
-  if (!customer) {
-    return <div className="card p-10 text-center text-slate-500">Customer not found.</div>
+  if (error || !customer) {
+    return (
+      <div className="space-y-4">
+        <Link href="/customers" className="inline-flex items-center gap-1 text-sm text-purple-700 hover:underline">
+          <ArrowLeft className="h-4 w-4" /> Back to customers
+        </Link>
+        <Card>
+          <EmptyState title="Customer not found" description={error || 'This customer does not exist or has been deleted.'} />
+        </Card>
+      </div>
+    )
   }
 
-  const pppoeLiveStatus = getPppoeLiveStatus(customer, primaryDevice)
-  const radiusVerificationStatus = getRadiusVerificationStatus(customer)
-  const overviewCards = [
-    { label: 'Customer', value: customer.name, sub: customer.phone || '-' },
-    { label: 'PPPoE', value: customer.pppoeUsername || '-', sub: `Service ${formatValue(customer.serviceId)}` },
-    { label: 'Plan', value: customer.plan?.name || '-', sub: customer.status || '-' },
-    { label: 'Zone', value: customer.zoneName || customer.zoneCode || '-', sub: customer.zoneStateName || customer.rawAddress?.state || '-' },
+  const tabs = [
+    { id: 'overview', label: 'Overview', content: <OverviewTab customer={customer} /> },
+    { id: 'billing', label: 'Billing', icon: CreditCard, badge: customer.invoices?.length || 0, content: <BillingTab customer={customer} /> },
+    { id: 'devices', label: 'Devices', icon: HardDrive, badge: customer.devices?.length || 0, content: <DevicesTab customer={customer} /> },
+    { id: 'tickets', label: 'Tickets', icon: Ticket, badge: customer.tickets?.length || 0, content: <TicketsTab customer={customer} /> },
+    { id: 'sessions', label: 'Sessions', icon: Wifi, content: <SessionsTab customer={customer} /> },
+    { id: 'documents', label: 'Documents', icon: FileText, content: <DocumentsTab customer={customer} /> },
   ]
 
   return (
     <div className="space-y-6">
-      <section className="card p-5 md:p-6 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="text-sm text-slate-500">
-              <Link href="/customers" className="font-semibold text-[#2a8cff]">Customers</Link>
-              <span className="mx-2">/</span>
-              <span>{customer.pppoeUsername || customer.customerId || customer.id}</span>
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Customers', href: '/customers' },
+          { label: customer.name },
+        ]}
+        title={customer.name}
+        description={`Customer ID: ${customer.customerId} · Account: ${customer.accountNumber || '-'}`}
+        actions={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => void load()} icon={<RefreshCw className="h-4 w-4" />}>Refresh</Button>
+            <Link href={`/billing?customerId=${customer.id}`}>
+              <Button variant="secondary" size="sm" icon={<CreditCard className="h-4 w-4" />}>Billing</Button>
+            </Link>
+            <Button variant="secondary" size="sm" icon={<Edit className="h-4 w-4" />}>Edit</Button>
+            <Button variant="danger" size="sm" onClick={handleDelete} icon={<Trash2 className="h-4 w-4" />}>Delete</Button>
+          </>
+        }
+      />
+
+      <Card>
+        <div className="flex flex-col items-start gap-5 md:flex-row md:items-center">
+          <Avatar name={customer.name} size="xl" status={customer.status === 'active' ? 'online' : customer.status === 'suspended' ? 'busy' : 'offline'} />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-xl font-bold text-slate-900">{customer.name}</h2>
+              <StatusBadge status={customer.status} />
+              <Badge variant="brand"><Cable className="h-3 w-3" /> {customer.plan?.name || 'No plan'}</Badge>
             </div>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{customer.name}</h1>
-            <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
-              <span className="rounded-full bg-slate-100 px-3 py-1">{customer.phone || 'No phone'}</span>
-              <span className="rounded-full bg-slate-100 px-3 py-1">{customer.plan?.name || 'No plan'}</span>
-              <span className="rounded-full bg-slate-100 px-3 py-1">{customer.pppoeUsername || 'No PPPoE'}</span>
-              <span className={`rounded-full px-3 py-1 ${pppoeLiveStatus.tone}`}>{pppoeLiveStatus.label}</span>
-              <span className={`rounded-full px-3 py-1 ${radiusVerificationStatus.tone}`}>{radiusVerificationStatus.label}</span>
-              <span className="rounded-full bg-slate-100 px-3 py-1">{customer.zoneName || customer.zoneCode || 'No zone'}</span>
+            <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-slate-600">
+              {customer.phone ? <span className="inline-flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-slate-400" /> {customer.phone}</span> : null}
+              {customer.email && customer.email !== '-' ? <span className="inline-flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-slate-400" /> {customer.email}</span> : null}
+              {customer.address && customer.address !== '-' ? <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-slate-400" /> {customer.address}</span> : null}
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn-secondary" onClick={() => void loadCustomer()} disabled={busyKey === 'refresh'}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              {busyKey === 'refresh' ? 'Refreshing...' : 'Refresh'}
-            </button>
-            <button type="button" className="btn-secondary" onClick={() => selectTab('billing')}>
-              Billing
-            </button>
-            <button type="button" className="btn-secondary" onClick={() => selectTab('devices')}>
-              Network
-            </button>
-            <Link href={`/all-users/${customer.id}/edit`} className="btn-secondary">Edit</Link>
-            <button type="button" className="btn-secondary" onClick={() => void handleReconnectSession()} disabled={busyKey === 'reconnect-session'}>
-              <PlugZap className="mr-2 h-4 w-4" />
-              {busyKey === 'reconnect-session' ? 'Reconnecting...' : 'Reconnect PPPoE'}
-            </button>
-            <button type="button" className="btn-secondary" onClick={() => void handleProvisionPppoe()} disabled={busyKey === 'provision-pppoe'}>
-              {busyKey === 'provision-pppoe' ? 'Provisioning...' : 'Provision PPPoE'}
-            </button>
-            <button type="button" className="btn-secondary" onClick={() => void handleRepairRadius()} disabled={busyKey === 'repair-radius'}>
-              {busyKey === 'repair-radius' ? 'Repairing...' : 'Repair Radius'}
-            </button>
-            <button type="button" className="btn-secondary" onClick={() => void handleResumePppoe()} disabled={busyKey === 'resume-pppoe'}>
-              {busyKey === 'resume-pppoe' ? 'Resuming...' : 'Resume PPPoE'}
-            </button>
-            <button type="button" className="btn-secondary" onClick={() => void handleSuspendPppoe()} disabled={busyKey === 'suspend-pppoe'}>
-              {busyKey === 'suspend-pppoe' ? 'Suspending...' : 'Suspend PPPoE'}
-            </button>
-            <button type="button" className="btn-secondary" onClick={() => void handleDisconnectSession()} disabled={busyKey === 'disconnect-session'}>
-              <PlugZap className="mr-2 h-4 w-4" />
-              Disconnect
-            </button>
-            <button type="button" className="btn-secondary text-rose-600" onClick={() => void handleDeleteCustomer()} disabled={busyKey === 'delete-customer'}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              {busyKey === 'delete-customer' ? 'Deleting...' : 'Delete Customer'}
-            </button>
+          <div className="flex flex-col gap-2 md:items-end">
+            <div className="text-xs text-slate-500">Joined {relativeTime(customer.createdAt)}</div>
+            {customer.expiryAt ? <div className="text-xs text-slate-500">Expires {formatDate(customer.expiryAt)}</div> : null}
           </div>
         </div>
+      </Card>
 
-      </section>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <QuickStat label="Outstanding" value={formatCurrency((customer.invoiceSummary as any)?.dueAmount || 0)} tone={(customer.invoiceSummary as any)?.dueAmount > 0 ? 'rose' : 'emerald'} />
+        <QuickStat label="Total Paid" value={formatCurrency((customer.invoiceSummary as any)?.paidAmount || 0)} tone="emerald" />
+        <QuickStat label="Active Devices" value={String(customer.devices?.length || 0)} tone="purple" />
+        <QuickStat label="Open Tickets" value={String(customer.tickets?.filter((t) => !['closed', 'resolved'].includes(t.status)).length || 0)} tone="amber" />
+      </div>
 
-      <section className="card p-4 md:p-5 space-y-5">
-        <div className="sticky top-0 z-10 -mx-4 -mt-4 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur md:-mx-5 md:-mt-5 md:px-5">
-          <div className="flex flex-wrap gap-2">
-          <button type="button" className={activeTab === 'overview' ? 'btn-primary' : 'btn-secondary'} onClick={() => selectTab('overview')}>Overview</button>
-          <button type="button" className={activeTab === 'billing' ? 'btn-primary' : 'btn-secondary'} onClick={() => selectTab('billing')}>Billing</button>
-          <button type="button" className={activeTab === 'devices' ? 'btn-primary' : 'btn-secondary'} onClick={() => selectTab('devices')}>LAN / WAN / WiFi</button>
-        </div>
-        </div>
-
-        {activeTab === 'overview' ? (
-          <div className="grid gap-4 lg:grid-cols-[1.3fr_0.9fr]">
-            <div className="space-y-3">
-              <div className="card p-5 space-y-4">
-                <h2 className="text-lg font-semibold text-slate-900">Basic details</h2>
-                <div className="grid gap-3 md:grid-cols-2 text-sm">
-                  {overviewCards.map((item) => (
-                    <div key={item.label} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">{item.label}</div>
-                      <div className="mt-2 font-semibold text-slate-900">{formatValue(item.value)}</div>
-                      <div className="mt-1 text-slate-500">{formatValue(item.sub)}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="card p-5 space-y-4">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-lg font-semibold text-slate-900">KYC Documents</h2>
-                  {kycDocs ? (
-                    <span className={`rounded-full px-3 py-1 text-xs font-medium ${
-                      kycDocs.verificationStatus === 'verified' ? 'bg-emerald-100 text-emerald-700'
-                        : kycDocs.verificationStatus === 'rejected' ? 'bg-rose-100 text-rose-700'
-                        : 'bg-amber-100 text-amber-700'
-                    }`}>
-                      {kycDocs.verificationStatus || 'pending'}
-                    </span>
-                  ) : null}
-                </div>
-                {kycDocs ? (
-                  <div className="space-y-4">
-                    {kycDocs.documentNumber ? (
-                      <div className="text-sm text-slate-600">
-                        <span className="font-medium text-slate-900">Aadhaar Number:</span> {kycDocs.documentNumber}
-                      </div>
-                    ) : null}
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      {kycDocs.frontImageUrl ? (
-                        <div className="space-y-1">
-                          <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Aadhaar Front</div>
-                          <img src={kycDocs.frontImageUrl} alt="Aadhaar Front" className="w-full rounded-xl border border-slate-200 object-cover" />
-                          <button
-                            type="button"
-                            className="btn-secondary w-full"
-                            onClick={() => triggerDownload(kycDocs.frontImageUrl!, `${customer?.customerId || customer?.id || 'customer'}-aadhaar-front.jpg`)}
-                          >
-                            Download Front
-                          </button>
-                        </div>
-                      ) : null}
-                      {kycDocs.backImageUrl ? (
-                        <div className="space-y-1">
-                          <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Aadhaar Back</div>
-                          <img src={kycDocs.backImageUrl} alt="Aadhaar Back" className="w-full rounded-xl border border-slate-200 object-cover" />
-                          <button
-                            type="button"
-                            className="btn-secondary w-full"
-                            onClick={() => triggerDownload(kycDocs.backImageUrl!, `${customer?.customerId || customer?.id || 'customer'}-aadhaar-back.jpg`)}
-                          >
-                            Download Back
-                          </button>
-                        </div>
-                      ) : null}
-                      {kycDocs.selfieImageUrl ? (
-                        <div className="space-y-1">
-                          <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Selfie</div>
-                          <img src={kycDocs.selfieImageUrl} alt="Selfie" className="w-full rounded-xl border border-slate-200 object-cover" />
-                          <button
-                            type="button"
-                            className="btn-secondary w-full"
-                            onClick={() => triggerDownload(kycDocs.selfieImageUrl!, `${customer?.customerId || customer?.id || 'customer'}-selfie.jpg`)}
-                          >
-                            Download Selfie
-                          </button>
-                        </div>
-                      ) : null}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {customer.cafDocument?.pdfUrl ? (
-                        <button
-                          type="button"
-                          className="btn-secondary"
-                          onClick={() => void openProtectedDocument(customer.cafDocument!.pdfUrl!).catch(() => toast.error('Failed to open CAF'))}
-                        >
-                          Download CAF PDF
-                        </button>
-                      ) : null}
-                      {kycDocs.documentNumber ? (
-                        <button
-                          type="button"
-                          className="btn-secondary"
-                          onClick={() => void copyValue(kycDocs.documentNumber || '', 'Aadhaar Number')}
-                        >
-                          Copy Aadhaar Number
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-sm text-slate-500">No KYC documents uploaded for this customer yet.</div>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="card p-5 space-y-3">
-                <h2 className="text-lg font-semibold text-slate-900">Last payment</h2>
-                <div className="grid gap-2 text-sm text-slate-600">
-                  <div><span className="font-medium text-slate-900">Amount:</span> {formatAmount(latestPayment?.amount)}</div>
-                  <div><span className="font-medium text-slate-900">Status:</span> {formatValue(latestPayment?.status)}</div>
-                  <div><span className="font-medium text-slate-900">Transaction ID:</span> {formatValue(latestPayment?.transactionId)}</div>
-                  <div><span className="font-medium text-slate-900">Date:</span> {formatDate(latestPayment?.paidAt || latestPayment?.createdAt)}</div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" className="btn-secondary" onClick={() => void copyValue(customer.pppoeUsername || '', 'PPPoE')}>
-                    Copy PPPoE
-                  </button>
-                  <button type="button" className="btn-secondary" onClick={() => void copyValue(String(latestPayment?.transactionId || ''), 'Transaction ID')}>
-                    Copy Txn ID
-                  </button>
-                </div>
-              </div>
-
-              <div className="card p-5 space-y-3">
-                <h2 className="text-lg font-semibold text-slate-900">Network info</h2>
-                <div className="grid gap-2 text-sm text-slate-600">
-                  <div><span className="font-medium text-slate-900">Static IP:</span> {formatValue(customer.radiusService?.currentIpv4)}</div>
-                  <div><span className="font-medium text-slate-900">Pool:</span> {formatValue(customer.radiusService?.ipv4Pool)}</div>
-                  <div><span className="font-medium text-slate-900">PPPoE:</span> {formatValue(customer.pppoeUsername)}</div>
-                  <div><span className="font-medium text-slate-900">Live status:</span> {pppoeLiveStatus.label}</div>
-                  <div><span className="font-medium text-slate-900">Radius state:</span> {radiusVerificationStatus.label}</div>
-                  <div><span className="font-medium text-slate-900">Last control:</span> {formatValue(customer.radiusService?.lastServiceControlAction)}</div>
-                  <div><span className="font-medium text-slate-900">Last auth source:</span> {formatValue(customer.radiusService?.lastAuthTelemetry?.sourceIp)}</div>
-                  <div><span className="font-medium text-slate-900">Auth trust:</span> {customer.radiusService?.lastAuthTelemetry?.matchedTrustedClient === false ? 'Mismatch' : customer.radiusService?.lastAuthTelemetry?.matchedTrustedClient === true ? 'Trusted' : '-'}</div>
-                  <div><span className="font-medium text-slate-900">Last session start:</span> {formatDate(customer.radiusService?.usageSummary?.latestSessionStart)}</div>
-                  <div><span className="font-medium text-slate-900">Last session update:</span> {formatDate(customer.radiusService?.usageSummary?.latestUpdateAt)}</div>
-                  <div><span className="font-medium text-slate-900">Recent usage:</span> {formatDataUsage(customer.radiusService?.usageSummary?.totalOctets)}</div>
-                  <div><span className="font-medium text-slate-900">WAN MAC:</span> {formatValue(primaryDevice?.wanInfo?.macAddress || primaryDevice?.wanInfo?.mac)}</div>
-                  <div><span className="font-medium text-slate-900">BNG:</span> {formatValue(customer.radiusService?.bngNodeCode)}</div>
-                  <div><span className="font-medium text-slate-900">Zone:</span> {formatValue(customer.zoneName || customer.zoneCode)}</div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" className="btn-secondary" onClick={() => void copyValue(String(customer.radiusService?.currentIpv4 || customer.radiusService?.ipv4Pool || ''), 'Network value')}>
-                    Copy IP / Pool
-                  </button>
-                </div>
-              </div>
-
-              <div className="card p-5 space-y-3">
-                <h2 className="text-lg font-semibold text-slate-900">Recent PPPoE sessions</h2>
-                {customer.radiusService?.sessionHistory?.length ? (
-                  <div className="space-y-2">
-                    {customer.radiusService.sessionHistory.map((session) => (
-                      <div key={session.sessionId || `${session.startedAt}-${session.ipAddress}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="font-medium text-slate-900">{session.live ? 'Live session' : 'Closed session'}</div>
-                          <div className={`rounded-full px-2 py-1 text-xs ${session.live ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
-                            {session.live ? 'Live' : 'Closed'}
-                          </div>
-                        </div>
-                        <div className="mt-2 grid gap-1 md:grid-cols-2">
-                          <div>Started: {formatDate(session.startedAt)}</div>
-                          <div>Updated: {formatDate(session.updatedAt)}</div>
-                          <div>Stopped: {formatDate(session.stoppedAt)}</div>
-                          <div>Duration: {formatDuration(session.sessionSeconds)}</div>
-                          <div>IP: {formatValue(session.ipAddress)}</div>
-                          <div>Usage: {formatDataUsage(session.totalOctets)}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-sm text-slate-500">No recent PPPoE session history found.</div>
-                )}
-              </div>
-
-              <div className="card p-5 space-y-3">
-                <h2 className="text-lg font-semibold text-slate-900">Latest auth telemetry</h2>
-                <div className="grid gap-2 text-sm text-slate-600">
-                  <div><span className="font-medium text-slate-900">Source IP:</span> {formatValue(customer.radiusService?.lastAuthTelemetry?.sourceIp)}</div>
-                  <div><span className="font-medium text-slate-900">Reply:</span> {formatValue(customer.radiusService?.lastAuthTelemetry?.reply)}</div>
-                  <div><span className="font-medium text-slate-900">When:</span> {formatDate(customer.radiusService?.lastAuthTelemetry?.authDate)}</div>
-                  <div><span className="font-medium text-slate-900">Trust result:</span> {customer.radiusService?.lastAuthTelemetry?.matchedTrustedClient === false ? 'Mismatch' : customer.radiusService?.lastAuthTelemetry?.matchedTrustedClient === true ? 'Trusted' : '-'}</div>
-                  <div><span className="font-medium text-slate-900">Reason:</span> {formatValue(customer.radiusService?.lastAuthTelemetry?.reason)}</div>
-                  <div><span className="font-medium text-slate-900">Trusted IPs:</span> {customer.radiusService?.lastAuthTelemetry?.trustedClientIps?.length ? customer.radiusService.lastAuthTelemetry.trustedClientIps.join(', ') : '-'}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {activeTab === 'billing' ? (
-          <div className="space-y-4">
-            <div className="grid gap-3 lg:grid-cols-[1.05fr_0.95fr]">
-              <div className="card p-5 space-y-4">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-lg font-semibold text-slate-900">Latest invoice</h2>
-                  {latestInvoice ? (
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        className="btn-secondary"
-                        onClick={() => void openInvoicePdf(latestInvoice.invoiceId || latestInvoice.invoiceNumber || latestInvoice.id)}
-                        disabled={busyKey === `invoice-${latestInvoice.invoiceId || latestInvoice.invoiceNumber || latestInvoice.id}`}
-                      >
-                        Open PDF
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-secondary text-rose-600"
-                        onClick={() => void deleteInvoice(latestInvoice.invoiceId || latestInvoice.invoiceNumber || latestInvoice.id)}
-                        disabled={busyKey === `delete-invoice-${latestInvoice.invoiceId || latestInvoice.invoiceNumber || latestInvoice.id}`}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-                {latestInvoice ? (
-                  <div className="grid gap-3 md:grid-cols-2 text-sm">
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Invoice</div>
-                      <div className="mt-2 font-semibold text-slate-900">{formatValue(latestInvoice.invoiceNumber || latestInvoice.invoiceId)}</div>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Amount</div>
-                      <div className="mt-2 font-semibold text-slate-900">{formatAmount(latestInvoice.amount)}</div>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Status</div>
-                      <div className="mt-2 font-semibold text-slate-900">{formatValue(latestInvoice.paymentStatus)}</div>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Date</div>
-                      <div className="mt-2 font-semibold text-slate-900">{formatDate(latestInvoice.issuedAt || latestInvoice.createdAt || latestInvoice.dueDate)}</div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-sm text-slate-500">No invoice found.</div>
-                )}
-              </div>
-
-              <div className="card p-5 space-y-4">
-                <h2 className="text-lg font-semibold text-slate-900">Last invoices</h2>
-                {recentInvoices.length ? (
-                  <div className="space-y-3">
-                    {recentInvoices.map((invoice) => (
-                      <div key={invoice.id} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="font-semibold text-slate-900">{formatValue(invoice.invoiceNumber || invoice.invoiceId)}</div>
-                          <div className="flex items-center gap-3">
-                            <div className="text-slate-500">{formatDate(invoice.issuedAt || invoice.createdAt || invoice.dueDate)}</div>
-                            <button
-                              type="button"
-                              className="text-xs font-semibold text-rose-600"
-                              onClick={() => void deleteInvoice(invoice.invoiceId || invoice.invoiceNumber || invoice.id)}
-                              disabled={busyKey === `delete-invoice-${invoice.invoiceId || invoice.invoiceNumber || invoice.id}`}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-                        <div className="mt-2 text-slate-600">{formatAmount(invoice.amount)} · {formatValue(invoice.paymentStatus)}</div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-sm text-slate-500">No invoice history found.</div>
-                )}
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {activeTab === 'devices' ? (
-          <div className="space-y-4">
-            <div className="card p-5 space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-lg font-semibold text-slate-900">Attach Router</h2>
-                  <p className="mt-1 text-sm text-slate-500">Search router or ONT by device ID or serial and attach it to this customer.</p>
-                </div>
-                <button type="button" className="btn-secondary" onClick={() => void loadAttachCandidates(attachDeviceQuery)} disabled={busyKey === 'attach-router'}>
-                  Load Inventory
-                </button>
-              </div>
-              <div className="flex flex-col gap-3 md:flex-row">
-                <input
-                  className="input flex-1"
-                  placeholder="Search by device ID or serial number"
-                  value={attachDeviceQuery}
-                  onChange={(e) => setAttachDeviceQuery(e.target.value)}
-                />
-                <button type="button" className="btn-secondary" onClick={() => void loadAttachCandidates(attachDeviceQuery)} disabled={busyKey === 'attach-router'}>
-                  Search
-                </button>
-              </div>
-              {attachCandidates.length ? (
-                <div className="space-y-2">
-                  {attachCandidates.slice(0, 8).map((device) => (
-                    <div key={device.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                      <div className="text-sm text-slate-600">
-                        <div className="font-semibold text-slate-900">{formatValue(device.deviceId || device.name)}</div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          Serial {formatValue(device.serialNumber)} | {formatValue(device.productClass || device.type)} | {device.customerId ? `Mapped ${device.customerId}` : 'Unbound'}
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        className="btn-secondary"
-                        onClick={() => void handleAttachRouter(device.deviceId || device.id)}
-                        disabled={busyKey === 'attach-router' || Boolean(device.customerId && device.customerId !== (customer.customerId || customer.id))}
-                      >
-                        {busyKey === 'attach-router' ? 'Attaching...' : 'Attach'}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
-                  Search inventory to load attachable routers.
-                </div>
-              )}
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="card p-5 space-y-4">
-                <div className="flex items-center gap-2">
-                  <Network className="h-4 w-4 text-slate-400" />
-                  <h2 className="text-lg font-semibold text-slate-900">Static IP</h2>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <input
-                    className={`input ${staticIpError ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : ''}`}
-                    placeholder="Static IPv4"
-                    value={staticIpForm.currentIpv4}
-                    onChange={(e) => setStaticIpForm((prev) => ({ ...prev, currentIpv4: e.target.value }))}
-                  />
-                  <input
-                    className={`input ${staticIpError ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : ''}`}
-                    placeholder="IPv4 Pool"
-                    value={staticIpForm.ipv4Pool}
-                    disabled={Boolean(staticIpForm.currentIpv4.trim())}
-                    onChange={(e) => setStaticIpForm((prev) => ({ ...prev, ipv4Pool: e.target.value }))}
-                  />
-                </div>
-                {staticIpError ? <p className="text-xs text-rose-600">{staticIpError}</p> : null}
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" className="btn-primary" onClick={() => void handleSaveStaticIp()} disabled={busyKey === 'save-static-ip' || Boolean(staticIpError)}>
-                    {busyKey === 'save-static-ip' ? 'Saving...' : 'Save'}
-                  </button>
-                  <button type="button" className="btn-secondary" onClick={() => setStaticIpForm({ currentIpv4: '', ipv4Pool: '' })} disabled={busyKey === 'save-static-ip'}>
-                    Clear
-                  </button>
-                </div>
-              </div>
-
-              <div className="card p-5 space-y-4">
-                <div className="flex items-center gap-2">
-                  <PlugZap className="h-4 w-4 text-slate-400" />
-                  <h2 className="text-lg font-semibold text-slate-900">Session</h2>
-                </div>
-                <div className="grid gap-2 text-sm text-slate-600">
-                  <div><span className="font-medium text-slate-900">PPPoE:</span> {formatValue(customer.pppoeUsername)}</div>
-                  <div><span className="font-medium text-slate-900">Node:</span> {formatValue(customer.radiusService?.bngNodeCode)}</div>
-                  <div><span className="font-medium text-slate-900">IPv4:</span> {formatValue(primaryDevice?.wanInfo?.ipAddress || primaryDevice?.wanInfo?.ipv4Address)}</div>
-                </div>
-                <button type="button" className="btn-secondary" onClick={() => void handleDisconnectSession()} disabled={busyKey === 'disconnect-session'}>
-                  Disconnect Session
-                </button>
-              </div>
-            </div>
-
-            {(customer.devices || []).length ? (
-              customer.devices!.map((device) => {
-                const form = deviceForms[device.deviceId] || {
-                  ssid24: '',
-                  ssid5: '',
-                  password24: '',
-                  password5: '',
-                  pppoeUsername: '',
-                  pppoePassword: '',
-                  natEnabled: true,
-                }
-                const lanClients = Array.isArray(device.lanInfo?.connectedDevices) ? device.lanInfo?.connectedDevices : []
-                return (
-                  <div key={device.id || device.deviceId} className="card p-5 space-y-5">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <h2 className="text-lg font-semibold text-slate-900">{formatValue(device.productClass || device.deviceId, 'Customer device')}</h2>
-                        <div className="mt-1 text-sm text-slate-500">
-                          Serial {formatValue(device.serialNumber)} · Status {formatValue(device.onlineStatus)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-4 xl:grid-cols-3">
-                      <div className="rounded-2xl border border-sky-100 bg-sky-50/60 p-4 space-y-3">
-                        <div className="flex items-center gap-2">
-                          <Router className="h-4 w-4 text-slate-400" />
-                          <h3 className="font-semibold text-slate-900">WAN</h3>
-                        </div>
-                        <div className="grid gap-2 text-sm text-slate-600">
-                          <div><span className="font-medium text-slate-900">PPPoE:</span> {formatValue(device.wanInfo?.pppoeUsername || customer.pppoeUsername)}</div>
-                          <div><span className="font-medium text-slate-900">IPv4:</span> {formatValue(device.wanInfo?.ipAddress || device.wanInfo?.ipv4Address)}</div>
-                          <div><span className="font-medium text-slate-900">Gateway:</span> {formatValue(device.wanInfo?.gateway)}</div>
-                          <div><span className="font-medium text-slate-900">MAC:</span> {formatValue(device.wanInfo?.macAddress || device.wanInfo?.mac)}</div>
-                        </div>
-                        <div className="grid gap-3">
-                          <input className="input" placeholder="PPPoE Username" value={form.pppoeUsername} onChange={(e) => updateDeviceForm(device.deviceId, { pppoeUsername: e.target.value })} />
-                          <input className="input" placeholder="PPPoE Password" type="password" value={form.pppoePassword} onChange={(e) => updateDeviceForm(device.deviceId, { pppoePassword: e.target.value })} />
-                          <label className="flex items-center gap-2 text-sm text-slate-600">
-                            <input type="checkbox" checked={form.natEnabled} onChange={(e) => updateDeviceForm(device.deviceId, { natEnabled: e.target.checked })} />
-                            NAT enabled
-                          </label>
-                          <button type="button" className="btn-primary" onClick={() => void handleDeviceWanUpdate(device)} disabled={busyKey === `wan-${device.deviceId}`}>
-                            {busyKey === `wan-${device.deviceId}` ? 'Saving WAN...' : 'Save WAN'}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="rounded-2xl border border-violet-100 bg-violet-50/50 p-4 space-y-3">
-                        <div className="flex items-center gap-2">
-                          <Wifi className="h-4 w-4 text-slate-400" />
-                          <h3 className="font-semibold text-slate-900">WiFi</h3>
-                        </div>
-                        <div className="grid gap-2 text-sm text-slate-600">
-                          <div><span className="font-medium text-slate-900">SSID 2.4G:</span> {formatValue(device.wifiInfo?.ssid24Masked || device.wifiInfo?.ssid24)}</div>
-                          <div><span className="font-medium text-slate-900">SSID 5G:</span> {formatValue(device.wifiInfo?.ssid5Masked || device.wifiInfo?.ssid5)}</div>
-                        </div>
-                        <div className="grid gap-3">
-                          <input className="input" placeholder="SSID 2.4G" value={form.ssid24} onChange={(e) => updateDeviceForm(device.deviceId, { ssid24: e.target.value })} />
-                          <input className="input" placeholder="SSID 5G" value={form.ssid5} onChange={(e) => updateDeviceForm(device.deviceId, { ssid5: e.target.value })} />
-                          <input className="input" placeholder="Password 2.4G" type="password" value={form.password24} onChange={(e) => updateDeviceForm(device.deviceId, { password24: e.target.value })} />
-                          <input className="input" placeholder="Password 5G" type="password" value={form.password5} onChange={(e) => updateDeviceForm(device.deviceId, { password5: e.target.value })} />
-                          <button type="button" className="btn-primary" onClick={() => void handleDeviceWifiUpdate(device)} disabled={busyKey === `wifi-${device.deviceId}`}>
-                            {busyKey === `wifi-${device.deviceId}` ? 'Saving WiFi...' : 'Save WiFi'}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4 space-y-3">
-                        <div className="flex items-center gap-2">
-                          <Network className="h-4 w-4 text-slate-400" />
-                          <h3 className="font-semibold text-slate-900">LAN</h3>
-                        </div>
-                        <div className="grid gap-2 text-sm text-slate-600">
-                          <div><span className="font-medium text-slate-900">LAN IP:</span> {formatValue(device.lanInfo?.ipAddress || device.lanInfo?.gateway)}</div>
-                          <div><span className="font-medium text-slate-900">LAN MAC:</span> {formatValue(device.lanInfo?.macAddress)}</div>
-                          <div><span className="font-medium text-slate-900">Connected clients:</span> {String(lanClients.length)}</div>
-                        </div>
-                        {lanClients.length ? (
-                          <div className="space-y-2">
-                            {lanClients.slice(0, 5).map((client: any, index: number) => (
-                              <div key={`${device.deviceId}-${index}`} className="rounded-lg bg-white px-3 py-3 text-sm text-slate-600">
-                                <div className="font-medium text-slate-900">{formatValue(client.hostName, 'Client')}</div>
-                                <div className="mt-1">IP {formatValue(client.ipAddress || client.ip)}</div>
-                                <div>MAC {formatValue(client.macAddress || client.mac)}</div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="rounded-lg bg-white px-3 py-3 text-sm text-slate-500">No LAN clients found.</div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })
-            ) : (
-              <div className="card p-10 text-center text-slate-500">No customer device found.</div>
-            )}
-          </div>
-        ) : null}
-      </section>
+      <Tabs items={tabs} />
     </div>
+  )
+}
+
+function QuickStat({ label, value, tone }: { label: string; value: string; tone: 'emerald' | 'rose' | 'purple' | 'amber' }) {
+  const tones = {
+    emerald: 'text-emerald-700 bg-emerald-50 border-emerald-100',
+    rose: 'text-rose-700 bg-rose-50 border-rose-100',
+    purple: 'text-purple-700 bg-purple-50 border-purple-100',
+    amber: 'text-amber-700 bg-amber-50 border-amber-100',
+  }
+  return (
+    <div className={`rounded-2xl border px-5 py-4 ${tones[tone]}`}>
+      <div className="text-[11px] font-bold uppercase tracking-wider opacity-80">{label}</div>
+      <div className="mt-1 text-xl font-bold">{value}</div>
+    </div>
+  )
+}
+
+function OverviewTab({ customer }: { customer: Customer }) {
+  return (
+    <div className="grid gap-5 lg:grid-cols-3">
+      <Card className="lg:col-span-2">
+        <CardTitle>Account Information</CardTitle>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <Field label="Customer ID" value={customer.customerId} mono />
+          <Field label="Service ID" value={customer.serviceId} mono />
+          <Field label="Account Number" value={customer.accountNumber} mono />
+          <Field label="PPPoE Username" value={customer.pppoeUsername} mono />
+          <Field label="Plan" value={customer.plan?.name} />
+          <Field label="Status" value={<StatusBadge status={customer.status} />} />
+          <Field label="Zone" value={customer.zoneName || customer.zoneCode} />
+          <Field label="Installation Date" value={formatDate(customer.installationDate)} />
+          <Field label="Created" value={formatDate(customer.createdAt, true)} />
+          <Field label="Expires" value={customer.expiryAt ? formatDate(customer.expiryAt) : '—'} />
+        </div>
+      </Card>
+
+      <Card>
+        <CardTitle>Service Control</CardTitle>
+        <p className="mt-1 text-xs text-slate-500">PPPoE service controls.</p>
+        <div className="mt-4 space-y-2">
+          <Button variant="secondary" className="w-full justify-start" icon={<Power className="h-4 w-4" />}>
+            {customer.status === 'active' ? 'Suspend Service' : 'Resume Service'}
+          </Button>
+          <Button variant="secondary" className="w-full justify-start" icon={<RefreshCw className="h-4 w-4" />}>Disconnect Session</Button>
+          <Button variant="secondary" className="w-full justify-start" icon={<Cable className="h-4 w-4" />}>Change Plan</Button>
+        </div>
+        {customer.radiusService ? (
+          <div className="mt-5 space-y-2 rounded-xl bg-slate-50 p-3 text-xs">
+            <div className="flex justify-between"><span className="text-slate-500">RADIUS</span><Badge variant="info">{customer.radiusService.status}</Badge></div>
+            <div className="flex justify-between"><span className="text-slate-500">IPv4</span><span className="font-mono text-slate-700">{customer.radiusService.currentIpv4 || '—'}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500">BNG</span><span className="font-mono text-slate-700">{customer.radiusService.bngNodeCode || '—'}</span></div>
+          </div>
+        ) : null}
+      </Card>
+    </div>
+  )
+}
+
+function Field({ label, value, mono }: { label: string; value?: any; mono?: boolean }) {
+  return (
+    <div>
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{label}</div>
+      <div className={`mt-1 text-sm text-slate-900 ${mono ? 'font-mono' : 'font-medium'}`}>
+        {value || <span className="text-slate-400">—</span>}
+      </div>
+    </div>
+  )
+}
+
+function BillingTab({ customer }: { customer: Customer }) {
+  const invoices = customer.invoices || []
+  const payments = customer.payments || []
+  return (
+    <div className="space-y-5">
+      <Card padding="none">
+        <CardHeader><CardTitle>Invoices</CardTitle></CardHeader>
+        {invoices.length === 0 ? (
+          <EmptyState icon={CreditCard} title="No invoices" description="Generated invoices will appear here." />
+        ) : (
+          <table className="w-full">
+            <thead>
+              <tr>
+                <th className="table-header">Invoice</th>
+                <th className="table-header">Amount</th>
+                <th className="table-header">Status</th>
+                <th className="table-header">Due Date</th>
+                <th className="table-header">Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              {invoices.map((inv) => (
+                <tr key={inv.id} className="table-row">
+                  <td className="table-cell font-mono text-sm">{inv.invoiceNumber || inv.invoiceId}</td>
+                  <td className="table-cell font-semibold">{formatCurrency(inv.amount)}</td>
+                  <td className="table-cell"><StatusBadge status={inv.paymentStatus} /></td>
+                  <td className="table-cell text-sm">{formatDate(inv.dueDate)}</td>
+                  <td className="table-cell text-sm">{formatDate(inv.createdAt || inv.issuedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Card>
+
+      <Card padding="none">
+        <CardHeader><CardTitle>Payments</CardTitle></CardHeader>
+        {payments.length === 0 ? (
+          <EmptyState icon={CreditCard} title="No payments" description="Payment transactions will appear here." />
+        ) : (
+          <table className="w-full">
+            <thead>
+              <tr>
+                <th className="table-header">Transaction ID</th>
+                <th className="table-header">Amount</th>
+                <th className="table-header">Method</th>
+                <th className="table-header">Status</th>
+                <th className="table-header">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {payments.map((p) => (
+                <tr key={p.id} className="table-row">
+                  <td className="table-cell font-mono text-sm">{p.transactionId}</td>
+                  <td className="table-cell font-semibold">{formatCurrency(p.amount)}</td>
+                  <td className="table-cell text-sm">{p.method || p.provider || '—'}</td>
+                  <td className="table-cell"><StatusBadge status={p.status} /></td>
+                  <td className="table-cell text-sm">{formatDate(p.paidAt || p.createdAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Card>
+    </div>
+  )
+}
+
+function DevicesTab({ customer }: { customer: Customer }) {
+  const devices = customer.devices || []
+  if (devices.length === 0) return <Card><EmptyState icon={HardDrive} title="No devices" description="Customer devices will appear here once provisioned." /></Card>
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      {devices.map((d) => (
+        <Card key={d.id}>
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-50 text-purple-700">
+              <HardDrive className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h4 className="font-bold text-slate-900">{d.serialNumber || d.deviceId}</h4>
+                <StatusBadge status={d.onlineStatus} />
+              </div>
+              <p className="text-xs text-slate-500">{d.productClass || 'CPE Device'}</p>
+              <div className="mt-3 grid gap-2 text-xs">
+                {d.wanInfo?.ipv4Address ? <div><span className="text-slate-500">IPv4:</span> <span className="font-mono">{d.wanInfo.ipv4Address}</span></div> : null}
+                {d.wifiInfo?.ssid24 ? <div><span className="text-slate-500">SSID 2.4G:</span> {d.wifiInfo.ssid24}</div> : null}
+                {d.wifiInfo?.ssid5 ? <div><span className="text-slate-500">SSID 5G:</span> {d.wifiInfo.ssid5}</div> : null}
+              </div>
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  )
+}
+
+function TicketsTab({ customer }: { customer: Customer }) {
+  const tickets = customer.tickets || []
+  if (tickets.length === 0) return <Card><EmptyState icon={Ticket} title="No tickets" description="Customer support tickets will appear here." /></Card>
+  return (
+    <Card padding="none">
+      <table className="w-full">
+        <thead>
+          <tr>
+            <th className="table-header">Ticket</th>
+            <th className="table-header">Subject</th>
+            <th className="table-header">Priority</th>
+            <th className="table-header">Status</th>
+            <th className="table-header">Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {tickets.map((t) => (
+            <tr key={t.id} className="table-row">
+              <td className="table-cell font-mono text-sm">{t.ticketNumber || t.id}</td>
+              <td className="table-cell"><div className="max-w-md truncate font-medium">{t.subject}</div></td>
+              <td className="table-cell"><Badge variant={t.priority === 'high' || t.priority === 'critical' ? 'danger' : 'neutral'}>{t.priority}</Badge></td>
+              <td className="table-cell"><StatusBadge status={t.status} /></td>
+              <td className="table-cell text-sm">{formatDate(t.createdAt)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Card>
+  )
+}
+
+function SessionsTab({ customer }: { customer: Customer }) {
+  const sessions = customer.radiusService?.sessionHistory || []
+  if (sessions.length === 0) return <Card><EmptyState icon={Wifi} title="No sessions" description="PPPoE session history will appear here." /></Card>
+  return (
+    <Card padding="none">
+      <table className="w-full">
+        <thead>
+          <tr>
+            <th className="table-header">Session</th>
+            <th className="table-header">Started</th>
+            <th className="table-header">Duration</th>
+            <th className="table-header">IP Address</th>
+            <th className="table-header">Data</th>
+            <th className="table-header">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sessions.slice(0, 30).map((s, i) => (
+            <tr key={s.sessionId || i} className="table-row">
+              <td className="table-cell font-mono text-xs">{(s.sessionId || '').slice(-8) || '—'}</td>
+              <td className="table-cell text-sm">{formatDate(s.startedAt, true)}</td>
+              <td className="table-cell text-sm">{Math.round((s.sessionSeconds || 0) / 60)}m</td>
+              <td className="table-cell font-mono text-xs">{s.ipAddress || '—'}</td>
+              <td className="table-cell text-sm">{((s.totalOctets || 0) / 1024 / 1024).toFixed(1)} MB</td>
+              <td className="table-cell">{s.live ? <Badge variant="success" withDot pulse>Live</Badge> : <Badge variant="neutral">Ended</Badge>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Card>
+  )
+}
+
+function DocumentsTab({ customer }: { customer: Customer }) {
+  return (
+    <Card>
+      {customer.cafDocument?.pdfUrl ? (
+        <div className="flex items-start gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50 text-purple-700">
+            <FileText className="h-6 w-6" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h4 className="font-bold text-slate-900">CAF Document</h4>
+            <p className="text-xs text-slate-500">CAF #{customer.cafDocument.cafNumber} · {customer.cafDocument.templateName}</p>
+            <p className="mt-1 text-xs text-slate-500">Generated {formatDate(customer.cafDocument.generatedAt, true)}</p>
+            <a href={customer.cafDocument.pdfUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex"><Button variant="secondary" size="sm">Open PDF</Button></a>
+          </div>
+        </div>
+      ) : (
+        <EmptyState icon={FileText} title="No documents" description="CAF and KYC documents will appear here once uploaded." />
+      )}
+    </Card>
   )
 }

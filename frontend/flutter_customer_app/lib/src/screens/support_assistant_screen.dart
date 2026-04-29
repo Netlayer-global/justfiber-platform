@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../core/app_state.dart';
@@ -48,9 +49,9 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
     _latestTicket = appState.tickets.isNotEmpty ? appState.tickets.first : null;
     setState(() {
       _messages.add(_ChatMessage.bot(
-          'We are here to help you out. Tell me what is happening with your connection, billing, Wi-Fi, or speed.'));
+          'We are here to help you out. Tell me what is happening with your connection, billing, Wi-Fi, or speed.\n\nHindi mein bhi type kar sakte hain — internet nahi chal raha, speed slow hai, bill ka issue, ya Wi-Fi problem.'));
       _messages.add(_ChatMessage.bot(
-          'You can type things like: internet not working, Wi-Fi problem, slow speed, bill issue, or plan issue.'));
+          'You can type things like: internet not working, Wi-Fi problem, slow speed, bill issue, or plan issue.\n\nYa phir: net band ho gaya, speed kam hai, bill bhar diya phir bhi band hai, wifi password bhool gaya.'));
       if (_latestTicket != null) {
         _messages.add(_ChatMessage.bot(
             'Your latest support case is ${_latestTicket!.ticketNumber} with status ${_latestTicket!.status}. If this is about the same issue, type still not resolved.'));
@@ -87,28 +88,55 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
     if (q.contains('bill') ||
         q.contains('due') ||
         q.contains('payment') ||
-        q.contains('recharge')) {
+        q.contains('recharge') ||
+        q.contains('bhar diya') ||
+        q.contains('bhugtan') ||
+        q.contains('invoice') ||
+        q.contains('paisa') ||
+        q.contains('paise')) {
       return 'billing';
     }
     if (q.contains('wifi') ||
         q.contains('wi-fi') ||
         q.contains('ssid') ||
         q.contains('router') ||
-        q.contains('password')) {
+        q.contains('password') ||
+        q.contains('pasword') ||
+        q.contains('passward') ||
+        q.contains('wifi band') ||
+        q.contains('net nahi aa')) {
       return 'wifi';
     }
     if (q.contains('slow') ||
         q.contains('speed') ||
         q.contains('latency') ||
-        q.contains('ping')) {
+        q.contains('ping') ||
+        q.contains('slow hai') ||
+        q.contains('speed kam') ||
+        q.contains('dhima') ||
+        q.contains('buffering') ||
+        q.contains('lagging')) {
       return 'speed';
     }
     if (q.contains('plan') ||
         q.contains('fup') ||
         q.contains('data') ||
         q.contains('upgrade') ||
-        q.contains('cap')) {
+        q.contains('cap') ||
+        q.contains('badlo') ||
+        q.contains('change karo') ||
+        q.contains('recharge plan')) {
       return 'plan';
+    }
+    if (q.contains('band ho gaya') ||
+        q.contains('nahi chal') ||
+        q.contains('nahi aa') ||
+        q.contains('net band') ||
+        q.contains('internet band') ||
+        q.contains('not working') ||
+        q.contains('down hai') ||
+        q.contains('kaam nahi')) {
+      return 'internet';
     }
     return 'internet';
   }
@@ -122,8 +150,62 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
         q.contains('continue') ||
         q.contains('proceed') ||
         q == 'yes' ||
+        q == 'haan' ||
+        q == 'ha' ||
         q.contains('agent') ||
-        q.contains('human');
+        q.contains('human') ||
+        q.contains('abhi bhi') ||
+        q.contains('phir bhi') ||
+        q.contains('theek nahi') ||
+        q.contains('solve nahi') ||
+        q.contains('nahi hua');
+  }
+
+  bool _isTicketOpen(String status) {
+    final value = status.toLowerCase();
+    return !(value.contains('closed') ||
+        value.contains('resolved') ||
+        value.contains('done') ||
+        value.contains('completed'));
+  }
+
+  bool _looksLikeSameIssue(SupportTicketItem ticket, SupportDiagnosis diagnosis) {
+    final issueType = diagnosis.issueType.toLowerCase();
+    final category = ticket.category.toLowerCase();
+    final text = '${ticket.subject} ${ticket.description}'.toLowerCase();
+    if (!_isTicketOpen(ticket.status)) return false;
+    if (issueType == 'billing') {
+      return category.contains('billing') || text.contains('billing') || text.contains('payment');
+    }
+    if (issueType == 'plan') {
+      return text.contains('plan') || text.contains('fup') || text.contains('data');
+    }
+    if (issueType == 'wifi') {
+      return text.contains('wifi') || text.contains('wi-fi') || text.contains('router');
+    }
+    if (issueType == 'speed') {
+      return text.contains('speed') || text.contains('slow');
+    }
+    return category.contains('technical') ||
+        text.contains('internet') ||
+        text.contains('offline') ||
+        text.contains('link');
+  }
+
+  SupportTicketItem? _findMatchingOpenTicket(
+      AppState appState, SupportDiagnosis diagnosis) {
+    for (final ticket in appState.tickets) {
+      if (_looksLikeSameIssue(ticket, diagnosis)) return ticket;
+    }
+    return null;
+  }
+
+  Future<void> _copyTicketReference(SupportTicketItem ticket) async {
+    await Clipboard.setData(ClipboardData(text: ticket.ticketNumber));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Reference copied: ${ticket.ticketNumber}')),
+    );
   }
 
   bool _handleContextualReply(String text) {
@@ -193,7 +275,8 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
         issueType: issueType,
       );
       if (!mounted) return;
-      final actions = _actionsForDiagnosis(diagnosis);
+      final matchingTicket = _findMatchingOpenTicket(appState, diagnosis);
+      final actions = _actionsForDiagnosis(diagnosis, matchingTicket);
       setState(() {
         _lastDiagnosis = diagnosis;
         _loading = false;
@@ -214,6 +297,26 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
                 .entries
                 .map((e) => '${e.key + 1}. ${e.value}')
                 .join('\n'),
+          ));
+        }
+        if (matchingTicket != null) {
+          _latestTicket = matchingTicket;
+          _messages.add(_ChatMessage.bot(
+            'You already have an open case for this issue: ${matchingTicket.ticketNumber} (${matchingTicket.status}). It is better to continue with the same case instead of raising a duplicate complaint.',
+            actions: [
+              _ChatAction(
+                label: 'Copy reference',
+                onTap: () => _copyTicketReference(matchingTicket),
+                primary: true,
+              ),
+              _ChatAction(
+                label: 'Check again',
+                onTap: () => _sendUserIntent(
+                  'Please check my issue again',
+                  issueTypeOverride: diagnosis.issueType,
+                ),
+              ),
+            ],
           ));
         }
       });
@@ -239,7 +342,26 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
     }
   }
 
-  List<_ChatAction> _actionsForDiagnosis(SupportDiagnosis diagnosis) {
+  List<_ChatAction> _actionsForDiagnosis(
+    SupportDiagnosis diagnosis,
+    SupportTicketItem? matchingTicket,
+  ) {
+    if (matchingTicket != null) {
+      return [
+        _ChatAction(
+          label: 'Copy reference',
+          onTap: () => _copyTicketReference(matchingTicket),
+          primary: true,
+        ),
+        _ChatAction(
+          label: 'Check again',
+          onTap: () => _sendUserIntent(
+            'Please check my issue again',
+            issueTypeOverride: diagnosis.issueType,
+          ),
+        ),
+      ];
+    }
     if (diagnosis.diagnosisCode == 'billing_suspended' ||
         diagnosis.diagnosisCode == 'payment_pending') {
       return [
@@ -339,6 +461,24 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
     final appState = AppStateScope.of(context);
     final diagnosis = _lastDiagnosis;
     if (diagnosis == null || _raisingTicket) return;
+    final matchingTicket = _findMatchingOpenTicket(appState, diagnosis);
+    if (matchingTicket != null) {
+      setState(() {
+        _latestTicket = matchingTicket;
+        _messages.add(_ChatMessage.bot(
+          'An open case already exists for this issue: ${matchingTicket.ticketNumber}. I have kept that case as the active reference so we do not create a duplicate complaint.',
+          actions: [
+            _ChatAction(
+              label: 'Copy reference',
+              onTap: () => _copyTicketReference(matchingTicket),
+              primary: true,
+            ),
+          ],
+        ));
+      });
+      _scrollToBottom();
+      return;
+    }
     setState(() => _raisingTicket = true);
     final subject = diagnosis.issueType == 'billing'
         ? 'Billing issue detected'

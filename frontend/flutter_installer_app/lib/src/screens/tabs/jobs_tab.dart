@@ -31,15 +31,18 @@ class _JobsTabState extends State<JobsTab> {
         .where((j) =>
             j.jobNumber.toLowerCase().contains(q) ||
             j.customerName.toLowerCase().contains(q) ||
+            j.customerPhone.toLowerCase().contains(q) ||
             j.customerAddress.toLowerCase().contains(q) ||
             j.status.toLowerCase().contains(q))
         .toList();
   }
 
   String _shortTime(DateTime value) {
-    final h = value.hour.toString().padLeft(2, '0');
-    final m = value.minute.toString().padLeft(2, '0');
-    return '$h:$m';
+    final ist = value.toUtc().add(const Duration(hours: 5, minutes: 30));
+    final h12 = ist.hour % 12 == 0 ? 12 : ist.hour % 12;
+    final min = ist.minute.toString().padLeft(2, '0');
+    final ampm = ist.hour < 12 ? 'AM' : 'PM';
+    return '$h12:$min $ampm';
   }
 
   @override
@@ -422,13 +425,16 @@ class _InstallCard extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            Text(
-                              job.jobNumber,
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 15,
-                                letterSpacing: -0.3,
+                            Flexible(
+                              child: Text(
+                                job.jobNumber,
+                                style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15,
+                                  letterSpacing: -0.3,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             if (priorityInfo != null) ...[
@@ -521,6 +527,14 @@ class _InstallCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (job.customerName.isNotEmpty) ...[
+                    _infoRow(Icons.person_rounded, job.customerName),
+                    const SizedBox(height: 4),
+                  ],
+                  if (job.customerPhone.isNotEmpty) ...[
+                    _infoRow(Icons.phone_rounded, '+91 ${job.customerPhone}'),
+                    const SizedBox(height: 4),
+                  ],
                   _infoRow(Icons.location_on_rounded, job.customerAddress,
                       maxLines: 2),
                   if (job.planName.isNotEmpty) ...[
@@ -554,7 +568,7 @@ class _InstallCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        job.scheduledAt,
+                        _fmtIst(job.scheduledAt),
                         style: GoogleFonts.inter(
                             color: kMuted, fontSize: 11),
                         overflow: TextOverflow.ellipsis,
@@ -681,5 +695,23 @@ class _InstallCard extends StatelessWidget {
     if (s.contains('defer')) return ('DEFERRED', const Color(0xFFE879F9));
     if (s.contains('cancel')) return ('CANCELLED', const Color(0xFFEF4444));
     return (status.toUpperCase(), kMuted);
+  }
+}
+
+// IST = UTC+5:30
+String _fmtIst(String raw) {
+  if (raw.isEmpty) return raw;
+  try {
+    final utc = DateTime.parse(raw).toUtc();
+    final ist = utc.add(const Duration(hours: 5, minutes: 30));
+    final d = ist.day.toString().padLeft(2, '0');
+    final mo = ist.month.toString().padLeft(2, '0');
+    final y = ist.year;
+    final h12 = ist.hour % 12 == 0 ? 12 : ist.hour % 12;
+    final min = ist.minute.toString().padLeft(2, '0');
+    final ampm = ist.hour < 12 ? 'AM' : 'PM';
+    return '$d-$mo-$y  $h12:$min $ampm';
+  } catch (_) {
+    return raw;
   }
 }

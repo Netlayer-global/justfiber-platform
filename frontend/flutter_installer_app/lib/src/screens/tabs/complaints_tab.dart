@@ -31,15 +31,18 @@ class _ComplaintsTabState extends State<ComplaintsTab> {
         .where((j) =>
             j.jobNumber.toLowerCase().contains(q) ||
             j.customerName.toLowerCase().contains(q) ||
+            j.customerPhone.toLowerCase().contains(q) ||
             j.customerAddress.toLowerCase().contains(q) ||
             j.status.toLowerCase().contains(q))
         .toList();
   }
 
   String _shortTime(DateTime value) {
-    final h = value.hour.toString().padLeft(2, '0');
-    final m = value.minute.toString().padLeft(2, '0');
-    return '$h:$m';
+    final ist = value.toUtc().add(const Duration(hours: 5, minutes: 30));
+    final h12 = ist.hour % 12 == 0 ? 12 : ist.hour % 12;
+    final min = ist.minute.toString().padLeft(2, '0');
+    final ampm = ist.hour < 12 ? 'AM' : 'PM';
+    return '$h12:$min $ampm';
   }
 
   @override
@@ -359,6 +362,7 @@ class _ComplaintCard extends StatelessWidget {
   final InstallerJob job;
 
   static const _amber = Color(0xFFFBBF24);
+  static const _orange = Color(0xFFF97316);
 
   @override
   Widget build(BuildContext context) {
@@ -366,10 +370,30 @@ class _ComplaintCard extends StatelessWidget {
     final priorityInfo = _priorityInfo(job.priority);
     final isDeferred = job.status.toLowerCase().contains('defer');
     final isCancelled = job.status.toLowerCase().contains('cancel');
-    final rxPower = job.rxPowerText.trim().isEmpty ? '-' : job.rxPowerText.trim();
-    final serial = job.finalSerialNumber.trim().isEmpty ? '-' : job.finalSerialNumber.trim();
-    final config = job.configStatus.trim().isEmpty ? 'Not synced' : job.configStatus.trim().replaceAll('_', ' ');
-    final optical = job.opticalHealth.trim().isEmpty ? 'Unknown' : job.opticalHealth.trim().replaceAll('_', ' ');
+    final rxPower = job.rxPowerText.trim();
+    final opticalRaw = job.opticalHealth.trim();
+    final issueType = job.complaintCategory.trim().replaceAll('_', ' ');
+    final issueDesc = job.complaintDescription.trim();
+    final hasIssue = issueType.isNotEmpty || issueDesc.isNotEmpty;
+
+    // Optical health color
+    final opticalColor = opticalRaw.toLowerCase().contains('good')
+        ? const Color(0xFF10B981)
+        : opticalRaw.toLowerCase().contains('warn')
+            ? const Color(0xFFF59E0B)
+            : opticalRaw.toLowerCase().contains('critical')
+                ? const Color(0xFFEF4444)
+                : kSubtle;
+
+    // RX power color
+    final rxNum = double.tryParse(rxPower.replaceAll(RegExp(r'[^0-9.\-]'), ''));
+    final rxColor = rxNum == null
+        ? kSubtle
+        : rxNum >= -22
+            ? const Color(0xFF10B981)
+            : rxNum >= -26
+                ? const Color(0xFFF59E0B)
+                : const Color(0xFFEF4444);
 
     return GestureDetector(
       onTap: () async {
@@ -383,13 +407,13 @@ class _ComplaintCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: kSurface,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _amber.withValues(alpha: 0.22)),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: _amber.withValues(alpha: 0.2)),
           boxShadow: [
             BoxShadow(
-              color: _amber.withValues(alpha: 0.05),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
+              color: _amber.withValues(alpha: 0.06),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
@@ -398,222 +422,224 @@ class _ComplaintCard extends StatelessWidget {
           children: [
             // ── Hero strip ────────────────────────────────────
             Container(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+              padding: const EdgeInsets.fromLTRB(14, 13, 14, 13),
               decoration: BoxDecoration(
-                color: _amber.withValues(alpha: 0.06),
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(18)),
+                color: _amber.withValues(alpha: 0.07),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 40,
-                    height: 40,
+                    width: 42,
+                    height: 42,
                     decoration: BoxDecoration(
-                      color: _amber.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(11),
-                      border: Border.all(
-                          color: _amber.withValues(alpha: 0.3)),
+                      color: _amber.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _amber.withValues(alpha: 0.3)),
                     ),
-                    child: const Icon(Icons.build_circle_rounded,
-                        color: _amber, size: 20),
+                    child: const Icon(Icons.build_circle_rounded, color: _amber, size: 20),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Text(
-                              job.jobNumber,
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 15,
-                                letterSpacing: -0.3,
-                              ),
-                            ),
-                            if (priorityInfo != null) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: priorityInfo.$2
-                                      .withValues(alpha: 0.15),
-                                  borderRadius:
-                                      BorderRadius.circular(5),
-                                  border: Border.all(
-                                      color: priorityInfo.$2
-                                          .withValues(alpha: 0.35)),
-                                ),
-                                child: Text(
-                                  priorityInfo.$1,
-                                  style: GoogleFonts.inter(
-                                    color: priorityInfo.$2,
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.6,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        const SizedBox(height: 1),
-                        Text(
-                          job.customerName,
-                          style: GoogleFonts.inter(
-                            color: Colors.white70,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                        Row(children: [
+                          Flexible(
+                            child: Text(job.jobNumber,
+                                style: GoogleFonts.inter(
+                                    color: Colors.white, fontWeight: FontWeight.w900,
+                                    fontSize: 15, letterSpacing: -0.3),
+                                overflow: TextOverflow.ellipsis),
                           ),
-                        ),
+                          if (priorityInfo != null) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: priorityInfo.$2.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(5),
+                                border: Border.all(color: priorityInfo.$2.withValues(alpha: 0.35)),
+                              ),
+                              child: Text(priorityInfo.$1,
+                                  style: GoogleFonts.inter(
+                                      color: priorityInfo.$2, fontSize: 8,
+                                      fontWeight: FontWeight.w800, letterSpacing: 0.6)),
+                            ),
+                          ],
+                        ]),
+                        const SizedBox(height: 2),
+                        if (job.customerName.isNotEmpty && job.customerName != '-')
+                          Text(job.customerName,
+                              style: GoogleFonts.inter(
+                                  color: Colors.white70, fontSize: 12,
+                                  fontWeight: FontWeight.w700)),
                       ],
                     ),
                   ),
-                  // Call button
+                  // Call
                   if (job.customerPhone.isNotEmpty) ...[
-                    _heroBtn(
-                      icon: Icons.call_rounded,
-                      color: const Color(0xFF34D399),
-                      onTap: () => _openUri('tel:${job.customerPhone}'),
-                    ),
+                    _heroBtn(icon: Icons.call_rounded,
+                        color: const Color(0xFF34D399),
+                        onTap: () => _openUri('tel:${job.customerPhone}')),
                     const SizedBox(width: 6),
                   ],
-                  // Map button
-                  if (job.mapUrl.isNotEmpty ||
-                      (job.latitude != null && job.longitude != null)) ...[
+                  // WhatsApp
+                  if (job.customerPhone.isNotEmpty) ...[
+                    _heroBtn(icon: Icons.chat_rounded,
+                        color: const Color(0xFF25D366),
+                        onTap: () => _openUri(
+                            'https://wa.me/91${job.customerPhone}?text=${Uri.encodeComponent('Hello! I am the JustFiber technician assigned to your complaint. I will be coming shortly.')}')),
+                    const SizedBox(width: 6),
+                  ],
+                  // Map
+                  if (job.mapUrl.isNotEmpty || (job.latitude != null && job.longitude != null)) ...[
                     _heroBtn(
-                      icon: Icons.map_rounded,
-                      color: const Color(0xFF38BDF8),
-                      onTap: () => _openUri(job.mapUrl.isNotEmpty
-                          ? job.mapUrl
-                          : 'https://maps.google.com/?q=${job.latitude},${job.longitude}'),
-                    ),
+                        icon: Icons.map_rounded,
+                        color: const Color(0xFF0EA5E9),
+                        onTap: () => _openUri(job.mapUrl.isNotEmpty
+                            ? job.mapUrl
+                            : 'https://maps.google.com/?q=${job.latitude},${job.longitude}')),
                     const SizedBox(width: 6),
                   ],
                   // Status badge
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                     decoration: BoxDecoration(
-                      color: statusInfo.$2.withValues(alpha: 0.12),
+                      color: statusInfo.$2.withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                          color: statusInfo.$2.withValues(alpha: 0.35)),
+                      border: Border.all(color: statusInfo.$2.withValues(alpha: 0.4)),
                     ),
-                    child: Text(
-                      statusInfo.$1,
-                      style: GoogleFonts.inter(
-                        color: statusInfo.$2,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
+                    child: Text(statusInfo.$1,
+                        style: GoogleFonts.inter(
+                            color: statusInfo.$2, fontSize: 10, fontWeight: FontWeight.w800)),
                   ),
                 ],
               ),
             ),
 
-            // ── Info ──────────────────────────────────────────
+            // ── Issue banner ──────────────────────────────────
+            if (hasIssue)
+              Container(
+                margin: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: _orange.withValues(alpha: 0.09),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: _orange.withValues(alpha: 0.35)),
+                ),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Icon(Icons.report_problem_rounded, color: _orange, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    if (issueType.isNotEmpty)
+                      Text(issueType.toUpperCase(),
+                          style: GoogleFonts.inter(
+                              color: _orange, fontSize: 10,
+                              fontWeight: FontWeight.w800, letterSpacing: 0.6)),
+                    if (issueDesc.isNotEmpty) ...[
+                      if (issueType.isNotEmpty) const SizedBox(height: 3),
+                      Text(issueDesc,
+                          style: GoogleFonts.inter(
+                              color: const Color(0xFFFED7AA), fontSize: 13, height: 1.4),
+                          maxLines: 2, overflow: TextOverflow.ellipsis),
+                    ],
+                  ])),
+                ]),
+              ),
+
+            // ── Info rows ─────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on_rounded,
-                          color: kMuted, size: 13),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          job.customerAddress,
-                          style: GoogleFonts.inter(
-                              color: kMuted, fontSize: 12, height: 1.3),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Defer note
-                  if (isDeferred && job.deferNote.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    _noteRow(Icons.schedule_rounded, job.deferNote,
-                        const Color(0xFFFBBF24)),
-                  ],
-                  // Cancel note
-                  if (isCancelled && job.cancelNote.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    _noteRow(Icons.cancel_outlined, job.cancelNote,
-                        const Color(0xFFFCA5A5)),
-                  ],
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _metricChip('Router', serial, Icons.router_rounded),
-                      _metricChip('RX Power', rxPower, Icons.network_check_rounded),
-                      _metricChip('Optical', optical, Icons.wifi_tethering_rounded),
-                      _metricChip('Config', config, Icons.settings_ethernet_rounded),
-                    ],
-                  ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                if (job.customerPhone.isNotEmpty)
+                  _infoRow(Icons.phone_rounded, '+91 ${job.customerPhone}'),
+                if (job.customerAddress.isNotEmpty && job.customerAddress != '-') ...[
+                  const SizedBox(height: 4),
+                  _infoRow(Icons.location_on_rounded, job.customerAddress, maxLines: 2),
                 ],
-              ),
+                if (isDeferred && job.deferNote.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  _noteRow(Icons.schedule_rounded, job.deferNote, const Color(0xFFFBBF24)),
+                ],
+                if (isCancelled && job.cancelNote.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  _noteRow(Icons.cancel_outlined, job.cancelNote, const Color(0xFFFCA5A5)),
+                ],
+
+                // ── Diagnostics row ───────────────────────────
+                const SizedBox(height: 10),
+                Row(children: [
+                  // RX Power badge
+                  if (rxPower.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: rxColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: rxColor.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Container(width: 6, height: 6,
+                            decoration: BoxDecoration(color: rxColor, shape: BoxShape.circle)),
+                        const SizedBox(width: 5),
+                        Text('RX $rxPower dBm',
+                            style: GoogleFonts.inter(
+                                color: rxColor, fontSize: 11, fontWeight: FontWeight.w700)),
+                      ]),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  // Optical health badge
+                  if (opticalRaw.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: opticalColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: opticalColor.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.wifi_tethering_rounded, color: opticalColor, size: 12),
+                        const SizedBox(width: 4),
+                        Text(opticalRaw.replaceAll('_', ' ').toUpperCase(),
+                            style: GoogleFonts.inter(
+                                color: opticalColor, fontSize: 11, fontWeight: FontWeight.w700)),
+                      ]),
+                    ),
+                  ],
+                ]),
+              ]),
             ),
 
             // ── Footer ────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-              child: Row(
-                children: [
-                  if (job.scheduledAt.isNotEmpty) ...[
-                    const Icon(Icons.schedule_rounded,
-                        color: kMuted, size: 12),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        job.scheduledAt,
-                        style: GoogleFonts.inter(
-                            color: kMuted, fontSize: 11),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                  ] else
-                    const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: _amber.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                          color: _amber.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Open Job',
-                          style: GoogleFonts.inter(
-                            color: _amber,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.arrow_forward_rounded,
-                            color: _amber, size: 13),
-                      ],
-                    ),
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 13),
+              child: Row(children: [
+                if (job.scheduledAt.isNotEmpty) ...[
+                  const Icon(Icons.schedule_rounded, color: kMuted, size: 12),
+                  const SizedBox(width: 4),
+                  Expanded(child: Text(_fmtIst(job.scheduledAt),
+                      style: GoogleFonts.inter(color: kMuted, fontSize: 11),
+                      overflow: TextOverflow.ellipsis)),
+                ] else
+                  const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _amber.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: _amber.withValues(alpha: 0.35)),
                   ),
-                ],
-              ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text('Open Job',
+                        style: GoogleFonts.inter(
+                            color: _amber, fontSize: 12, fontWeight: FontWeight.w700)),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.arrow_forward_rounded, color: _amber, size: 13),
+                  ]),
+                ),
+              ]),
             ),
           ],
         ),
@@ -621,50 +647,23 @@ class _ComplaintCard extends StatelessWidget {
     );
   }
 
-  Widget _metricChip(String label, String value, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0x1AFBBF24)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+  Widget _infoRow(IconData icon, String text, {int maxLines = 1}) => Row(children: [
+        Icon(icon, color: kMuted, size: 13),
+        const SizedBox(width: 6),
+        Expanded(child: Text(text,
+            style: GoogleFonts.inter(color: kMuted, fontSize: 12, height: 1.3),
+            maxLines: maxLines, overflow: TextOverflow.ellipsis)),
+      ]);
+
+  Widget _noteRow(IconData icon, String text, Color color) => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: _amber, size: 14),
-          const SizedBox(width: 6),
-          Text(
-            '$label: $value',
-            style: GoogleFonts.inter(
-              color: const Color(0xFFE2E8F0),
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+          Icon(icon, color: color, size: 12),
+          const SizedBox(width: 5),
+          Expanded(child: Text(text,
+              style: GoogleFonts.inter(color: color, fontSize: 11, height: 1.3),
+              maxLines: 2, overflow: TextOverflow.ellipsis)),
         ],
-      ),
-    );
-  }
-
-  Widget _noteRow(IconData icon, String text, Color color) => Padding(
-        padding: const EdgeInsets.only(top: 0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 12),
-            const SizedBox(width: 5),
-            Expanded(
-              child: Text(
-                text,
-                style: GoogleFonts.inter(
-                    color: color, fontSize: 11, height: 1.3),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
       );
 
   Widget _heroBtn({
@@ -715,5 +714,23 @@ class _ComplaintCard extends StatelessWidget {
     if (s.contains('defer')) return ('DEFERRED', const Color(0xFFE879F9));
     if (s.contains('cancel')) return ('CANCELLED', const Color(0xFFEF4444));
     return (status.toUpperCase(), kMuted);
+  }
+}
+
+// IST = UTC+5:30
+String _fmtIst(String raw) {
+  if (raw.isEmpty) return raw;
+  try {
+    final utc = DateTime.parse(raw).toUtc();
+    final ist = utc.add(const Duration(hours: 5, minutes: 30));
+    final d = ist.day.toString().padLeft(2, '0');
+    final mo = ist.month.toString().padLeft(2, '0');
+    final y = ist.year;
+    final h12 = ist.hour % 12 == 0 ? 12 : ist.hour % 12;
+    final min = ist.minute.toString().padLeft(2, '0');
+    final ampm = ist.hour < 12 ? 'AM' : 'PM';
+    return '$d-$mo-$y  $h12:$min $ampm';
+  } catch (_) {
+    return raw;
   }
 }

@@ -14,6 +14,7 @@ import { PaymentTransaction } from "../../models/PaymentTransaction.js";
 import { PlanCatalog } from "../../models/PlanCatalog.js";
 import { SalesAgent } from "../../models/SalesAgent.js";
 import { salesBookingPaymentConfirmSchema, salesBookingPaymentLinkSchema, salesKycSchema, salesLeadSchema, salesLoginSchema } from "./schemas.js";
+import { razorpayClient } from "../../integrations/razorpayClient.js";
 
 export const salesAppRouter = Router();
 
@@ -254,6 +255,53 @@ salesAppRouter.get(
     const leadIds = await Lead.find({ salesAgentId: req.salesAgent._id }).distinct("_id");
     const bookings = await ConnectionBooking.find({ leadId: { $in: leadIds } }).sort({ createdAt: -1 }).lean();
     return ok(res, bookings);
+  })
+);
+
+salesAppRouter.delete(
+  "/bookings/:bookingId",
+  requireSalesAuth,
+  asyncHandler(async (req, res) => {
+    const { booking } = await ensureSalesBookingOwnership(req.params.bookingId, req.salesAgent._id);
+    const blocked = ["completed", "installed", "active"];
+    if (blocked.includes(String(booking.status || "").toLowerCase())) {
+      throw new ApiError(409, `Cannot delete a booking with status '${booking.status}'`);
+    }
+    const bookingNumber = booking.bookingNumber;
+    await ConnectionBooking.deleteOne({ _id: booking._id });
+    return ok(res, { deleted: true, bookingNumber });
+  })
+);
+
+salesAppRouter.post(
+  "/bookings/:bookingId/payment-link",
+  requireSalesAuth,
+  asyncHandler(async (req, res) => {
+    const { booking } = await ensureSalesBookingOwnership(req.params.bookingId, req.salesAgent._id);
+    const amount =
+      Number(req.body?.amount || 0) ||
+      Number(booking.selectedPlan?.totalAmount || booking.selectedPlan?.amount || booking.payment?.amount || 0);
+    if (!amount || amount <= 0) throw new ApiError(400, "A valid amount is required to generate the payment link");
+
+    const link = await razorpayClient.createPaymentLink({
+      amount,
+      description: booking.selectedPlan?.planName
+        ? `${booking.selectedPlan.planName} — Booking ${booking.bookingNumber}`
+        : `Booking ${booking.bookingNumber}`,
+      customerName: booking.personalDetails?.fullName || undefined,
+      customerContact: booking.personalDetails?.mobile || undefined,
+      customerEmail: booking.personalDetails?.email || undefined,
+      referenceId: booking.bookingNumber,
+      notes: { bookingId: String(booking._id), bookingNumber: booking.bookingNumber },
+    });
+
+    booking.payment = {
+      ...(booking.payment || {}),
+      razorpayPaymentLinkId: link.id,
+      razorpayPaymentLinkUrl: link.short_url,
+    };
+    await booking.save();
+    return ok(res, { paymentLink: link.short_url, linkId: link.id, amount });
   })
 );
 

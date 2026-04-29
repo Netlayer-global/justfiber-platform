@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -31,7 +31,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   String _selectedDurationLabel = '1 month';
   static const String _selectedPaymentMode = 'razorpay';
   String? _selectedSlotCode = 'morning';
-  String? _selectedSlotLabel = '10 AM – 1 PM';
+  String? _selectedSlotLabel = '10 AM â€“ 1 PM';
   DateTime _preferredDate = DateTime.now().add(const Duration(days: 1));
   final MapController _mapController = MapController();
   LatLng _selectedLocation = const LatLng(28.6139, 77.2090);
@@ -42,6 +42,8 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   bool _locationServiceDisabled = false;
   bool _usedCurrentLocation = false;
   bool _showUnavailableState = false;
+  bool _manualEnquiryMode = false;
+  String? _manualLeadNumber;
   bool _draftHydrated = false;
   final nameController = TextEditingController();
   final mobileController = TextEditingController();
@@ -79,7 +81,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       _selectedSlotCode =
           draft.selectedSlotCode.isEmpty ? 'morning' : draft.selectedSlotCode;
       _selectedSlotLabel = draft.selectedSlotLabel.isEmpty
-          ? '10 AM – 1 PM'
+          ? '10 AM â€“ 1 PM'
           : draft.selectedSlotLabel;
       _preferredDate = DateTime.tryParse(draft.preferredDateIso) ??
           DateTime.now().add(const Duration(days: 1));
@@ -111,7 +113,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     super.dispose();
   }
 
-  // ─── Build ─────────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Build â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @override
   Widget build(BuildContext context) {
@@ -154,7 +156,11 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                   if (step == 1) _planStep(appState, plans),
                   if (step == 2) _durationStep(plans),
                   if (step == 3) _bookingStep(appState, plans),
-                  if (step == 4 && latestBooking != null)
+                  if (step == 4 && _manualLeadNumber != null)
+                    _leadSuccessStep(plans),
+                  if (step == 4 &&
+                      _manualLeadNumber == null &&
+                      latestBooking != null)
                     _successStep(latestBooking),
                 ],
               ),
@@ -165,7 +171,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     );
   }
 
-  // ─── Steps ─────────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Steps â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _addressStep(AppState appState) {
     final feasibility = appState.feasibility;
@@ -193,7 +199,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Draft restored — continue where you left off.',
+                      'Draft restored â€” continue where you left off.',
                       style: GoogleFonts.inter(
                           color: kPrimary,
                           fontSize: 13,
@@ -256,7 +262,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                     )
                   : const Icon(Icons.my_location_rounded, size: 18),
               label: Text(
-                _locationBusy ? 'Fetching location…' : 'Use Current Location',
+                _locationBusy ? 'Fetching locationâ€¦' : 'Use Current Location',
                 style: GoogleFonts.inter(fontWeight: FontWeight.w700),
               ),
               style: FilledButton.styleFrom(
@@ -511,7 +517,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
 
           const SizedBox(height: 18),
           _primaryBtn(
-            label: appState.bookingBusy ? 'Checking…' : 'Confirm & View Plans',
+            label: appState.bookingBusy ? 'Checkingâ€¦' : 'Confirm & View Plans',
             onPressed: appState.bookingBusy
                 ? null
                 : () async {
@@ -530,28 +536,52 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                       }
                       setState(() {
                         _showUnavailableState = false;
+                        _manualEnquiryMode = false;
+                        _manualLeadNumber = null;
                         step = 1;
                       });
                       _persistBookingDraft();
                     } else {
-                      final leadNumber = await appState.submitFeasibilityLead(
-                        fullName: nameController.text.trim(),
-                        mobile: mobileController.text.trim(),
-                        address: addressController.text.trim(),
-                        pinCode: pinController.text.trim(),
-                        lat: _selectedLocation.latitude,
-                        lng: _selectedLocation.longitude,
-                      );
+                      if (appState.plans.isEmpty) {
+                        await appState.refreshPlans();
+                        if (!mounted) return;
+                      }
                       if (!mounted) return;
-                      setState(() => _showUnavailableState = true);
+                      setState(() {
+                        _showUnavailableState = true;
+                        _manualEnquiryMode = true;
+                        _manualLeadNumber = null;
+                        step = appState.plans.isNotEmpty ? 1 : 0;
+                      });
                       ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                      if (leadNumber != null) {
+                      if (appState.plans.isNotEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                                'Lead $leadNumber created for manual follow-up.'),
+                                'Address is not live yet. Choose a preferred plan and submit the enquiry for sales follow-up.'),
                           ),
                         );
+                      } else {
+                        final leadNumber = await appState.submitFeasibilityLead(
+                          fullName: nameController.text.trim(),
+                          mobile: mobileController.text.trim(),
+                          email: emailController.text.trim().isEmpty
+                              ? null
+                              : emailController.text.trim(),
+                          address: addressController.text.trim(),
+                          pinCode: pinController.text.trim(),
+                          lat: _selectedLocation.latitude,
+                          lng: _selectedLocation.longitude,
+                        );
+                        if (!mounted) return;
+                        if (leadNumber != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                  'Lead $leadNumber created for manual follow-up.'),
+                            ),
+                          );
+                        }
                       }
                     }
                   },
@@ -663,7 +693,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Plans are loading…',
+                  Text('Plans are loadingâ€¦',
                       style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
@@ -672,7 +702,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                   Text(
                     (appState.error ?? '').isNotEmpty
                         ? appState.error!
-                        : 'Serviceability check passed. Retrying plan catalog…',
+                        : 'Serviceability check passed. Retrying plan catalogâ€¦',
                     style: GoogleFonts.inter(
                         color: kMuted, height: 1.45, fontSize: 13),
                   ),
@@ -778,6 +808,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           const SizedBox(height: 8),
           _summaryBox([
             ('Duration', _selectedDurationLabel),
+            ('Preferred slot', _selectedSlotLabel ?? '—'),
             ('Plan amount', 'Rs ${recurringAmount.toStringAsFixed(0)}'),
             ('Setup charges', 'Rs ${setupAmount.toStringAsFixed(0)}'),
             ('Payable now', 'Rs ${totalAmount.toStringAsFixed(0)}'),
@@ -804,10 +835,13 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
 
   Widget _bookingStep(AppState appState, List<dynamic> plans) {
     final selected = _selectedPlan(plans);
+    final manualEnquiry = _manualEnquiryMode;
 
     return _sectionCard(
-      title: 'Review & Pay',
-      subtitle: 'Confirm details before opening secure payment',
+      title: manualEnquiry ? 'Review & Submit Enquiry' : 'Review & Pay',
+      subtitle: manualEnquiry
+          ? 'Confirm the preferred plan details for manual sales follow-up'
+          : 'Confirm details before opening secure payment',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -815,67 +849,83 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             (
               'Customer',
               nameController.text.trim().isEmpty
-                  ? '—'
+                  ? 'â€”'
                   : nameController.text.trim()
             ),
             (
               'Mobile',
               mobileController.text.trim().isEmpty
-                  ? '—'
+                  ? 'â€”'
                   : mobileController.text.trim()
             ),
             (
               'Email',
               emailController.text.trim().isEmpty
-                  ? '—'
+                  ? 'â€”'
                   : emailController.text.trim()
             ),
             (
               'Address',
               addressController.text.trim().isEmpty
-                  ? '—'
+                  ? 'â€”'
                   : addressController.text.trim()
             ),
             (
               'Pin code',
               pinController.text.trim().isEmpty
-                  ? '—'
+                  ? 'â€”'
                   : pinController.text.trim()
             ),
-            ('Plan', selected?.name ?? '—'),
+            ('Plan', selected?.name ?? 'â€”'),
             (
               'Speed',
               selected == null
-                  ? '—'
+                  ? 'â€”'
                   : '${selected.speedMbps.toStringAsFixed(0)} Mbps'
             ),
             ('Duration', _selectedDurationLabel),
+            ('Preferred slot', _selectedSlotLabel ?? '—'),
             (
-              'Payable now',
+              manualEnquiry ? 'Expected amount' : 'Payable now',
               'Rs ${_bookingAmountFor(selected).toStringAsFixed(0)}'
             ),
           ]),
 
           const SizedBox(height: 16),
 
-          // Payment info note
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0x12FBBD24),
+              color: manualEnquiry
+                  ? kPrimary.withValues(alpha: 0.10)
+                  : const Color(0x12FBBD24),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0x44FBBF24)),
+              border: Border.all(
+                color: manualEnquiry
+                    ? kPrimary.withValues(alpha: 0.28)
+                    : const Color(0x44FBBF24),
+              ),
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline_rounded,
-                    color: Color(0xFFFBBF24), size: 16),
+                Icon(
+                  manualEnquiry
+                      ? Icons.support_agent_rounded
+                      : Icons.info_outline_rounded,
+                  color:
+                      manualEnquiry ? kPrimary : const Color(0xFFFBBF24),
+                  size: 16,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Payment completes the booking first. Install date and slot are confirmed in the next step.',
+                    manualEnquiry
+                        ? 'This address is outside the live serviceability map right now. Your preferred plan, duration and slot will be sent to the sales team for manual follow-up.'
+                        : 'Payment completes the booking first. Install date and slot are confirmed in the next step.',
                     style: GoogleFonts.inter(
-                        color: const Color(0xFFFBBF24),
+                        color: manualEnquiry
+                            ? kPrimary
+                            : const Color(0xFFFBBF24),
                         fontSize: 12,
                         height: 1.45,
                         fontWeight: FontWeight.w600),
@@ -887,14 +937,14 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
 
           const SizedBox(height: 14),
 
-          // Secure payment indicator
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  kPrimary.withValues(alpha: 0.12),
-                  const Color(0xFF7C3AED).withValues(alpha: 0.08),
+                  kPrimary.withValues(alpha: manualEnquiry ? 0.16 : 0.12),
+                  const Color(0xFF7C3AED)
+                      .withValues(alpha: manualEnquiry ? 0.12 : 0.08),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -910,22 +960,29 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                   decoration: BoxDecoration(
                       color: kPrimary.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12)),
-                  child:
-                      const Icon(Icons.lock_rounded, color: kPrimary, size: 20),
+                  child: Icon(
+                    manualEnquiry
+                        ? Icons.assignment_turned_in_rounded
+                        : Icons.lock_rounded,
+                    color: kPrimary,
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Secure Payment',
+                      manualEnquiry ? 'Manual Follow-up Request' : 'Secure Payment',
                       style: GoogleFonts.inter(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
                           fontSize: 14),
                     ),
                     Text(
-                      'Razorpay checkout will open next',
+                      manualEnquiry
+                          ? 'Sales team will receive this enquiry with your selected plan'
+                          : 'Razorpay checkout will open next',
                       style: GoogleFonts.inter(color: kMuted, fontSize: 12),
                     ),
                   ],
@@ -934,7 +991,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             ),
           ),
 
-          if (appState.session == null) ...[
+          if (!manualEnquiry && appState.session == null) ...[
             const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.all(12),
@@ -953,62 +1010,112 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
 
           const SizedBox(height: 18),
           _primaryBtn(
-            label: appState.bookingBusy ? 'Preparing checkout…' : 'Pay now',
-            onPressed: appState.bookingBusy || appState.session == null
+            label: appState.bookingBusy
+                ? (manualEnquiry
+                    ? 'Submitting enquiry...'
+                    : 'Preparing checkout...')
+                : (manualEnquiry ? 'Submit enquiry' : 'Pay now'),
+            onPressed: appState.bookingBusy
                 ? null
-                : () async {
-                    final ok = await appState.createBooking(
-                      planCode: selectedPlanCode!,
-                      fullName: nameController.text.trim(),
-                      mobile: mobileController.text.trim(),
-                      email: emailController.text.trim(),
-                      address: addressController.text.trim(),
-                      pinCode: pinController.text.trim(),
-                      lat: _selectedLocation.latitude,
-                      lng: _selectedLocation.longitude,
-                      durationMonths: _selectedDurationMonths,
-                      durationLabel: _selectedDurationLabel,
-                      paymentMode: _selectedPaymentMode,
-                    );
-                    if (!mounted) return;
-                    if (ok) {
-                      final order = await appState.loadBookingPaymentOrder(
-                        bookingNumber: appState.latestBooking!.bookingNumber,
-                        amount: appState.latestBooking!.amount,
-                      );
-                      if (!mounted) return;
-                      if (order != null) {
-                        final paid = await Navigator.of(context).push<bool>(
-                          MaterialPageRoute(
-                            builder: (_) => BookingPaymentScreen(
-                              bookingNumber:
-                                  appState.latestBooking!.bookingNumber,
-                              paymentOrder: order,
-                            ),
-                          ),
+                : manualEnquiry
+                    ? () async {
+                        final leadNumber = await appState.submitConnectionLead(
+                          fullName: nameController.text.trim(),
+                          mobile: mobileController.text.trim(),
+                          email: emailController.text.trim(),
+                          address: addressController.text.trim(),
+                          pinCode: pinController.text.trim(),
+                          lat: _selectedLocation.latitude,
+                          lng: _selectedLocation.longitude,
+                          planCode: selected?.planCode ?? selectedPlanCode,
+                          planName: selected?.name?.toString(),
+                          durationMonths: _selectedDurationMonths,
+                          durationLabel: _selectedDurationLabel,
+                          preferredSlotCode: _selectedSlotCode,
+                          preferredSlotLabel: _selectedSlotLabel,
                         );
                         if (!mounted) return;
-                        if (paid == true) {
-                          await appState.refresh();
+                        if (leadNumber != null) {
                           await appState.clearBookingFlowDraft();
                           if (!mounted) return;
-                          setState(() => step = 4);
+                          setState(() {
+                            _manualLeadNumber = leadNumber;
+                            step = 4;
+                          });
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                appState.error ??
+                                    'Unable to submit enquiry right now',
+                              ),
+                            ),
+                          );
                         }
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text(appState.error ??
-                                  'Unable to start booking payment')),
-                        );
                       }
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content: Text(appState.bookingError ??
-                                'Unable to create booking')),
-                      );
-                    }
-                  },
+                    : appState.session == null
+                        ? null
+                        : () async {
+                            final ok = await appState.createBooking(
+                              planCode: selectedPlanCode!,
+                              fullName: nameController.text.trim(),
+                              mobile: mobileController.text.trim(),
+                              email: emailController.text.trim(),
+                              address: addressController.text.trim(),
+                              pinCode: pinController.text.trim(),
+                              lat: _selectedLocation.latitude,
+                              lng: _selectedLocation.longitude,
+                              durationMonths: _selectedDurationMonths,
+                              durationLabel: _selectedDurationLabel,
+                              paymentMode: _selectedPaymentMode,
+                            );
+                            if (!mounted) return;
+                            if (ok) {
+                              final order =
+                                  await appState.loadBookingPaymentOrder(
+                                bookingNumber:
+                                    appState.latestBooking!.bookingNumber,
+                                amount: appState.latestBooking!.amount,
+                              );
+                              if (!mounted) return;
+                              if (order != null) {
+                                final paid = await Navigator.of(context).push<bool>(
+                                  MaterialPageRoute(
+                                    builder: (_) => BookingPaymentScreen(
+                                      bookingNumber:
+                                          appState.latestBooking!.bookingNumber,
+                                      paymentOrder: order,
+                                    ),
+                                  ),
+                                );
+                                if (!mounted) return;
+                                if (paid == true) {
+                                  await appState.refresh();
+                                  await appState.clearBookingFlowDraft();
+                                  if (!mounted) return;
+                                  setState(() => step = 4);
+                                }
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      appState.error ??
+                                          'Unable to start booking payment',
+                                    ),
+                                  ),
+                                );
+                              }
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    appState.bookingError ??
+                                        'Unable to create booking',
+                                  ),
+                                ),
+                              );
+                            }
+                          },
           ),
           const SizedBox(height: 10),
           _backBtn('Back to Duration', () {
@@ -1067,7 +1174,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Booking ${latestBooking.bookingNumber} · ${latestBooking.status}',
+                        'Booking ${latestBooking.bookingNumber} Â· ${latestBooking.status}',
                         style: GoogleFonts.inter(
                             color: Colors.white70, fontSize: 13),
                       ),
@@ -1099,13 +1206,13 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             (
               'Install address',
               addressController.text.trim().isEmpty
-                  ? '—'
+                  ? 'â€”'
                   : addressController.text.trim()
             ),
             (
               'Pin code',
               pinController.text.trim().isEmpty
-                  ? '—'
+                  ? 'â€”'
                   : pinController.text.trim()
             ),
           ]),
@@ -1255,7 +1362,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
 
           _summaryBox([
             ('Preferred date', _formatDate(_preferredDate)),
-            ('Preferred slot', _selectedSlotLabel ?? '—'),
+            ('Preferred slot', _selectedSlotLabel ?? 'â€”'),
           ]),
 
           const SizedBox(height: 14),
@@ -1376,7 +1483,91 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     );
   }
 
-  // ─── Stepper ───────────────────────────────────────────────────────────────
+  Widget _leadSuccessStep(List<dynamic> plans) {
+    final selected = _selectedPlan(plans);
+    return _sectionCard(
+      title: 'Enquiry submitted',
+      subtitle: 'Sales team can now see your preferred plan details',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFBB6FF7), Color(0xFF7C3AED)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.check_circle_rounded,
+                      color: Colors.white, size: 30),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Lead ${_manualLeadNumber ?? 'â€”'} created',
+                        style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 18),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Our sales team will follow up on your selected plan and slot.',
+                        style: GoogleFonts.inter(
+                            color: Colors.white70, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _summaryBox([
+            ('Lead Number', _manualLeadNumber ?? 'â€”'),
+            ('Plan', selected?.name ?? 'â€”'),
+            ('Duration', _selectedDurationLabel),
+            ('Preferred slot', _selectedSlotLabel ?? '—'),
+            (
+              'Install address',
+              addressController.text.trim().isEmpty
+                  ? 'â€”'
+                  : addressController.text.trim()
+            ),
+            (
+              'Pin code',
+              pinController.text.trim().isEmpty
+                  ? 'â€”'
+                  : pinController.text.trim()
+            ),
+          ]),
+          const SizedBox(height: 18),
+          _primaryBtn(
+            label: 'Start new enquiry',
+            onPressed: () async =>
+                await _resetBookingFlow(clearSavedDraft: true),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // â”€â”€â”€ Stepper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _stepper() {
     const labels = ['Address', 'Plan', 'Duration', 'Checkout', 'Confirm'];
@@ -1487,7 +1678,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     );
   }
 
-  // ─── UI helpers ────────────────────────────────────────────────────────────
+  // â”€â”€â”€ UI helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _sectionCard({
     required String title,
@@ -1623,7 +1814,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                     ),
                   ),
                   child: Text(
-                    selected ? 'Selected ✓' : 'Select',
+                    selected ? 'Selected âœ“' : 'Select',
                     style: GoogleFonts.inter(
                       color: selected ? Colors.white : kPrimary,
                       fontSize: 11,
@@ -1990,7 +2181,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       );
 
-  // ─── Logic helpers (unchanged) ─────────────────────────────────────────────
+  // â”€â”€â”€ Logic helpers (unchanged) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   bool _validateAddressStep() {
     final messenger = ScaffoldMessenger.of(context);
@@ -2118,7 +2309,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       selectedDurationMonths: _selectedDurationMonths,
       selectedDurationLabel: _selectedDurationLabel,
       selectedSlotCode: _selectedSlotCode ?? 'morning',
-      selectedSlotLabel: _selectedSlotLabel ?? '10 AM – 1 PM',
+      selectedSlotLabel: _selectedSlotLabel ?? '10 AM â€“ 1 PM',
       preferredDateIso: _preferredDate.toIso8601String(),
       name: nameController.text.trim(),
       mobile: mobileController.text.trim(),
@@ -2140,13 +2331,15 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       _selectedDurationMonths = 1;
       _selectedDurationLabel = '1 month';
       _selectedSlotCode = 'morning';
-      _selectedSlotLabel = '10 AM – 1 PM';
+      _selectedSlotLabel = '10 AM â€“ 1 PM';
       _preferredDate = DateTime.now().add(const Duration(days: 1));
       _selectedLocation = const LatLng(28.6139, 77.2090);
       _hasPickedLocation = false;
       _usedCurrentLocation = false;
       _locationError = null;
       _showUnavailableState = false;
+      _manualEnquiryMode = false;
+      _manualLeadNumber = null;
       nameController.clear();
       mobileController.text = AppStateScope.of(context).session?.mobile ??
           widget.initialMobile ??
@@ -2224,7 +2417,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   }
 }
 
-// ─── Booking Header ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Booking Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _BookingHeader extends StatelessWidget {
   const _BookingHeader({
@@ -2285,7 +2478,7 @@ class _BookingHeader extends StatelessWidget {
                         const SizedBox(height: 3),
                         Text(
                           step < _stepNames.length
-                              ? 'Step ${step + 1} of ${_stepNames.length} · ${_stepNames[step]}'
+                              ? 'Step ${step + 1} of ${_stepNames.length} Â· ${_stepNames[step]}'
                               : 'Booking flow',
                           style: GoogleFonts.inter(
                               color: Colors.white60, fontSize: 13),

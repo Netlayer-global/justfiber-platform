@@ -6,6 +6,7 @@ import '../core/app_state.dart';
 import '../core/models.dart';
 import '../core/theme.dart';
 import 'booking_flow_screen.dart';
+import 'lead_booking_flow_screen.dart';
 import 'notifications_screen.dart';
 import 'support_history_screen.dart';
 
@@ -78,7 +79,13 @@ class ServiceTrackingScreen extends StatelessWidget {
                     tickets: tickets,
                     onBookAnother: () async {
                       await Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => const BookingFlowScreen()));
+                          builder: (_) => appState.connections.isEmpty
+                              ? LeadBookingFlowScreen(
+                                  initialMobile: appState.session?.mobile,
+                                )
+                              : BookingFlowScreen(
+                                  initialMobile: appState.session?.mobile,
+                                )));
                       if (context.mounted) {
                         await appState.refreshBookingTracking();
                       }
@@ -102,7 +109,13 @@ class ServiceTrackingScreen extends StatelessWidget {
                     latestBooking: latestBooking,
                     onBook: () async {
                       await Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => const BookingFlowScreen()));
+                          builder: (_) => appState.connections.isEmpty
+                              ? LeadBookingFlowScreen(
+                                  initialMobile: appState.session?.mobile,
+                                )
+                              : BookingFlowScreen(
+                                  initialMobile: appState.session?.mobile,
+                                )));
                       if (context.mounted) {
                         await appState.refreshBookingTracking();
                       }

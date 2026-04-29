@@ -80,5 +80,27 @@ export const razorpayClient = {
     }
     const digest = crypto.createHmac("sha256", env.RAZORPAY_WEBHOOK_SECRET).update(rawBody).digest("hex");
     return digest === signature;
+  },
+
+  createPaymentLink({ amount, currency = "INR", description, customerName, customerContact, customerEmail, referenceId, expireBy, notes = {} }) {
+    const body = {
+      amount: normalizePaise(amount),
+      currency,
+      description: description || "Booking payment",
+      customer: {
+        name: customerName || undefined,
+        contact: customerContact || undefined,
+        email: customerEmail || undefined,
+      },
+      reference_id: referenceId || undefined,
+      expire_by: expireBy || Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
+      reminder_enable: true,
+      notify: {
+        sms: Boolean(customerContact),
+        email: Boolean(customerEmail),
+      },
+      notes,
+    };
+    return request("/payment_links", { method: "POST", body });
   }
 };

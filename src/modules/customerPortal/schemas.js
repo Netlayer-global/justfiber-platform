@@ -31,7 +31,14 @@ export const feasibilityLeadSchema = z.object({
   address: z.string().min(5),
   pinCode: z.string().min(4),
   lat: z.number(),
-  lng: z.number()
+  lng: z.number(),
+  source: z.string().min(2).optional(),
+  planCode: z.string().min(2).optional(),
+  planName: z.string().min(2).optional(),
+  durationMonths: z.number().int().positive().optional(),
+  durationLabel: z.string().min(2).optional(),
+  preferredSlotCode: z.string().min(2).optional(),
+  preferredSlotLabel: z.string().min(2).optional()
 });
 
 export const bookingSchema = z.object({
@@ -40,15 +47,16 @@ export const bookingSchema = z.object({
   mobile: z.string().min(8),
   email: z.string().email().optional(),
   fullAddress: z.string().min(5),
-  pinCode: z.string().min(4),
-  lat: z.number(),
-  lng: z.number(),
+  pinCode: z.string().optional(),
+  lat: z.number().default(0),
+  lng: z.number().default(0),
   preferredDate: z.string().min(4).optional(),
   preferredSlotCode: z.string().min(2).optional(),
   preferredSlotLabel: z.string().min(2).optional(),
   durationMonths: z.number().int().positive().optional(),
   durationLabel: z.string().min(2).optional(),
-  paymentMode: z.enum(["razorpay", "cash"]).default("razorpay")
+  paymentMode: z.enum(["razorpay", "cash"]).default("razorpay"),
+  source: z.string().optional()
 });
 
 export const bookingPaymentLinkSchema = z.object({});

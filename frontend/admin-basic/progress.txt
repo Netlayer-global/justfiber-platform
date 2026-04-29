@@ -1,0 +1,72 @@
+# JustFiber Admin Modernization — Progress
+
+## Phase 1 — DONE (Foundation + High-impact pages)
+
+### Design system
+- `tailwind.config.js` — extended with shadows (soft/medium/large/brand), animations (shimmer, fade-in, scale-in, slide-in-right, pulse-soft), keyframes
+- `app/globals.css` — modern CSS variables (light + dark scaffolded), comprehensive component layer
+  - Buttons: `.btn-primary` (gradient), `.btn-secondary`, `.btn-ghost`, `.btn-danger`, `.btn-success`, `.btn-sm/lg`, `.btn-icon`
+  - Cards: `.card`, `.card-hover`, `.stat-card`, `.gradient-card`
+  - Inputs: `.input`, `.select`, `.label`, hover/focus states
+  - Tables: `.table-shell`, `.table-cell`, `.table-header`, `.table-row` hover
+  - Badges: `.badge-{success,warning,danger,info,brand,neutral}`, dots with pulse
+  - Tabs, skeletons (shimmer), glass, kbd, divider
+
+### Reusable UI library — `components/ui/`
+- `button.tsx` — Button (variants, sizes, loading, icon, iconRight)
+- `card.tsx` — Card, CardHeader, CardTitle, CardDescription, CardBody, CardFooter
+- `badge.tsx` — Badge, StatusBadge (auto-maps status strings)
+- `skeleton.tsx` — Skeleton, SkeletonCard, SkeletonTable
+- `empty-state.tsx` — EmptyState (icon + title + description + action)
+- `input.tsx` — Input, Select, Textarea (with label/hint/error/icons)
+- `stat-card.tsx` — StatCard (icon, trend, color variants, loading)
+- `page-header.tsx` — PageHeader (eyebrow, breadcrumbs, actions)
+- `tabs.tsx` — Tabs (icon, badge, smooth transitions)
+- `modal.tsx` — Modal (sizes sm/md/lg/xl/full, ESC to close, animated)
+- `data-table.tsx` — DataTable (sort, paginate, select, empty, loading, sticky headers)
+- `avatar.tsx` — Avatar (deterministic color, sizes, status indicator)
+- `charts.tsx` — RevenueAreaChart, GrowthLineChart, CategoryBarChart, DonutChart, MiniSparkline
+- `index.ts` — barrel export
+
+### Modernized pages
+- **Layout** `app/(dashboard)/layout.tsx` — collapsible sidebar (persisted), search filter, sticky topbar with global search (⌘K), avatar dropdown, zone switcher, notifications bell, mobile drawer with animations
+- **Dashboard** `app/(dashboard)/dashboard/page.tsx` — KPI cards with trends, mini metrics, revenue area chart, customer status donut, top plans bar chart, quick actions, recent sales table, OTP lookup, network status panel
+- **Customer Detail** `app/(dashboard)/customers/[customerId]/page.tsx` — hero card with avatar+status, quick stats, 6 tabs (Overview, Billing, Devices, Tickets, Sessions, Documents)
+
+### New pages
+- **Activity Logs** `app/(dashboard)/activity-logs/page.tsx` — overview KPIs, search/filter, audit feed with diff
+- **Reports** `app/(dashboard)/reports/page.tsx` — revenue trends, customer growth, plan distribution, GST by state, period selector, quick reports
+
+### Build status
+- `npm run build` → 31/31 pages built ✓
+- `npx tsc --noEmit` → 0 errors ✓
+- New routes added: `/activity-logs`, `/reports`
+- Bundle sizes: dashboard 7.99kB / 267kB FLJS (recharts), reports 4kB / 263kB FLJS
+
+---
+
+## Phase 2 — TODO (apply UI library to remaining pages)
+
+Pages still using legacy styling (functional but inconsistent):
+- `/customers` (list)
+- `/billing`, `/plans`, `/sales`, `/jobs`, `/tickets`, `/installers`
+- `/devices`, `/routers`, `/network-map`, `/nat-logs`, `/ip-management`
+- `/serviceability`, `/provisioning`, `/apps`, `/user-management`
+- `/caf-templates`, `/my-zone-details`, `/settings`
+- `/auth/login`
+
+Standard transform per page:
+1. Replace top section with `<PageHeader>`
+2. Wrap KPIs with `<StatCard>` grid
+3. Replace tables with `<DataTable>` + `<StatusBadge>`
+4. Replace forms with `<Input>`, `<Select>`, `<Button>`
+5. Use `<Modal>` for dialogs
+6. Use `<Tabs>` where appropriate
+7. Add `<EmptyState>` and `<Skeleton>` for empty/loading
+
+## Phase 3 — TODO (advanced)
+- Global ⌘K command palette (cmdk library)
+- Toast notifications system
+- Dark mode toggle (CSS already wired)
+- Real-time activity feed via SSE/websocket
+- Export-to-PDF wiring on Reports page

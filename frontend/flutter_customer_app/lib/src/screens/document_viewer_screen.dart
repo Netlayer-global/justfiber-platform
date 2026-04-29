@@ -73,7 +73,13 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: #0E0E1A; }
 #viewer { width: 100%; padding: 8px 0; }
-canvas { display: block; margin: 0 auto 8px; box-shadow: 0 2px 12px #0006; }
+canvas {
+  display: block;
+  margin: 0 auto 8px;
+  box-shadow: 0 2px 12px #0006;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
 #loading { color: #fff; text-align: center; padding: 40px; font-family: sans-serif; }
 </style>
 </head>
@@ -91,16 +97,23 @@ for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
 pdfjsLib.getDocument({ data: bytes }).promise.then(pdf => {
   document.getElementById('loading').style.display = 'none';
   const viewer = document.getElementById('viewer');
-  const scale = window.innerWidth / 595;
+  const cssWidth = Math.max(document.documentElement.clientWidth, window.innerWidth || 0) - 16;
+  const basePageWidth = 595;
+  const scale = cssWidth / basePageWidth;
+  const pixelRatio = window.devicePixelRatio || 1;
   for (let i = 1; i <= pdf.numPages; i++) {
     pdf.getPage(i).then(page => {
       const vp = page.getViewport({ scale });
+      const hiResVp = page.getViewport({ scale: scale * pixelRatio });
       const canvas = document.createElement('canvas');
-      canvas.width = vp.width;
-      canvas.height = vp.height;
-      canvas.style.width = '100%';
+      canvas.width = Math.floor(hiResVp.width);
+      canvas.height = Math.floor(hiResVp.height);
+      canvas.style.width = Math.floor(vp.width) + 'px';
+      canvas.style.height = Math.floor(vp.height) + 'px';
       viewer.appendChild(canvas);
-      page.render({ canvasContext: canvas.getContext('2d'), viewport: vp });
+      const context = canvas.getContext('2d', { alpha: false });
+      context.imageSmoothingEnabled = true;
+      page.render({ canvasContext: context, viewport: hiResVp });
     });
   }
 }).catch(() => {

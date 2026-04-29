@@ -9,12 +9,77 @@ import '../widgets/pressable_scale.dart';
 import 'service_tracking_screen.dart';
 import 'support_assistant_screen.dart';
 
-class SupportHistoryScreen extends StatelessWidget {
+class SupportHistoryScreen extends StatefulWidget {
   const SupportHistoryScreen({super.key});
+
+  @override
+  State<SupportHistoryScreen> createState() => _SupportHistoryScreenState();
+}
+
+class _SupportHistoryScreenState extends State<SupportHistoryScreen> {
+  String _ticketFilter = 'open';
+  String _requestFilter = 'open';
+
+  bool _isClosedLike(String status) {
+    final value = status.toLowerCase();
+    return value.contains('closed') ||
+        value.contains('resolved') ||
+        value.contains('completed') ||
+        value.contains('done');
+  }
+
+  List<SupportTicketItem> _filterTickets(List<SupportTicketItem> input) {
+    final sorted = [...input]..sort((a, b) {
+      final aOpenRank = _isClosedLike(a.status) ? 1 : 0;
+      final bOpenRank = _isClosedLike(b.status) ? 1 : 0;
+      if (aOpenRank != bOpenRank) return aOpenRank - bOpenRank;
+      return b.createdAt.compareTo(a.createdAt);
+    });
+    if (_ticketFilter == 'all') return sorted;
+    if (_ticketFilter == 'closed') {
+      return sorted.where((item) => _isClosedLike(item.status)).toList();
+    }
+    return sorted.where((item) => !_isClosedLike(item.status)).toList();
+  }
+
+  List<RequestItem> _filterRequests(List<RequestItem> input) {
+    final sorted = [...input]..sort((a, b) {
+      final aOpenRank = _isClosedLike(a.status) ? 1 : 0;
+      final bOpenRank = _isClosedLike(b.status) ? 1 : 0;
+      if (aOpenRank != bOpenRank) return aOpenRank - bOpenRank;
+      return b.createdAt.compareTo(a.createdAt);
+    });
+    if (_requestFilter == 'all') return sorted;
+    if (_requestFilter == 'closed') {
+      return sorted.where((item) => _isClosedLike(item.status)).toList();
+    }
+    return sorted.where((item) => !_isClosedLike(item.status)).toList();
+  }
+
+  String _nextStepText(String status) {
+    final value = status.toLowerCase();
+    if (value.contains('resolved') ||
+        value.contains('closed') ||
+        value.contains('completed')) {
+      return 'This case looks closed from our side. If the issue returns, create a fresh ticket.';
+    }
+    if (value.contains('assigned')) {
+      return 'Support team has picked this up. Please keep your phone reachable for callbacks.';
+    }
+    if (value.contains('progress') || value.contains('working')) {
+      return 'Our team is actively working on this case. Track the latest update here.';
+    }
+    if (value.contains('pending') || value.contains('open')) {
+      return 'This case is in queue. Keep the reference handy and avoid raising duplicates.';
+    }
+    return 'Track the latest update here. If nothing moves for a while, contact support with this reference.';
+  }
 
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
+    final visibleTickets = _filterTickets(appState.tickets);
+    final visibleRequests = _filterRequests(appState.requests);
     final openTickets = appState.tickets
         .where((t) => !t.status.toLowerCase().contains('closed') &&
             !t.status.toLowerCase().contains('resolved'))
@@ -96,17 +161,48 @@ class SupportHistoryScreen extends StatelessWidget {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(18, 22, 18, 0),
-                child: _sectionLabel('SUPPORT TICKETS'),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _sectionLabel('SUPPORT TICKETS'),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _FilterChip(
+                          label: 'Open',
+                          selected: _ticketFilter == 'open',
+                          onTap: () => setState(() => _ticketFilter = 'open'),
+                        ),
+                        _FilterChip(
+                          label: 'All',
+                          selected: _ticketFilter == 'all',
+                          onTap: () => setState(() => _ticketFilter = 'all'),
+                        ),
+                        _FilterChip(
+                          label: 'Closed',
+                          selected: _ticketFilter == 'closed',
+                          onTap: () => setState(() => _ticketFilter = 'closed'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-            if (appState.tickets.isEmpty)
+            if (visibleTickets.isEmpty)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(18, 10, 18, 0),
                   child: _EmptyCard(
                     icon: Icons.support_agent_rounded,
-                    title: 'No tickets yet',
-                    subtitle: 'Create a ticket for billing, internet or account issues.',
+                    title: appState.tickets.isEmpty
+                        ? 'No tickets yet'
+                        : 'No tickets in this filter',
+                    subtitle: appState.tickets.isEmpty
+                        ? 'Create a ticket for billing, internet or account issues.'
+                        : 'Try another filter to view open or older tickets.',
                     actionLabel: 'Create ticket',
                     onTap: () => _showCreateTicketSheet(context, appState),
                   ),
@@ -118,7 +214,7 @@ class SupportHistoryScreen extends StatelessWidget {
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (_, i) {
-                      final item = appState.tickets[i];
+                      final item = visibleTickets[i];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: _ItemCard(
@@ -133,7 +229,7 @@ class SupportHistoryScreen extends StatelessWidget {
                         ),
                       );
                     },
-                    childCount: appState.tickets.length,
+                    childCount: visibleTickets.length,
                   ),
                 ),
               ),
@@ -142,17 +238,48 @@ class SupportHistoryScreen extends StatelessWidget {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(18, 22, 18, 0),
-                child: _sectionLabel('SERVICE REQUESTS'),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _sectionLabel('SERVICE REQUESTS'),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _FilterChip(
+                          label: 'Open',
+                          selected: _requestFilter == 'open',
+                          onTap: () => setState(() => _requestFilter = 'open'),
+                        ),
+                        _FilterChip(
+                          label: 'All',
+                          selected: _requestFilter == 'all',
+                          onTap: () => setState(() => _requestFilter = 'all'),
+                        ),
+                        _FilterChip(
+                          label: 'Closed',
+                          selected: _requestFilter == 'closed',
+                          onTap: () => setState(() => _requestFilter = 'closed'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-            if (appState.requests.isEmpty)
+            if (visibleRequests.isEmpty)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(18, 10, 18, 0),
                   child: _EmptyCard(
                     icon: Icons.build_circle_rounded,
-                    title: 'No requests yet',
-                    subtitle: 'Need a shift, disconnect or service change? Create a request.',
+                    title: appState.requests.isEmpty
+                        ? 'No requests yet'
+                        : 'No requests in this filter',
+                    subtitle: appState.requests.isEmpty
+                        ? 'Need a shift, disconnect or service change? Create a request.'
+                        : 'Try another filter to view open or completed requests.',
                     actionLabel: 'Create request',
                     onTap: () => _showCreateRequestSheet(context, appState),
                   ),
@@ -164,7 +291,7 @@ class SupportHistoryScreen extends StatelessWidget {
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (_, i) {
-                      final item = appState.requests[i];
+                      final item = visibleRequests[i];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: _ItemCard(
@@ -179,7 +306,7 @@ class SupportHistoryScreen extends StatelessWidget {
                         ),
                       );
                     },
-                    childCount: appState.requests.length,
+                    childCount: visibleRequests.length,
                   ),
                 ),
               ),
@@ -263,6 +390,7 @@ class SupportHistoryScreen extends StatelessWidget {
         reference: item.ticketNumber,
         status: item.status,
         statusColor: _statusColor(item.status),
+        nextStep: _nextStepText(item.status),
         rows: [
           ('Priority', item.priority.isEmpty ? '—' : item.priority),
           ('Created', item.createdAt.isEmpty ? '—' : item.createdAt),
@@ -286,6 +414,7 @@ class SupportHistoryScreen extends StatelessWidget {
         reference: item.referenceNumber,
         status: item.status,
         statusColor: _statusColor(item.status),
+        nextStep: _nextStepText(item.status),
         rows: [
           ('Type', item.type.isEmpty ? '—' : item.type),
           ('Created', item.createdAt.isEmpty ? '—' : item.createdAt),
@@ -947,6 +1076,45 @@ class _TrackingEntryCard extends StatelessWidget {
   }
 }
 
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return PressableScale(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? kPrimary.withValues(alpha: 0.14) : kSurface,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: selected
+                ? kPrimaryLight.withValues(alpha: 0.35)
+                : kBorder,
+          ),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            color: selected ? kPrimaryLight : Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ItemCard extends StatelessWidget {
   const _ItemCard({
     required this.icon,
@@ -1124,10 +1292,12 @@ class _DetailSheet extends StatelessWidget {
     required this.reference,
     required this.status,
     required this.statusColor,
+    required this.nextStep,
     required this.rows,
   });
 
   final String title, subtitle, reference, status;
+  final String nextStep;
   final Color statusColor;
   final List<(String, String)> rows;
 
@@ -1189,6 +1359,33 @@ class _DetailSheet extends StatelessWidget {
                     label: const Text('Copy ref'),
                   ),
                 ],
+              ),
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: kSurface2,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: kBorder),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Next step',
+                        style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: kMuted,
+                            fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 6),
+                    Text(nextStep,
+                        style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            height: 1.45)),
+                  ],
+                ),
               ),
               const SizedBox(height: 14),
               Container(

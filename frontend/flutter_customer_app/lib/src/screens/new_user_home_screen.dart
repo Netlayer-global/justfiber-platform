@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../core/app_state.dart';
+import '../core/models.dart';
 import '../core/theme.dart';
+import 'booking_payment_screen.dart';
 import 'lead_booking_flow_screen.dart';
 import 'public_plan_catalog_screen.dart';
 
@@ -13,6 +15,8 @@ class NewUserHomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final mobile = appState.session?.mobile ?? '';
+    final pendingBooking = appState.pendingPaymentBooking;
+    final hasPending = pendingBooking != null;
 
     return Scaffold(
       backgroundColor: kBg,
@@ -98,7 +102,9 @@ class NewUserHomeScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Welcome to\nJustFiber',
+                              hasPending
+                                  ? 'Almost Connected!'
+                                  : 'Welcome to\nJustFiber',
                               style: GoogleFonts.inter(
                                 color: Colors.white,
                                 fontSize: 30,
@@ -120,7 +126,9 @@ class NewUserHomeScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Choose a plan and book your installation to get connected.',
+                              hasPending
+                                  ? 'Complete your payment to confirm your installation booking.'
+                                  : 'Choose a plan and book your installation to get connected.',
                               style: GoogleFonts.inter(
                                 color: Colors.white54,
                                 fontSize: 12,
@@ -132,73 +140,85 @@ class NewUserHomeScreen extends StatelessWidget {
                       ),
                     ),
 
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 24),
+
+                    // ── Payment Ticket (shown when pending) ──────────────
+                    if (hasPending) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _PaymentTicketCard(
+                          booking: pendingBooking,
+                          onPayNow: () =>
+                              _handlePayNow(context, appState, pendingBooking),
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                    ],
 
                     // ── Section label ────────────────────────────────────
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'GET STARTED',
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: kMuted,
-                            letterSpacing: 1.6,
+                    if (!hasPending) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'GET STARTED',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: kMuted,
+                              letterSpacing: 1.6,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    // ── Plans Card ───────────────────────────────────────
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: _ActionCard(
-                        icon: Icons.grid_view_rounded,
-                        iconColor: const Color(0xFF0EA5E9),
-                        title: 'View Plans',
-                        subtitle:
-                            'Browse all available fiber internet plans and pricing.',
-                        buttonLabel: 'Plans',
-                        onTap: () async {
-                          await Navigator.of(context).push(MaterialPageRoute(
-                              builder: (_) => const PublicPlanCatalogScreen()));
-                          await appState.refresh();
-                        },
+                      const SizedBox(height: 14),
+                      // ── Plans Card ──────────────────────────────────
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _ActionCard(
+                          icon: Icons.grid_view_rounded,
+                          iconColor: const Color(0xFF0EA5E9),
+                          title: 'View Plans',
+                          subtitle:
+                              'Browse all available fiber internet plans and pricing.',
+                          buttonLabel: 'Plans',
+                          onTap: () async {
+                            await Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => const PublicPlanCatalogScreen()));
+                            await appState.refresh();
+                          },
+                        ),
                       ),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    // ── Book Card ────────────────────────────────────────
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: _ActionCard(
-                        icon: Icons.calendar_month_rounded,
-                        iconColor: const Color(0xFF10B981),
-                        title: 'Book Installation',
-                        subtitle:
-                            'Schedule your fiber installation at a time that works for you.',
-                        buttonLabel: 'Book Now',
-                        onTap: () async {
-                          await Navigator.of(context).push(MaterialPageRoute(
-                              builder: (_) => LeadBookingFlowScreen(
-                                  initialMobile: mobile)));
-                          await appState.refresh();
-                        },
+                      const SizedBox(height: 14),
+                      // ── Book Card ────────────────────────────────────
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _ActionCard(
+                          icon: Icons.calendar_month_rounded,
+                          iconColor: const Color(0xFF10B981),
+                          title: 'Book Installation',
+                          subtitle:
+                              'Schedule your fiber installation at a time that works for you.',
+                          buttonLabel: 'Book Now',
+                          onTap: () async {
+                            await Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => LeadBookingFlowScreen(
+                                    initialMobile: mobile)));
+                            await appState.refresh();
+                          },
+                        ),
                       ),
-                    ),
-
-                    const SizedBox(height: 32),
+                      const SizedBox(height: 32),
+                    ],
 
                     // ── Pull to refresh hint ─────────────────────────────
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 40),
                       child: Text(
-                        'Pull down to refresh if you already have an active connection.',
+                        hasPending
+                            ? 'Pull down to refresh your booking status.'
+                            : 'Pull down to refresh if you already have an active connection.',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
                             fontSize: 12,
@@ -216,6 +236,34 @@ class NewUserHomeScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _handlePayNow(
+      BuildContext context, AppState appState, BookingQuote booking) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final order = await appState.loadBookingPaymentOrder(
+      bookingNumber: booking.bookingNumber,
+      amount: booking.amount > 0 ? booking.amount : null,
+    );
+    if (!context.mounted) return;
+    if (order == null) {
+      messenger.showSnackBar(SnackBar(
+        content: Text(
+          appState.bookingError ?? 'Could not load payment details.',
+          style: GoogleFonts.inter(fontSize: 13),
+        ),
+      ));
+      return;
+    }
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => BookingPaymentScreen(
+        bookingNumber: booking.bookingNumber,
+        paymentOrder: order,
+        planName: booking.planName,
+        durationLabel: booking.durationLabel,
+      ),
+    ));
+    await appState.refresh();
   }
 
   Future<void> _confirmLogout(BuildContext context, AppState appState) async {
@@ -248,6 +296,171 @@ class NewUserHomeScreen extends StatelessWidget {
     if (confirm == true) {
       appState.logout();
     }
+  }
+}
+
+// ─── Payment Ticket Card ──────────────────────────────────────────────────────
+
+class _PaymentTicketCard extends StatelessWidget {
+  const _PaymentTicketCard({
+    required this.booking,
+    required this.onPayNow,
+  });
+
+  final BookingQuote booking;
+  final VoidCallback onPayNow;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0369A1), Color(0xFF0EA5E9)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0x440EA5E9)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0EA5E9).withValues(alpha: 0.25),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.schedule_rounded,
+                        color: Colors.white, size: 12),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Payment Pending',
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            booking.planName.isNotEmpty ? booking.planName : 'Your Plan',
+            style: GoogleFonts.inter(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Booking #${booking.bookingNumber}',
+            style: GoogleFonts.inter(
+              color: Colors.white60,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Amount Due',
+                      style: GoogleFonts.inter(
+                          color: Colors.white60, fontSize: 11),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      booking.amount > 0
+                          ? '₹${booking.amount.toInt()}'
+                          : 'Check with agent',
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'Duration',
+                    style: GoogleFonts.inter(
+                        color: Colors.white60, fontSize: 11),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    booking.durationLabel.isNotEmpty
+                        ? booking.durationLabel
+                        : '${booking.durationMonths} month',
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: booking.amount > 0 ? onPayNow : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF0369A1),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+              ),
+              icon: const Icon(Icons.payment_rounded, size: 18),
+              label: Text(
+                booking.amount > 0 ? 'Pay Now  ₹${booking.amount.toInt()}' : 'Pay Now',
+                style: GoogleFonts.inter(
+                    fontSize: 15, fontWeight: FontWeight.w800),
+              ),
+            ),
+          ),
+          if (booking.amount <= 0) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Payment amount will be confirmed by your sales agent.',
+              style: GoogleFonts.inter(
+                  color: Colors.white54, fontSize: 11, height: 1.4),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
 

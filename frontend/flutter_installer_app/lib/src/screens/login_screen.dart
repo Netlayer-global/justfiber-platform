@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../core/app_state.dart';
@@ -13,8 +12,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _loginCtrl = TextEditingController(text: '9000000001');
-  final _passCtrl = TextEditingController(text: 'Installer123!');
+  final _loginCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
   bool _obscure = true;
 
   @override
@@ -30,17 +29,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: kBg,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF0E0818), kBg],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            stops: [0.0, 0.5],
-          ),
-        ),
-        child: SafeArea(
+      backgroundColor: Colors.black,
+      body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 26),
             child: ConstrainedBox(
@@ -53,8 +43,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   // ── Logo ─────────────────────────────────────────
                   Center(
                     child: Image.asset(
-                      'assets/branding/justfiber-field-logo-source.jpg',
-                      width: 180,
+                      'assets/images/logo.png',
+                      width: 240,
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -288,9 +278,9 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
-      ),
     );
   }
+
 
   Widget _label(String text) => Text(
         text,

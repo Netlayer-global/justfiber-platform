@@ -123,6 +123,7 @@ class AppState extends ChangeNotifier {
   List<ParentalRule> parentalRules = const [];
 
   BookingQuote? latestBooking;
+  BookingQuote? pendingPaymentBooking;
   BookingTrackingData? bookingTracking;
   BookingQuote? bookingDraft;
   FeasibilityResult? feasibility;
@@ -137,6 +138,8 @@ class AppState extends ChangeNotifier {
     packetLossPercent: 0,
     status: '',
   );
+  bool speedTestBusy = false;
+  String? speedTestError;
 
   NetworkQualityData networkQuality = const NetworkQualityData(
     latencyMs: 0,
@@ -280,21 +283,29 @@ class AppState extends ChangeNotifier {
         await prefs.setString(_selectedCustomerKey, selectedCustomerId!);
       }
 
+      final hasConnections = connections.isNotEmpty;
       await Future.wait<void>([
-        runRefreshTask(
-            'dashboard',
-            () async => dashboard = await api.fetchDashboard(current,
-                customerId: selectedCustomerId)),
-        runRefreshTask(
-            'wifi',
-            () async => wifi =
-                await api.fetchWifi(current, customerId: selectedCustomerId)),
-        runRefreshTask(
-            'billing',
-            () async => billing = await api.fetchBilling(current,
-                customerId: selectedCustomerId)),
+        if (hasConnections)
+          runRefreshTask(
+              'dashboard',
+              () async => dashboard = await api.fetchDashboard(current,
+                  customerId: selectedCustomerId)),
+        if (hasConnections)
+          runRefreshTask(
+              'wifi',
+              () async => wifi =
+                  await api.fetchWifi(current, customerId: selectedCustomerId)),
+        if (hasConnections)
+          runRefreshTask(
+              'billing',
+              () async => billing = await api.fetchBilling(current,
+                  customerId: selectedCustomerId)),
         runRefreshTask('notifications',
             () async => notifications = await api.fetchNotifications(current)),
+        runRefreshTask(
+            'pending booking',
+            () async => pendingPaymentBooking =
+                await api.fetchPendingPaymentBooking(current)),
       ]);
 
       lastSyncedAt = DateTime.now();
@@ -859,12 +870,39 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  bool get isOffline {
+    final e = (error ?? '').toLowerCase();
+    return e.contains('no internet') ||
+        e.contains('unable to connect') ||
+        e.contains('socket') ||
+        e.contains('network') ||
+        e.contains('unreachable') ||
+        e.contains('connection refused') ||
+        e.contains('failed host lookup');
+  }
+
   Future<void> selectConnection(String customerId) async {
     selectedCustomerId = customerId;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_selectedCustomerKey, customerId);
     notifyListeners();
     await refresh();
+  }
+
+  Future<void> runSpeedTest() async {
+    final current = session;
+    if (current == null || speedTestBusy) return;
+    speedTestBusy = true;
+    speedTestError = null;
+    notifyListeners();
+    try {
+      speedTest = await api.fetchSpeedTest(current, customerId: selectedCustomerId);
+    } catch (e) {
+      speedTestError = e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
+    } finally {
+      speedTestBusy = false;
+      notifyListeners();
+    }
   }
 
   Future<void> markNotificationRead(String notificationId) async {
@@ -1202,6 +1240,12 @@ class AppState extends ChangeNotifier {
     required String pinCode,
     required double lat,
     required double lng,
+    String? planCode,
+    String? planName,
+    int? durationMonths,
+    String? durationLabel,
+    String? preferredSlotCode,
+    String? preferredSlotLabel,
   }) async {
     bookingBusy = true;
     bookingError = null;
@@ -1215,6 +1259,12 @@ class AppState extends ChangeNotifier {
         pinCode: pinCode,
         lat: lat,
         lng: lng,
+        planCode: planCode,
+        planName: planName,
+        durationMonths: durationMonths,
+        durationLabel: durationLabel,
+        preferredSlotCode: preferredSlotCode,
+        preferredSlotLabel: preferredSlotLabel,
       );
     } catch (e) {
       bookingError = e.toString();
@@ -1448,6 +1498,7 @@ class AppState extends ChangeNotifier {
     installerVisits = const [];
     parentalRules = const [];
     latestBooking = null;
+    pendingPaymentBooking = null;
     bookingTracking = null;
     bookingDraft = null;
     bookingFlowDraft = null;
@@ -1469,6 +1520,8 @@ class AppState extends ChangeNotifier {
       quality: '',
     );
     bookingError = null;
+    speedTestBusy = false;
+    speedTestError = null;
     pendingNavigationTarget = null;
     pendingNotificationReadId = null;
     lastSyncedAt = null;

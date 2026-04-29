@@ -5,6 +5,7 @@ import '../core/app_state.dart';
 import '../core/theme.dart';
 import '../widgets/pressable_scale.dart';
 import 'booking_flow_screen.dart';
+import 'lead_booking_flow_screen.dart';
 import 'plan_catalog_screen.dart';
 import 'wifi_settings_screen.dart';
 
@@ -80,7 +81,15 @@ class ServiceHubScreen extends StatelessWidget {
                         subtitle: 'New broadband booking with plan & checkout',
                         accent: const Color(0xFF60A5FA),
                         onTap: () => _push(
-                            context, appState, const BookingFlowScreen()),
+                            context,
+                            appState,
+                            appState.connections.isEmpty
+                                ? LeadBookingFlowScreen(
+                                    initialMobile: appState.session?.mobile,
+                                  )
+                                : BookingFlowScreen(
+                                    initialMobile: appState.session?.mobile,
+                                  )),
                       ),
                       _ActionTile(
                         icon: Icons.home_work_rounded,

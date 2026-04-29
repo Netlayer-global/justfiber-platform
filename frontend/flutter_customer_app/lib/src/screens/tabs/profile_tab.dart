@@ -150,6 +150,29 @@ class ProfileTab extends StatelessWidget {
           ),
         ),
 
+        if (appState.connections.length > 1) ...[
+          const SizedBox(height: 14),
+          _Section(
+            icon: Icons.swap_horiz_rounded,
+            title: 'MY CONNECTIONS',
+            child: Column(
+              children: appState.connections.asMap().entries.map((entry) {
+                final i = entry.key;
+                final c = entry.value;
+                final isSelected = c.customerId == appState.selectedCustomerId;
+                return _ConnectionRow(
+                  connection: c,
+                  isSelected: isSelected,
+                  isLast: i == appState.connections.length - 1,
+                  onTap: isSelected
+                      ? null
+                      : () => appState.selectConnection(c.customerId),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+
         const SizedBox(height: 28),
 
         // ── Logout ─────────────────────────────────────────────────
@@ -547,6 +570,101 @@ class _InfoRow extends StatelessWidget {
             endIndent: 18,
           ),
       ],
+    );
+  }
+}
+
+class _ConnectionRow extends StatelessWidget {
+  const _ConnectionRow({
+    required this.connection,
+    required this.isSelected,
+    required this.isLast,
+    required this.onTap,
+  });
+
+  final CustomerConnection connection;
+  final bool isSelected;
+  final bool isLast;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? kPrimary.withValues(alpha: 0.15)
+                        : kBg,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: isSelected
+                            ? kPrimary.withValues(alpha: 0.4)
+                            : kBorder),
+                  ),
+                  child: Icon(Icons.wifi_rounded,
+                      size: 17,
+                      color: isSelected ? kPrimaryLight : Colors.white38),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        connection.fullName.isNotEmpty
+                            ? connection.fullName
+                            : connection.customerId,
+                        style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13),
+                      ),
+                      Text(
+                        connection.planName.isNotEmpty
+                            ? connection.planName
+                            : connection.serviceId,
+                        style: GoogleFonts.inter(
+                            color: kMuted, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isSelected)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: kPrimary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(999),
+                      border:
+                          Border.all(color: kPrimary.withValues(alpha: 0.3)),
+                    ),
+                    child: Text('Active',
+                        style: GoogleFonts.inter(
+                            color: kPrimaryLight,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700)),
+                  )
+                else
+                  const Icon(Icons.chevron_right_rounded,
+                      color: Colors.white24, size: 18),
+              ],
+            ),
+          ),
+          if (!isLast)
+            const Divider(color: kBorder, height: 1, indent: 18, endIndent: 18),
+        ],
+      ),
     );
   }
 }
