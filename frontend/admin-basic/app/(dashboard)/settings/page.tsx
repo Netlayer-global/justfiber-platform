@@ -2115,6 +2115,58 @@ export default function SettingsPage() {
                   </label>
                 ))}
               </div>
+              <div className="mt-5 rounded-[22px] border border-slate-200 bg-white p-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <div className="text-sm font-semibold text-slate-900">Existing sub-zones</div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      Delete action yahin bhi visible hai. Full permission summary `Zone Directory and Permissions` tab me milegi.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300"
+                    onClick={() => setZoneOperationsView('directory')}
+                  >
+                    Open zone directory
+                  </button>
+                </div>
+                <div className="mt-4 space-y-3">
+                  {visibleSubZones.length ? (
+                    visibleSubZones.slice(0, 5).map((item) => {
+                      const itemCode = item.zoneCode || item.franchiseCode
+                      const deleting = busyDeleteFranchiseCode === item.franchiseCode
+                      return (
+                        <div key={`subzone-quick-${item.id || item.franchiseCode}`} className="flex flex-col gap-3 rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <div className="text-sm font-semibold text-slate-900">{item.name || itemCode}</div>
+                            <div className="mt-1 text-xs text-slate-500">
+                              Code: {itemCode || '-'} | Contact: {item.phone || item.email || 'Not set'}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            className="rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            onClick={() => void handleDeleteSubZone(item)}
+                            disabled={!canAccessAllZones || deleting}
+                          >
+                            {!canAccessAllZones ? 'Main admin only' : deleting ? 'Deleting...' : 'Delete sub-zone'}
+                          </button>
+                        </div>
+                      )
+                    })
+                  ) : (
+                    <div className="rounded-[18px] border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
+                      No sub-zones found for this admin scope.
+                    </div>
+                  )}
+                  {visibleSubZones.length > 5 ? (
+                    <div className="text-xs text-slate-500">
+                      {visibleSubZones.length - 5} more sub-zones available in `Zone Directory and Permissions`.
+                    </div>
+                  ) : null}
+                </div>
+              </div>
             </div>
           ) : null}
 
