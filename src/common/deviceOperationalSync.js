@@ -164,6 +164,17 @@ function firstValue(root, paths) {
   return undefined;
 }
 
+function hasOpticalShell(summary) {
+  return Boolean(
+    readPath(summary, "InternetGatewayDevice.X_ALU_OntOpticalParam") ||
+    readPath(summary, "InternetGatewayDevice.X_ALU-COM_GPON") ||
+    readPath(summary, "InternetGatewayDevice.X_ALU-COM_ONT.Optical") ||
+    readPath(summary, "Device.Optical.Interface.1") ||
+    readPath(summary, "Device.PON.Interface.1") ||
+    readPath(summary, "Device.XPON.Interface.1")
+  );
+}
+
 function collectHostNodes(node) {
   if (!node || typeof node !== "object") return [];
   const hostsRoot =
@@ -341,7 +352,7 @@ async function requestOpticalTelemetryRefresh(deviceId) {
     // Ignore explicit parameter fetch failures and fall back to whatever the device exposes.
   }
 
-  await wait(1500);
+  await wait(3200);
 }
 
 export function summarizeGenieDevice(summary, fallbackDeviceId) {
@@ -727,7 +738,17 @@ export async function getLiveGenieDeviceList(limit = 100) {
           return device;
         }
 
-        const parsed = summarizeGenieDevice(richSummary, device.deviceId);
+        let parsed = summarizeGenieDevice(richSummary, device.deviceId);
+        if (parsed.opticalInfo?.rxPower == null && parsed.opticalInfo?.txPower == null && hasOpticalShell(richSummary)) {
+          await requestOpticalTelemetryRefresh(device.deviceId);
+          const retriedSummary = await genieacsClient.getRichDeviceSummary({
+            deviceId: device.deviceId,
+            serialNumber: device.serialNumber
+          });
+          if (retriedSummary) {
+            parsed = summarizeGenieDevice(retriedSummary, device.deviceId);
+          }
+        }
         return {
           ...device,
           ...(parsed.serialNumber ? { serialNumber: parsed.serialNumber } : {}),
@@ -781,6 +802,16 @@ export async function syncDeviceFromGenie(cacheRecord) {
     });
     if (summary) {
       parsed = summarizeGenieDevice(summary, cacheRecord.deviceId);
+    }
+    if (summary && parsed.opticalInfo?.rxPower == null && parsed.opticalInfo?.txPower == null && hasOpticalShell(summary)) {
+      await requestOpticalTelemetryRefresh(cacheRecord.deviceId);
+      summary = await genieacsClient.getRichDeviceSummary({
+        deviceId: cacheRecord.deviceId,
+        serialNumber: cacheRecord.serialNumber
+      });
+      if (summary) {
+        parsed = summarizeGenieDevice(summary, cacheRecord.deviceId);
+      }
     }
   }
   await DeviceOperationalCache.updateOne(
