@@ -1207,12 +1207,59 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       if (!mounted) return;
       _show(successMessage);
     } catch (e) {
-      _show(e.toString());
+      final conflict = _extractSerialConflictMessage(
+        e.toString(),
+        attemptedSerial: _serialController.text.trim(),
+      );
+      if (conflict != null) {
+        setState(() => _serialConflictError = conflict);
+        await _showSerialConflictDialog(conflict);
+      } else {
+        _show(e.toString());
+      }
     } finally {
       if (mounted) {
         setState(() => _busy = false);
       }
     }
+  }
+
+  String? _extractSerialConflictMessage(String raw,
+      {required String attemptedSerial}) {
+    final lower = raw.toLowerCase();
+    final isConflict = lower.contains('409') ||
+        lower.contains('bound') ||
+        lower.contains('linked to') ||
+        lower.contains('another customer') ||
+        lower.contains('already');
+    if (!isConflict) return null;
+
+    var conflict =
+        'Serial ${attemptedSerial.isEmpty ? 'selected router' : attemptedSerial} is already linked to another customer. Please use a different ONT router.';
+    final nameMatch =
+        RegExp(r'linked to (.+?)\. Use', caseSensitive: false).firstMatch(raw);
+    if (nameMatch != null) {
+      conflict =
+          'This router is already linked to ${nameMatch.group(1)}. Please use a different ONT.';
+    }
+    return conflict;
+  }
+
+  Future<void> _showSerialConflictDialog(String conflict) async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Router Already Linked'),
+        content: Text(conflict),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _show(String message) {
@@ -1249,6 +1296,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
     if (!mounted || scanned == null || scanned.trim().isEmpty) return;
     setState(() {
+      _serialConflictError = null;
       controller.text = scanned.trim();
     });
     if (refreshOntDetails) {
@@ -3986,20 +4034,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     if (mounted) setState(() => _wizardStep = 3);
                   } catch (e) {
                     final raw = e.toString();
-                    final lower = raw.toLowerCase();
-                    if (lower.contains('409') ||
-                        lower.contains('bound') ||
-                        lower.contains('linked to') ||
-                        lower.contains('another customer') ||
-                        lower.contains('already')) {
-                      // Try to extract customer name from the backend message:
-                      // "Router already linked to John Doe (CUST001). Use a different ONT."
-                      String conflict = 'Serial $serial is already linked to another customer. Please use a different ONT router.';
-                      final nameMatch = RegExp(r'linked to (.+?)\. Use', caseSensitive: false).firstMatch(raw);
-                      if (nameMatch != null) {
-                        conflict = 'This router is already linked to ${nameMatch.group(1)}. Please use a different ONT.';
-                      }
+                    final conflict = _extractSerialConflictMessage(
+                      raw,
+                      attemptedSerial: serial,
+                    );
+                    if (conflict != null) {
                       setState(() => _serialConflictError = conflict);
+                      await _showSerialConflictDialog(conflict);
                     } else {
                       _show(raw);
                     }
