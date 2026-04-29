@@ -664,8 +664,11 @@ class InstallerApiClient {
         method: 'POST', token: session.accessToken);
   }
 
-  Future<List<SalesPlan>> fetchSalesPlans() async {
-    final list = _asList(await _request('/api/v1/installer/sales/plans'));
+  Future<List<SalesPlan>> fetchSalesPlans(InstallerSession session) async {
+    final list = _asList(await _request(
+      '/api/v1/installer/sales/plans',
+      token: session.accessToken,
+    ));
     return list.map((item) {
       final map = item as Map<String, dynamic>;
       return SalesPlan(

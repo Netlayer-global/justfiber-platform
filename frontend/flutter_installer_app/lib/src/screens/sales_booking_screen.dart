@@ -115,7 +115,11 @@ class _SalesBookingScreenState extends State<SalesBookingScreen> {
     });
     try {
       final appState = InstallerStateScope.of(context);
-      final plans = await appState.api.fetchSalesPlans();
+      final session = appState.session;
+      if (session == null) {
+        throw 'Installer session not found. Please login again.';
+      }
+      final plans = await appState.api.fetchSalesPlans(session);
       if (mounted) setState(() => _plans = plans);
     } catch (e) {
       if (mounted) setState(() => _plansError = e.toString());
