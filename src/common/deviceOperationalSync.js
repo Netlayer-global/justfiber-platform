@@ -851,7 +851,49 @@ export async function syncDeviceFromGenie(cacheRecord) {
   return { ok: true, deviceId: cacheRecord.deviceId, onlineStatus: parsed.onlineStatus };
 }
 
+async function seedMissingDevicesFromGenie(limit = 50) {
+  const liveDevices = await genieacsClient.listDevices(Math.max(1, Math.min(Number(limit || 50), 200)));
+  if (!Array.isArray(liveDevices) || !liveDevices.length) {
+    return { seeded: 0 };
+  }
+
+  let seeded = 0;
+  for (const summary of liveDevices) {
+    const parsed = summarizeGenieDevice(summary, firstValue(summary, ["_id", "DeviceID.ID"]));
+    if (!parsed.deviceId) continue;
+    const existing = await DeviceOperationalCache.findOne({ deviceId: parsed.deviceId }).select({ _id: 1 }).lean();
+    if (existing) continue;
+
+    await DeviceOperationalCache.create({
+      deviceId: parsed.deviceId,
+      serialNumber: parsed.serialNumber || "",
+      productClass: parsed.productClass || "",
+      onlineStatus: parsed.onlineStatus || "unknown",
+      wanInfo: parsed.wanInfo || {},
+      wifiInfo: parsed.wifiInfo || {},
+      lanInfo: parsed.lanInfo || {},
+      opticalInfo: parsed.opticalInfo || {},
+      provisioningState: "discovered_from_genie",
+      updatedAt: parsed.lastInformAt || new Date(),
+      ...(parsed.lastInformAt ? { lastInformAt: parsed.lastInformAt } : {})
+    });
+    seeded += 1;
+  }
+
+  return { seeded };
+}
+
 export async function syncCachedDevicesFromGenie({ deviceId, limit = 50 } = {}) {
+  let seeded = 0;
+  if (!deviceId) {
+    try {
+      const seedResult = await seedMissingDevicesFromGenie(limit);
+      seeded = seedResult.seeded || 0;
+    } catch (error) {
+      console.error("[devices] Failed to seed missing Genie devices:", error);
+    }
+  }
+
   const filter = deviceId ? { deviceId } : {};
   const devices = await DeviceOperationalCache.find(filter)
     .sort({ updatedAt: -1 })
@@ -879,6 +921,7 @@ export async function syncCachedDevicesFromGenie({ deviceId, limit = 50 } = {}) 
 
   return {
     scanned: devices.length,
+    seeded,
     synced,
     failed,
     results
