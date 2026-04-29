@@ -1326,6 +1326,16 @@ function mapFranchiseProfile(item: any): FranchiseProfile {
       useParentRouters: Boolean(metadata.useParentRouters),
       canCreateSubZone: Boolean(metadata.canCreateSubZone),
     },
+    permissionProfile: metadata.permissionProfile && typeof metadata.permissionProfile === 'object'
+      ? metadata.permissionProfile
+      : {
+          allowCustomerManagement: true,
+          allowBilling: true,
+          allowTickets: true,
+          allowJobs: true,
+          allowNetwork: false,
+          allowSettings: false,
+        },
     adminAccounts: Array.isArray(metadata.adminAccounts) ? metadata.adminAccounts : [],
     copiedSettings: metadata.copiedSettings && typeof metadata.copiedSettings === 'object'
       ? {

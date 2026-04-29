@@ -977,6 +977,14 @@ export interface FranchiseProfile {
     useParentRouters?: boolean
     canCreateSubZone?: boolean
   }
+  permissionProfile?: {
+    allowCustomerManagement?: boolean
+    allowBilling?: boolean
+    allowTickets?: boolean
+    allowJobs?: boolean
+    allowNetwork?: boolean
+    allowSettings?: boolean
+  }
   adminAccounts?: Array<{
     fullName?: string
     email?: string

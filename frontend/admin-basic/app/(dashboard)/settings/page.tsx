@@ -17,7 +17,7 @@ type WorkspaceNavItem = {
   sections: string[]
 }
 type InvoiceSetupView = 'organization' | 'rules' | 'template'
-type ZoneOperationsView = 'subzone' | 'logins' | 'contact'
+type ZoneOperationsView = 'subzone' | 'directory' | 'logins' | 'contact'
 
 type SectionMeta = {
   title: string
@@ -432,6 +432,25 @@ function getSectionMeta(section: string): SectionMeta {
       advanced: true,
     }
   )
+}
+
+function describeInheritanceLabels(profile?: FranchiseProfile['inheritanceProfile']) {
+  const active = [
+    profile?.inheritBillingProfile ? 'Billing profile' : '',
+    profile?.inheritInvoiceTemplate ? 'Invoice template' : '',
+    profile?.inheritPlans ? 'Plans' : '',
+    profile?.inheritPaymentGateway ? 'Payment gateway' : '',
+    profile?.inheritRouterVisibility ? 'Router visibility' : '',
+    profile?.useParentRouters ? 'Parent routers' : '',
+    profile?.canCreateSubZone ? 'Can create child sub-zones' : '',
+  ].filter(Boolean)
+  return active.length ? active : ['No inherit rules']
+}
+
+function describePermissionLabels(profile?: FranchiseProfile['permissionProfile']) {
+  return SUB_ZONE_PERMISSION_GROUPS
+    .filter((group) => Boolean(profile?.[group.key as keyof NonNullable<FranchiseProfile['permissionProfile']>]))
+    .map((group) => group.label)
 }
 
 function getWorkspaceForSection(section: string): WorkspaceKey {
@@ -1916,6 +1935,17 @@ export default function SettingsPage() {
             </button>
             <button
               type="button"
+              onClick={() => setZoneOperationsView('directory')}
+              className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                zoneOperationsView === 'directory'
+                  ? 'border-purple-300 bg-purple-50 text-purple-700'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+              }`}
+            >
+              Zone Directory and Permissions
+            </button>
+            <button
+              type="button"
               onClick={() => setZoneOperationsView('logins')}
               className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
                 zoneOperationsView === 'logins'
@@ -2085,49 +2115,120 @@ export default function SettingsPage() {
                   </label>
                 ))}
               </div>
-              <div className="mt-5 rounded-[22px] border border-slate-200 bg-white p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold text-slate-900">Existing sub-zones</div>
-                    <div className="mt-1 text-xs text-slate-500">
-                      {canAccessAllZones ? 'Delete unused sub-zones from here.' : 'Only main admin can delete sub-zones.'}
-                    </div>
+            </div>
+          ) : null}
+
+          {zoneOperationsView === 'directory' ? (
+            <div className="mt-4 rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <div className="text-sm font-semibold text-slate-900">Zone Directory and Permissions</div>
+                  <div className="mt-1 text-sm text-slate-500">
+                    Every created sub-zone, its contact, inherited setup, allowed work, and delete action in one place.
                   </div>
-                  <div className="text-xs text-slate-500">{visibleSubZones.length} total</div>
                 </div>
-                <div className="mt-4 space-y-3">
-                  {visibleSubZones.length ? (
-                    visibleSubZones.map((item) => {
-                      const itemCode = item.zoneCode || item.franchiseCode
-                      const deleting = busyDeleteFranchiseCode === item.franchiseCode
-                      return (
-                        <div key={item.id || item.franchiseCode} className="flex flex-col gap-3 rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 md:flex-row md:items-center md:justify-between">
-                          <div>
-                            <div className="text-sm font-semibold text-slate-900">{item.name || itemCode}</div>
-                            <div className="mt-1 text-xs text-slate-500">
-                              Code: {itemCode || '-'} | Parent: {normalizeRootZoneLabel(String(item.metadata?.parentZoneName || item.metadata?.parentZoneCode || activeZoneLabel || 'Admin'))}
+                <div className="grid grid-cols-2 gap-2 text-center md:min-w-[220px]">
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Sub-zones</div>
+                    <div className="mt-1 text-xl font-semibold text-slate-900">{visibleSubZones.length}</div>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Delete Access</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-900">{canAccessAllZones ? 'Main admin' : 'Locked'}</div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-5 space-y-4">
+                {visibleSubZones.length ? (
+                  visibleSubZones.map((item) => {
+                    const itemCode = item.zoneCode || item.franchiseCode
+                    const deleting = busyDeleteFranchiseCode === item.franchiseCode
+                    const allowedWork = describePermissionLabels(item.permissionProfile)
+                    const inheritedRules = describeInheritanceLabels(item.inheritanceProfile)
+                    const primaryAdmin = item.adminAccounts?.[0]
+                    return (
+                      <div key={item.id || item.franchiseCode} className="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                          <div className="space-y-3">
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <div className="text-base font-semibold text-slate-900">{item.name || itemCode}</div>
+                                <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                  {item.status || 'active'}
+                                </span>
+                              </div>
+                              <div className="mt-1 text-xs text-slate-500">
+                                Code: {itemCode || '-'} | Parent: {normalizeRootZoneLabel(String(item.metadata?.parentZoneName || item.metadata?.parentZoneCode || activeZoneLabel || 'Admin'))}
+                              </div>
                             </div>
-                            <div className="mt-1 text-xs text-slate-500">
-                              Contact: {item.phone || '-'} | {item.email || 'No email'}
+                            <div className="grid gap-3 md:grid-cols-3">
+                              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+                                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Contact</div>
+                                <div className="mt-2 text-sm text-slate-700">{item.phone || 'No phone'}</div>
+                                <div className="mt-1 text-sm text-slate-500">{item.email || 'No email'}</div>
+                              </div>
+                              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+                                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Zone Admin</div>
+                                <div className="mt-2 text-sm text-slate-700">{primaryAdmin?.fullName || 'Not saved'}</div>
+                                <div className="mt-1 text-sm text-slate-500">{primaryAdmin?.email || primaryAdmin?.phone || 'No login contact'}</div>
+                              </div>
+                              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+                                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Invoice Prefix</div>
+                                <div className="mt-2 text-sm font-semibold text-slate-800">{item.invoiceConfig?.invoicePrefix || 'Not set'}</div>
+                                <div className="mt-1 text-sm text-slate-500">{item.invoiceConfig?.templateKey || 'Default invoice template'}</div>
+                              </div>
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            className="rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-                            onClick={() => void handleDeleteSubZone(item)}
-                            disabled={!canAccessAllZones || deleting}
-                          >
-                            {!canAccessAllZones ? 'Main admin only' : deleting ? 'Deleting...' : 'Delete sub-zone'}
-                          </button>
+                          <div className="flex flex-col items-start gap-2 xl:items-end">
+                            <button
+                              type="button"
+                              className="rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                              onClick={() => void handleDeleteSubZone(item)}
+                              disabled={!canAccessAllZones || deleting}
+                            >
+                              {!canAccessAllZones ? 'Main admin only' : deleting ? 'Deleting...' : 'Delete sub-zone'}
+                            </button>
+                            <div className="text-xs text-slate-400">Delete also removes its zone login and serviceability zone.</div>
+                          </div>
                         </div>
-                      )
-                    })
-                  ) : (
-                    <div className="rounded-[18px] border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-                      No sub-zones found for this admin scope.
-                    </div>
-                  )}
-                </div>
+                        <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+                            <div className="text-sm font-semibold text-slate-900">Allowed Work</div>
+                            <div className="mt-1 text-xs text-slate-500">This is the permission summary for the created sub-zone.</div>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {allowedWork.length ? (
+                                allowedWork.map((label) => (
+                                  <span key={label} className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                                    {label}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-500">
+                                  No work areas enabled
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+                            <div className="text-sm font-semibold text-slate-900">Inheritance and Routing</div>
+                            <div className="mt-1 text-xs text-slate-500">What this sub-zone inherits from parent zone settings.</div>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {inheritedRules.map((label) => (
+                                <span key={label} className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+                                  {label}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <div className="rounded-[18px] border border-dashed border-slate-200 bg-white px-4 py-5 text-sm text-slate-500">
+                    No sub-zones found for this admin scope.
+                  </div>
+                )}
               </div>
             </div>
           ) : null}
