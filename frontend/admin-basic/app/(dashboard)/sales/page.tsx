@@ -248,27 +248,6 @@ function LeadStatusControl({
   )
 }
 
-function LeadActivityTimeline({ lead }: { lead: SalesLeadItem }) {
-  const activityItems = Array.isArray(lead.activityLog) ? lead.activityLog.slice(0, 5) : []
-  return (
-    <div className="rounded-[18px] border border-slate-200 bg-white p-4">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Recent activity</div>
-      {activityItems.length ? (
-        <div className="mt-3 space-y-3">
-          {activityItems.map((entry, index) => (
-            <div key={`${entry.type || 'activity'}-${entry.at || index}`} className="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3">
-              <div className="text-sm font-medium text-slate-800">{entry.message || 'Lead updated'}</div>
-              <div className="mt-1 text-xs text-slate-500">{formatDate(entry.at)}</div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="mt-3 text-sm text-slate-500">No activity captured yet for this lead.</div>
-      )}
-    </div>
-  )
-}
-
 async function compressImage(file: File, maxWidthPx = 1200, quality = 0.75): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -796,19 +775,6 @@ export default function SalesPage() {
     [bookingRows],
   )
 
-  const leadsWithFollowUp = useMemo(() => enrichedLeadRows.filter((item) => item.lead.followUpAt).length, [enrichedLeadRows])
-  const leadStageSummary = useMemo(() => {
-    const summary = new Map<string, number>()
-    enrichedLeadRows.forEach((item) => {
-      const key = item.lead.status || 'new'
-      summary.set(key, (summary.get(key) || 0) + 1)
-    })
-    return leadStatusOptions.map((status) => ({
-      status,
-      count: summary.get(status) || 0,
-    }))
-  }, [enrichedLeadRows])
-
   if (isLoading) {
     return (
       <div className="flex h-[40vh] items-center justify-center">
@@ -825,7 +791,7 @@ export default function SalesPage() {
             <div className="eyebrow-brand">Sales Desk</div>
             <h1 className="page-title">Sales Enquiries</h1>
             <p className="page-description">
-              Unassigned enquiries, feasible follow-ups, booked leads, and payment progress in one operator desk.
+              Ek simple desk jahan lead, booking, payment, aur quick actions sab seedhe dikhte hain.
             </p>
           </div>
 
@@ -847,69 +813,13 @@ export default function SalesPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-7">
-        <div className="stat-card">
-          <div className="eyebrow">Open Leads</div>
-          <div className="mt-3 text-3xl font-semibold text-slate-950">{leadSummary.total}</div>
-          <div className="mt-2 text-sm text-slate-500">Total sales enquiries in desk</div>
-        </div>
-        <div className="stat-card">
-          <div className="eyebrow">Needs Assignment</div>
-          <div className="mt-3 text-3xl font-semibold text-amber-600">{leadSummary.unassigned}</div>
-          <div className="mt-2 text-sm text-slate-500">Leads waiting for sales owner</div>
-        </div>
-        <div className="stat-card">
-          <div className="eyebrow">Feasible</div>
-          <div className="mt-3 text-3xl font-semibold text-emerald-600">{leadSummary.feasible}</div>
-          <div className="mt-2 text-sm text-slate-500">Ready for commercial follow-up</div>
-        </div>
-        <div className="stat-card">
-          <div className="eyebrow">Converted To Booking</div>
-          <div className="mt-3 text-3xl font-semibold text-sky-600">{leadSummary.booked}</div>
-          <div className="mt-2 text-sm text-slate-500">Leads with booking records linked</div>
-        </div>
-        <div className="stat-card">
-          <div className="eyebrow">Payment Pending</div>
-          <div className="mt-3 text-3xl font-semibold text-rose-600">{bookingSummary.pending}</div>
-          <div className="mt-2 text-sm text-slate-500">Bookings still waiting for payment</div>
-        </div>
-        <div className="stat-card">
-          <div className="eyebrow">Follow-ups Planned</div>
-          <div className="mt-3 text-3xl font-semibold text-violet-600">{leadsWithFollowUp}</div>
-          <div className="mt-2 text-sm text-slate-500">Leads with a scheduled next action</div>
-        </div>
-        <div className="stat-card">
-          <div className="eyebrow">Overdue Follow-up</div>
-          <div className="mt-3 text-3xl font-semibold text-rose-600">{leadSummary.overdueFollowUp}</div>
-          <div className="mt-2 text-sm text-slate-500">Leads where follow-up time has already passed</div>
-        </div>
-      </section>
-
       <section className="section-panel">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="eyebrow">Pipeline Summary</div>
-            <h2 className="mt-2 text-2xl font-semibold text-slate-950">Lead stage distribution</h2>
-            <p className="mt-2 text-sm text-slate-500">See where the current queue is stacking up before dispatching the sales team.</p>
-          </div>
-        </div>
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {leadStageSummary.map((item) => (
-            <div key={item.status} className="rounded-[20px] border border-slate-200 bg-white p-4">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{formatSource(item.status)}</div>
-              <div className="mt-3 text-2xl font-semibold text-slate-950">{item.count}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="section-panel">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="eyebrow">Field Sales Intake</div>
-            <h2 className="mt-2 text-2xl font-semibold text-slate-950">Add manual lead</h2>
+            <div className="eyebrow">Quick Intake</div>
+            <h2 className="mt-2 text-2xl font-semibold text-slate-950">Add enquiry</h2>
             <p className="mt-2 text-sm text-slate-500">
-              Use this for walk-in, field visit, business broadband, or manually captured sales opportunities.
+              Walk-in, field visit, ya manual sales enquiry yahan se seedhe add karo.
             </p>
           </div>
         </div>
@@ -1012,8 +922,8 @@ export default function SalesPage() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <div className="eyebrow">Lead Queue</div>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-950">Lead actions</h2>
-              <p className="mt-2 text-sm text-slate-500">Focus first on unassigned, stale, and feasible enquiries that need quick follow-up.</p>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-950">All enquiries</h2>
+              <p className="mt-2 text-sm text-slate-500">Sirf zaroori lead details aur quick actions.</p>
             </div>
             <div className="flex flex-col gap-3 lg:items-end">
               <label className="flex min-w-[220px] flex-col gap-2">
@@ -1031,7 +941,6 @@ export default function SalesPage() {
               <div className="flex flex-wrap gap-2">
               <FilterChip active={leadView === 'all'} label="All" count={leadSummary.total} onClick={() => setLeadView('all')} />
               <FilterChip active={leadView === 'unassigned'} label="Unassigned" count={leadSummary.unassigned} onClick={() => setLeadView('unassigned')} />
-              <FilterChip active={leadView === 'feasible'} label="Feasible" count={leadSummary.feasible} onClick={() => setLeadView('feasible')} />
               <FilterChip active={leadView === 'booked'} label="Booked" count={leadSummary.booked} onClick={() => setLeadView('booked')} />
               <FilterChip active={leadView === 'stale'} label="Stale" count={leadSummary.stale} onClick={() => setLeadView('stale')} />
               </div>
@@ -1041,7 +950,7 @@ export default function SalesPage() {
           <div className="space-y-4">
             {filteredLeadRows.length ? (
               filteredLeadRows.slice(0, 40).map(({ lead, matchedBooking, planName, amount, duration, preferredSlot, fullAddress, isStale, isFollowUpOverdue }) => (
-                <div key={lead.id} className="rounded-[24px] border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm">
+                <div key={lead.id} className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0">
                       <div className="text-lg font-semibold text-slate-900">{lead.fullName || 'New enquiry'}</div>
@@ -1060,44 +969,45 @@ export default function SalesPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 grid gap-3 xl:grid-cols-3">
-                    <div className="rounded-[18px] border border-slate-200 bg-white p-4 text-sm text-slate-700">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Customer Details</div>
-                      <div className="mt-3 space-y-1.5">
-                        <div>Phone: {lead.mobile || '-'}</div>
-                        <div>Email: {lead.email || '-'}</div>
-                        <div>PIN Code: {lead.pinCode || matchedBooking?.personalDetails?.pinCode || '-'}</div>
-                        <div>Zone: {lead.zoneId || '-'}</div>
-                        <div>Date: {formatDate(lead.createdAt)}</div>
-                        <div>Follow-up: {lead.followUpAt ? formatDate(lead.followUpAt) : 'Not scheduled'}</div>
+                  <div className="mt-4 rounded-[18px] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Phone</div>
+                        <div className="mt-1">{lead.mobile || '-'}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Plan</div>
+                        <div className="mt-1">{planName || 'Not selected'}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Booking</div>
+                        <div className="mt-1">{matchedBooking?.bookingNumber || 'Lead only'}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Payment</div>
+                        <div className="mt-1">{matchedBooking?.payment?.status || 'Not started'}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Amount</div>
+                        <div className="mt-1">{amount ? formatMoney(Number(amount)) : '-'}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Follow-up</div>
+                        <div className="mt-1">{lead.followUpAt ? formatDate(lead.followUpAt) : 'Not scheduled'}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Zone</div>
+                        <div className="mt-1">{lead.zoneId || '-'}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Created</div>
+                        <div className="mt-1">{formatDate(lead.createdAt)}</div>
                       </div>
                     </div>
-
-                    <div className="rounded-[18px] border border-slate-200 bg-white p-4 text-sm text-slate-700">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Plan and Schedule</div>
-                      <div className="mt-3 space-y-1.5">
-                        <div>Plan: {planName || 'Not selected yet'}</div>
-                        <div>Amount: {amount ? formatMoney(Number(amount)) : 'Pending selection'}</div>
-                        <div>Duration: {duration || 'Pending selection'}</div>
-                        <div>Preferred Slot: {preferredSlot || 'Not shared yet'}</div>
-                        <div>Booking Ref: {matchedBooking?.bookingNumber || '-'}</div>
-                      </div>
+                    <div className="mt-3 border-t border-slate-200 pt-3">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Address</div>
+                      <div className="mt-1 whitespace-pre-wrap break-words">{fullAddress || '-'}</div>
                     </div>
-
-                    <div className="rounded-[18px] border border-slate-200 bg-white p-4 text-sm text-slate-700">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Booking and Payment</div>
-                      <div className="mt-3 space-y-1.5">
-                        <div>Booking Status: {matchedBooking?.status || 'Lead only'}</div>
-                        <div>Payment: {matchedBooking?.payment?.status || 'Not started'}</div>
-                        <div>Payment Amount: {matchedBooking?.payment?.amount ? formatMoney(matchedBooking.payment.amount) : '-'}</div>
-                        <div>Source: {formatSource(matchedBooking?.source || lead.source)}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 rounded-[18px] border border-slate-200 bg-white p-4 text-sm text-slate-700">
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Address</div>
-                    <div className="mt-3 whitespace-pre-wrap break-words">{fullAddress || '-'}</div>
                   </div>
 
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -1128,9 +1038,6 @@ export default function SalesPage() {
                   <div className="mt-3 grid gap-3 xl:grid-cols-2">
                     <SalesAssignmentControl lead={lead} agents={agents} onAssign={handleAssignLead} busy={assigningLeadId === lead.id || !agents.length} />
                     <LeadStatusControl lead={lead} onSave={handleUpdateLead} busy={updatingLeadId === lead.id} />
-                    <div className="xl:col-span-2">
-                      <LeadActivityTimeline lead={lead} />
-                    </div>
                   </div>
                 </div>
               ))
@@ -1168,15 +1075,13 @@ export default function SalesPage() {
           <div className="flex flex-col gap-4">
             <div>
               <div className="eyebrow">Booking Queue</div>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-950">Payment and conversion</h2>
-              <p className="mt-2 text-sm text-slate-500">Track payment state and the leads that have already moved into booking.</p>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-950">Bookings</h2>
+              <p className="mt-2 text-sm text-slate-500">Simple booking list with payment actions.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <FilterChip active={bookingView === 'all'} label="All" count={bookingSummary.total} onClick={() => setBookingView('all')} />
               <FilterChip active={bookingView === 'payment_pending'} label="Payment pending" count={bookingSummary.pending} onClick={() => setBookingView('payment_pending')} />
               <FilterChip active={bookingView === 'paid'} label="Paid" count={bookingSummary.paid} onClick={() => setBookingView('paid')} />
-              <FilterChip active={bookingView === 'assigned'} label="Assigned lead" count={bookings.filter((booking) => leads.find((lead) => lead.id === booking.leadId)?.salesAgent?.id).length} onClick={() => setBookingView('assigned')} />
-              <FilterChip active={bookingView === 'recent'} label="Recent" count={bookingRows.filter((booking) => !isStaleLead(booking.createdAt)).length} onClick={() => setBookingView('recent')} />
             </div>
           </div>
 
@@ -1185,7 +1090,7 @@ export default function SalesPage() {
               filteredBookingRows.slice(0, 30).map((booking) => {
                 const linkedLead = booking.leadId ? leads.find((item) => item.id === booking.leadId) : undefined
                 return (
-                  <div key={booking.id} className="rounded-[24px] border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm">
+                  <div key={booking.id} className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="min-w-0">
                         <div className="text-lg font-semibold text-slate-900">
@@ -1204,32 +1109,28 @@ export default function SalesPage() {
                       </div>
                     </div>
 
-                    <div className="mt-4 grid gap-3">
-                      <div className="rounded-[18px] border border-slate-200 bg-white p-4 text-sm text-slate-700">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Booking Details</div>
-                        <div className="mt-3 space-y-1.5">
-                          <div>Plan: {booking.selectedPlan?.planName || linkedLead?.selectedPlan?.planName || '-'}</div>
-                          <div>Amount: {formatMoney(booking.selectedPlan?.totalAmount || booking.payment?.amount || 0)}</div>
-                          <div>Payment: {booking.payment?.status || '-'}</div>
-                          <div>Date: {formatDate(booking.createdAt)}</div>
-                          <div>Lead Ref: {linkedLead?.leadNumber || '-'}</div>
+                    <div className="mt-4 rounded-[18px] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        <div>
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Plan</div>
+                          <div className="mt-1">{booking.selectedPlan?.planName || linkedLead?.selectedPlan?.planName || '-'}</div>
+                        </div>
+                        <div>
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Amount</div>
+                          <div className="mt-1">{formatMoney(booking.selectedPlan?.totalAmount || booking.payment?.amount || 0)}</div>
+                        </div>
+                        <div>
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Phone</div>
+                          <div className="mt-1">{booking.personalDetails?.mobile || linkedLead?.mobile || '-'}</div>
+                        </div>
+                        <div>
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Date</div>
+                          <div className="mt-1">{formatDate(booking.createdAt)}</div>
                         </div>
                       </div>
-
-                      <div className="rounded-[18px] border border-slate-200 bg-white p-4 text-sm text-slate-700">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Customer and Follow Up</div>
-                        <div className="mt-3 space-y-1.5">
-                          <div>Phone: {booking.personalDetails?.mobile || linkedLead?.mobile || '-'}</div>
-                          <div>Email: {booking.personalDetails?.email || linkedLead?.email || '-'}</div>
-                          <div>PIN Code: {booking.personalDetails?.pinCode || linkedLead?.pinCode || '-'}</div>
-                          <div>Assigned Sales Person: {linkedLead?.salesAgent?.fullName || 'Unassigned'}</div>
-                          <div>Feasible: {linkedLead?.feasible ? 'Yes' : linkedLead ? 'No' : '-'}</div>
-                        </div>
-                      </div>
-
-                      <div className="rounded-[18px] border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                      <div className="mt-3 border-t border-slate-200 pt-3">
                         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Address</div>
-                        <div className="mt-3 whitespace-pre-wrap break-words">{booking.personalDetails?.fullAddress || linkedLead?.address || '-'}</div>
+                        <div className="mt-1 whitespace-pre-wrap break-words">{booking.personalDetails?.fullAddress || linkedLead?.address || '-'}</div>
                       </div>
                     </div>
 
