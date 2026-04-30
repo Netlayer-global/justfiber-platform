@@ -867,6 +867,17 @@ function mapCustomer(customer: any): Customer {
                 reason: customer.radiusService.lastAuthTelemetry.reason || null,
               }
             : null,
+          pppoeSnapshot: customer.radiusService.pppoeSnapshot
+            ? {
+                online: customer.radiusService.pppoeSnapshot.online === true,
+                derivedState: customer.radiusService.pppoeSnapshot.derivedState || null,
+                ipAddress: customer.radiusService.pppoeSnapshot.ipAddress || null,
+                sessionId: customer.radiusService.pppoeSnapshot.sessionId || null,
+                liveSince: customer.radiusService.pppoeSnapshot.liveSince || null,
+                lastActivityAt: customer.radiusService.pppoeSnapshot.lastActivityAt || null,
+                sessionCount: Number(customer.radiusService.pppoeSnapshot.sessionCount || 0),
+              }
+            : null,
           usageSummary: customer.radiusService.usageSummary
             ? {
                 totalInputOctets: Number(customer.radiusService.usageSummary.totalInputOctets || 0),
