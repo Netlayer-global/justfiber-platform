@@ -143,6 +143,7 @@ export default function CustomerDetailPage() {
   }
 
   const pppoeSession = getPppoeSessionSnapshot(customer)
+  const deviceSummary = getCustomerDeviceSummary(customer)
 
   const tabs = [
     { id: 'overview', label: 'Overview', content: <OverviewTab customer={customer} onRefresh={load} /> },
@@ -202,7 +203,15 @@ export default function CustomerDetailPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <QuickStat label="Outstanding" value={formatCurrency((customer.invoiceSummary as any)?.dueAmount || 0)} tone={(customer.invoiceSummary as any)?.dueAmount > 0 ? 'rose' : 'emerald'} />
         <QuickStat label="Total Paid" value={formatCurrency((customer.invoiceSummary as any)?.paidAmount || 0)} tone="emerald" />
-        <QuickStat label="Active Devices" value={String(customer.devices?.length || 0)} tone="purple" />
+        <QuickStat
+          label="Active Devices"
+          value={
+            deviceSummary.totalCount
+              ? `${deviceSummary.onlineCount} / ${deviceSummary.totalCount} online`
+              : '0'
+          }
+          tone={deviceSummary.onlineCount > 0 ? 'purple' : 'amber'}
+        />
         <QuickStat label="PPPoE Session" value={pppoeSession.online ? 'Online' : 'Offline'} tone={pppoeSession.online ? 'emerald' : 'amber'} />
       </div>
 
@@ -256,6 +265,10 @@ function OverviewTab({ customer, onRefresh }: { customer: Customer; onRefresh: (
     customer.radiusService?.currentIpv4
   )
   const pppoeSession = getPppoeSessionSnapshot(customer)
+  const primaryDeviceStatus = getResolvedDeviceOnlineState(customer, primaryDevice, 0)
+  const wanMode = customerDeviceText(primaryDevice?.wanInfo?.wanMode, primaryDevice?.wanInfo?.connectionType, 'pppoe').toUpperCase()
+  const wanVlan = customerDeviceText(primaryDevice?.wanInfo?.vlanId)
+  const wanGateway = customerDeviceText(primaryDevice?.wanInfo?.gateway, primaryDevice?.wanInfo?.defaultGateway)
   const [wifi24, setWifi24] = useState(ssid24)
   const [wifi5, setWifi5] = useState(ssid5)
   const [wifiPasswordInput, setWifiPasswordInput] = useState('')
@@ -372,11 +385,15 @@ function OverviewTab({ customer, onRefresh }: { customer: Customer; onRefresh: (
           <div className="mt-5 space-y-2 rounded-xl border border-slate-200 bg-white p-3 text-xs">
             <div className="font-semibold text-slate-900">Wi-Fi and Device Snapshot</div>
             <div className="flex justify-between gap-3"><span className="text-slate-500">Device</span><span className="font-mono text-right text-slate-700">{customerDeviceText(primaryDevice.serialNumber, primaryDevice.deviceId) || '—'}</span></div>
+            <div className="flex justify-between gap-3"><span className="text-slate-500">Device Status</span>{primaryDeviceStatus === 'online' ? <Badge variant="success" withDot pulse>Online</Badge> : <Badge variant="neutral">Offline</Badge>}</div>
             <div className="flex justify-between gap-3"><span className="text-slate-500">SSID 2.4G</span><span className="text-right text-slate-700">{ssid24 || '—'}</span></div>
             <div className="flex justify-between gap-3"><span className="text-slate-500">SSID 5G</span><span className="text-right text-slate-700">{ssid5 || '—'}</span></div>
             <div className="flex justify-between gap-3"><span className="text-slate-500">Wi-Fi Password</span><span className="text-right text-slate-700">{wifiPassword || '—'}</span></div>
             <div className="flex justify-between gap-3"><span className="text-slate-500">PPPoE</span><span className="font-mono text-right text-slate-700">{pppoeUsername || '—'}</span></div>
             <div className="flex justify-between gap-3"><span className="text-slate-500">IPv4</span><span className="font-mono text-right text-slate-700">{ipv4 || '—'}</span></div>
+            <div className="flex justify-between gap-3"><span className="text-slate-500">WAN Mode</span><span className="font-mono text-right text-slate-700">{wanMode || '—'}</span></div>
+            <div className="flex justify-between gap-3"><span className="text-slate-500">VLAN</span><span className="font-mono text-right text-slate-700">{wanVlan || '—'}</span></div>
+            <div className="flex justify-between gap-3"><span className="text-slate-500">Gateway</span><span className="font-mono text-right text-slate-700">{wanGateway || '—'}</span></div>
           </div>
         ) : null}
         <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4">
@@ -400,7 +417,31 @@ function OverviewTab({ customer, onRefresh }: { customer: Customer; onRefresh: (
           </div>
         </div>
         <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-          <div className="text-sm font-semibold text-slate-900">Change PPPoE</div>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold text-slate-900">WAN Settings</div>
+              <div className="mt-1 text-xs text-slate-500">PPPoE credentials and current WAN details for the linked router.</div>
+            </div>
+            {primaryDeviceStatus === 'online' ? <Badge variant="success" withDot pulse>Device Online</Badge> : <Badge variant="neutral">Device Offline</Badge>}
+          </div>
+          <div className="mt-3 grid gap-2 rounded-xl bg-slate-50 p-3 text-xs sm:grid-cols-2">
+            <div>
+              <div className="text-slate-500">WAN mode</div>
+              <div className="font-mono text-slate-700">{wanMode || '—'}</div>
+            </div>
+            <div>
+              <div className="text-slate-500">Current IPv4</div>
+              <div className="font-mono text-slate-700">{ipv4 || '—'}</div>
+            </div>
+            <div>
+              <div className="text-slate-500">VLAN</div>
+              <div className="font-mono text-slate-700">{wanVlan || '—'}</div>
+            </div>
+            <div>
+              <div className="text-slate-500">Gateway</div>
+              <div className="font-mono text-slate-700">{wanGateway || '—'}</div>
+            </div>
+          </div>
           <div className="mt-3 grid gap-3">
             <label className="space-y-1">
               <div className="text-xs font-medium text-slate-500">PPPoE Username</div>
@@ -411,7 +452,7 @@ function OverviewTab({ customer, onRefresh }: { customer: Customer; onRefresh: (
               <input className="input" value={pppoePasswordInput} onChange={(event) => setPppoePasswordInput(event.target.value)} placeholder="Enter new PPPoE password" />
             </label>
             <Button variant="secondary" onClick={() => void handlePppoeSave()} disabled={savingPppoe || !pppoeUserInput.trim()}>
-              {savingPppoe ? 'Saving...' : 'Save PPPoE'}
+              {savingPppoe ? 'Saving...' : 'Save WAN Settings'}
             </Button>
           </div>
         </div>
@@ -499,6 +540,39 @@ function getPppoeSessionSnapshot(customer: Customer) {
     ipAddress,
     radiusState: radiusState || 'unknown',
     sessionCount: sessions.length,
+  }
+}
+
+function getResolvedDeviceOnlineState(customer: Customer, device?: NonNullable<Customer['devices']>[number] | null, deviceIndex = 0) {
+  if (!device) return 'offline'
+  const normalized = String(device.onlineStatus || '').trim().toLowerCase()
+  if (['online', 'up', 'connected', 'live'].includes(normalized)) return 'online'
+
+  const wanSignals = [
+    device.wanInfo?.sessionStatus,
+    device.wanInfo?.connectionStatus,
+    device.wanInfo?.status,
+  ]
+    .map((value) => String(value || '').trim().toLowerCase())
+    .filter(Boolean)
+
+  if (wanSignals.some((value) => ['up', 'connected', 'online', 'live'].includes(value))) return 'online'
+  if (customerDeviceText(device.wanInfo?.ipv4Address, device.wanInfo?.ipAddress, device.wanInfo?.externalIpAddress)) return 'online'
+  if (deviceIndex === 0 && getPppoeSessionSnapshot(customer).online) return 'online'
+
+  return 'offline'
+}
+
+function getCustomerDeviceSummary(customer: Customer) {
+  const devices = customer.devices || []
+  const onlineCount = devices.reduce(
+    (count, device, index) => count + (getResolvedDeviceOnlineState(customer, device, index) === 'online' ? 1 : 0),
+    0
+  )
+
+  return {
+    totalCount: devices.length,
+    onlineCount,
   }
 }
 
@@ -593,43 +667,46 @@ function DevicesTab({ customer }: { customer: Customer }) {
   if (devices.length === 0) return <Card><EmptyState icon={HardDrive} title="No devices" description="Customer devices will appear here once provisioned." /></Card>
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      {devices.map((d) => (
-        <Card key={d.id}>
-          <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-50 text-purple-700">
-              <HardDrive className="h-5 w-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <h4 className="font-bold text-slate-900">{customerDeviceText(d.serialNumber, d.deviceId) || 'Device linked'}</h4>
-                <StatusBadge status={d.onlineStatus} />
+      {devices.map((d, index) => {
+        const resolvedStatus = getResolvedDeviceOnlineState(customer, d, index)
+        return (
+          <Card key={d.id}>
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-50 text-purple-700">
+                <HardDrive className="h-5 w-5" />
               </div>
-              <p className="text-xs text-slate-500">{customerDeviceText(d.productClass) || 'CPE Device'}</p>
-              <div className="mt-3 grid gap-2 text-xs">
-                {customerDeviceText(d.deviceId) ? <div><span className="text-slate-500">Device ID:</span> <span className="font-mono">{customerDeviceText(d.deviceId)}</span></div> : null}
-                {customerDeviceText(d.wanInfo?.ipv4Address, d.wanInfo?.ipAddress, d.wanInfo?.externalIpAddress) ? (
-                  <div><span className="text-slate-500">IPv4:</span> <span className="font-mono">{customerDeviceText(d.wanInfo?.ipv4Address, d.wanInfo?.ipAddress, d.wanInfo?.externalIpAddress)}</span></div>
-                ) : null}
-                {customerDeviceText(d.wanInfo?.pppoeUsernameMasked, d.wanInfo?.pppoeUsername, d.wanInfo?.username) ? (
-                  <div><span className="text-slate-500">PPPoE:</span> <span className="font-mono">{customerDeviceText(d.wanInfo?.pppoeUsernameMasked, d.wanInfo?.pppoeUsername, d.wanInfo?.username)}</span></div>
-                ) : null}
-                {customerDeviceText(d.wifiInfo?.ssid24, d.wifiInfo?.ssid24Masked, d.wifiInfo?.primarySsid) ? (
-                  <div><span className="text-slate-500">SSID 2.4G:</span> {customerDeviceText(d.wifiInfo?.ssid24, d.wifiInfo?.ssid24Masked, d.wifiInfo?.primarySsid)}</div>
-                ) : null}
-                {customerDeviceText(d.wifiInfo?.ssid5, d.wifiInfo?.ssid5Masked, d.wifiInfo?.guestSsid5) ? (
-                  <div><span className="text-slate-500">SSID 5G:</span> {customerDeviceText(d.wifiInfo?.ssid5, d.wifiInfo?.ssid5Masked, d.wifiInfo?.guestSsid5)}</div>
-                ) : null}
-                {customerDeviceText(d.wifiInfo?.password24Masked, d.wifiInfo?.passwordMasked, d.wifiInfo?.password5Masked) ? (
-                  <div><span className="text-slate-500">Wi-Fi Password:</span> {customerDeviceText(d.wifiInfo?.password24Masked, d.wifiInfo?.passwordMasked, d.wifiInfo?.password5Masked)}</div>
-                ) : null}
-                {customerDeviceText(d.wanInfo?.vlanId) ? (
-                  <div><span className="text-slate-500">VLAN:</span> {customerDeviceText(d.wanInfo?.vlanId)}</div>
-                ) : null}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h4 className="font-bold text-slate-900">{customerDeviceText(d.serialNumber, d.deviceId) || 'Device linked'}</h4>
+                  <StatusBadge status={resolvedStatus} />
+                </div>
+                <p className="text-xs text-slate-500">{customerDeviceText(d.productClass) || 'CPE Device'}</p>
+                <div className="mt-3 grid gap-2 text-xs">
+                  {customerDeviceText(d.deviceId) ? <div><span className="text-slate-500">Device ID:</span> <span className="font-mono">{customerDeviceText(d.deviceId)}</span></div> : null}
+                  {customerDeviceText(d.wanInfo?.ipv4Address, d.wanInfo?.ipAddress, d.wanInfo?.externalIpAddress) ? (
+                    <div><span className="text-slate-500">IPv4:</span> <span className="font-mono">{customerDeviceText(d.wanInfo?.ipv4Address, d.wanInfo?.ipAddress, d.wanInfo?.externalIpAddress)}</span></div>
+                  ) : null}
+                  {customerDeviceText(d.wanInfo?.pppoeUsernameMasked, d.wanInfo?.pppoeUsername, d.wanInfo?.username) ? (
+                    <div><span className="text-slate-500">PPPoE:</span> <span className="font-mono">{customerDeviceText(d.wanInfo?.pppoeUsernameMasked, d.wanInfo?.pppoeUsername, d.wanInfo?.username)}</span></div>
+                  ) : null}
+                  {customerDeviceText(d.wifiInfo?.ssid24, d.wifiInfo?.ssid24Masked, d.wifiInfo?.primarySsid) ? (
+                    <div><span className="text-slate-500">SSID 2.4G:</span> {customerDeviceText(d.wifiInfo?.ssid24, d.wifiInfo?.ssid24Masked, d.wifiInfo?.primarySsid)}</div>
+                  ) : null}
+                  {customerDeviceText(d.wifiInfo?.ssid5, d.wifiInfo?.ssid5Masked, d.wifiInfo?.guestSsid5) ? (
+                    <div><span className="text-slate-500">SSID 5G:</span> {customerDeviceText(d.wifiInfo?.ssid5, d.wifiInfo?.ssid5Masked, d.wifiInfo?.guestSsid5)}</div>
+                  ) : null}
+                  {customerDeviceText(d.wifiInfo?.password24Masked, d.wifiInfo?.passwordMasked, d.wifiInfo?.password5Masked) ? (
+                    <div><span className="text-slate-500">Wi-Fi Password:</span> {customerDeviceText(d.wifiInfo?.password24Masked, d.wifiInfo?.passwordMasked, d.wifiInfo?.password5Masked)}</div>
+                  ) : null}
+                  {customerDeviceText(d.wanInfo?.vlanId) ? (
+                    <div><span className="text-slate-500">VLAN:</span> {customerDeviceText(d.wanInfo?.vlanId)}</div>
+                  ) : null}
+                </div>
               </div>
             </div>
-          </div>
-        </Card>
-      ))}
+          </Card>
+        )
+      })}
     </div>
   )
 }
