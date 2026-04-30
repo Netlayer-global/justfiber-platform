@@ -287,10 +287,10 @@ export default function EditUserPage() {
           <div className="text-sm text-slate-500">
             <Link href="/user-management?view=users" className="font-semibold text-[#2a8cff]">User Management</Link>
             <span className="mx-2">/</span>
-            <Link href={`/customers/${customer.id}`} className="font-semibold text-[#2a8cff]">{customer.pppoeUsername || customer.customerId}</Link>
+            <Link href={`/customers/${customer.customerId || customer.id}`} className="font-semibold text-[#2a8cff]">{customer.pppoeUsername || customer.customerId}</Link>
           </div>
           <div className="flex gap-3">
-            <Link href={`/customers/${customer.id}`} className="btn-secondary">Customer page</Link>
+            <Link href={`/customers/${customer.customerId || customer.id}`} className="btn-secondary">Customer page</Link>
             <Link href="/user-management?view=users" className="btn-secondary">Users list</Link>
           </div>
         </div>
@@ -349,7 +349,7 @@ export default function EditUserPage() {
               <h2 className="text-xl font-semibold text-slate-900">Account</h2>
               <p className="mt-1 text-sm text-slate-500">Only the account identity operators need every day.</p>
             </div>
-            <Link href={`/customers/${customer.id}`} className="btn-secondary">Open customer page</Link>
+            <Link href={`/customers/${customer.customerId || customer.id}`} className="btn-secondary">Open customer page</Link>
           </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-2">
             <label className="space-y-2">
@@ -376,8 +376,8 @@ export default function EditUserPage() {
               <Copy className="h-4 w-4" />
               Copy username
             </button>
-            <Link href={`/customers/${customer.id}`} className="btn-secondary">Customer page</Link>
-            <Link href={`/customers/${customer.id}?tab=billing`} className="btn-secondary">Open billing</Link>
+            <Link href={`/customers/${customer.customerId || customer.id}`} className="btn-secondary">Customer page</Link>
+            <Link href={`/customers/${customer.customerId || customer.id}?tab=billing`} className="btn-secondary">Open billing</Link>
             <Link href={natLogHref} className="btn-secondary">Open NAT Logs</Link>
             <Link href="/user-management?view=users" className="btn-secondary">Users list</Link>
           </div>
@@ -481,7 +481,7 @@ export default function EditUserPage() {
               <p className="mt-1 text-sm text-slate-500">Static IP, pool, bound MAC, and live service state in one place.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link href={`/customers/${customer.id}?tab=devices`} className="btn-secondary">Open network</Link>
+              <Link href={`/customers/${customer.customerId || customer.id}?tab=devices`} className="btn-secondary">Open network</Link>
               <Link href={natLogHref} className="btn-secondary">NAT logs</Link>
             </div>
           </div>
@@ -603,7 +603,7 @@ export default function EditUserPage() {
           <button type="button" className="btn-secondary" onClick={() => void handleResetForm()} disabled={isSaving}>
             Reset
           </button>
-          <Link href={`/customers/${customer.id}`} className="btn-secondary">Cancel</Link>
+          <Link href={`/customers/${customer.customerId || customer.id}`} className="btn-secondary">Cancel</Link>
           <button type="submit" className="btn-primary" disabled={isSaving || !canSave}>
             {isSaving ? 'Saving...' : 'Save Profile'}
           </button>

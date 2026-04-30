@@ -309,7 +309,7 @@ function CustomersContent() {
                 <div
                   key={customer.id}
                   className="grid cursor-pointer grid-cols-[56px_minmax(220px,1.8fr)_minmax(120px,1fr)_minmax(120px,1fr)_110px_130px] items-center gap-3 border-b border-slate-100 px-4 py-2.5 text-sm transition hover:bg-slate-50 last:border-b-0"
-                  onClick={() => router.push(`/customers/${customer.id}`)}
+                  onClick={() => router.push(`/customers/${customer.customerId || customer.id}`)}
                 >
                   <div className="text-slate-500">{index + 1}</div>
                   <div>
@@ -335,11 +335,11 @@ function CustomersContent() {
                     </span>
                   </div>
                   <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
-                    <Link href={`/customers/${customer.id}`} className="inline-flex items-center gap-2 font-medium text-purple-700">
+                    <Link href={`/customers/${customer.customerId || customer.id}`} className="inline-flex items-center gap-2 font-medium text-purple-700">
                       <Eye className="h-4 w-4" />
                       Open
                     </Link>
-                    <Link href={`/customers/${customer.id}?tab=billing`} className="text-slate-500 hover:text-slate-900">
+                    <Link href={`/customers/${customer.customerId || customer.id}?tab=billing`} className="text-slate-500 hover:text-slate-900">
                       Billing
                     </Link>
                     <Link href={`/all-users/${customer.id}/edit`} className="text-slate-500 hover:text-slate-900">
