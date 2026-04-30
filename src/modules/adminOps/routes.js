@@ -682,14 +682,16 @@ function buildInvoiceHtml(invoice, customer, branding) {
     <meta charset="utf-8"/>
     <title>${displayInvoiceNumber}</title>
     <style>
-      @page { size: A4; margin: 10mm; }
+      @page { size: A4; margin: 6mm; }
       * { box-sizing: border-box; }
-      body { font-family: Arial, sans-serif; background: #eef0f4; margin: 0; padding: 16px; color: #23262d; }
-      .invoice-shell { width: 190mm; margin: 0 auto; background: #ffffff; box-shadow: 0 24px 60px rgba(15,23,42,0.10); padding: 14mm 12mm 10mm; }
+      html, body { width: 210mm; min-height: 297mm; }
+      body { font-family: Arial, sans-serif; background: #eef0f4; margin: 0; padding: 10px; color: #23262d; }
+      .invoice-shell { width: 186mm; margin: 0 auto; background: #ffffff; box-shadow: 0 24px 60px rgba(15,23,42,0.10); padding: 9mm 8mm 7mm; page-break-after: avoid; overflow: hidden; }
       .avoid-break { break-inside: avoid; page-break-inside: avoid; }
       @media print {
-        body { background: #ffffff; padding: 0; }
-        .invoice-shell { width: auto; margin: 0; box-shadow: none; padding: 0; }
+        html, body { width: 210mm; height: 297mm; overflow: hidden; background: #ffffff; }
+        body { padding: 0; }
+        .invoice-shell { width: 186mm; margin: 0 auto; box-shadow: none; padding: 8mm 7mm 6mm; page-break-after: avoid; overflow: hidden; }
       }
     </style>
   </head>

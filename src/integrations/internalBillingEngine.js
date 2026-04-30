@@ -377,12 +377,15 @@ function resolveCustomerBillingState(customer = {}, zoneMapping = null) {
     customer?.address?.stateCode,
     stateName
   );
+  if (stateCode && STATE_CODE_MAP[stateCode]) {
+    stateName = STATE_CODE_MAP[stateCode];
+  }
   if (!stateCode) {
     const companyFallbackStateName = String(zoneMapping?.companyStateName || "").trim();
     const companyFallbackStateCode = resolveComparableStateCode(zoneMapping?.companyStateCode, companyFallbackStateName);
     if (companyFallbackStateCode) {
       stateCode = companyFallbackStateCode;
-      stateName = companyFallbackStateName || stateName;
+      stateName = STATE_CODE_MAP[companyFallbackStateCode] || companyFallbackStateName || stateName;
     }
   }
   return {
