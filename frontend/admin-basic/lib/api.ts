@@ -928,17 +928,21 @@ function mapCustomerBooking(booking: any): CustomerBooking {
 }
 
 function mapCustomerDevice(device: any): CustomerDevice {
+  const wifiInfo = device.wifiInfo && typeof device.wifiInfo === 'object' ? device.wifiInfo : {}
+  const wanInfo = device.wanInfo && typeof device.wanInfo === 'object' ? device.wanInfo : {}
+  const lanInfo = device.lanInfo && typeof device.lanInfo === 'object' ? device.lanInfo : {}
+  const opticalInfo = device.opticalInfo && typeof device.opticalInfo === 'object' ? device.opticalInfo : {}
   return {
-    id: device._id || device.deviceId || '',
-    deviceId: device.deviceId || '',
-    serialNumber: device.serialNumber,
-    onlineStatus: device.onlineStatus,
-    provisioningState: device.provisioningState,
-    productClass: device.productClass,
-    wifiInfo: device.wifiInfo || {},
-    wanInfo: device.wanInfo || {},
-    lanInfo: device.lanInfo || {},
-    opticalInfo: device.opticalInfo || {},
+    id: renderSafeText(device._id || device.deviceId),
+    deviceId: renderSafeText(device.deviceId),
+    serialNumber: renderSafeText(device.serialNumber),
+    onlineStatus: renderSafeText(device.onlineStatus),
+    provisioningState: renderSafeText(device.provisioningState),
+    productClass: renderSafeText(device.productClass),
+    wifiInfo,
+    wanInfo,
+    lanInfo,
+    opticalInfo,
   }
 }
 

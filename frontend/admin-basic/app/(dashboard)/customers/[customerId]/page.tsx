@@ -187,6 +187,35 @@ function QuickStat({ label, value, tone }: { label: string; value: string; tone:
 }
 
 function OverviewTab({ customer }: { customer: Customer }) {
+  const primaryDevice = customer.devices?.[0]
+  const pppoeUsername = customerDeviceText(
+    customer.pppoeUsername,
+    customer.radiusService?.radiusUsername,
+    primaryDevice?.wanInfo?.pppoeUsernameMasked,
+    primaryDevice?.wanInfo?.pppoeUsername
+  )
+  const ssid24 = customerDeviceText(
+    primaryDevice?.wifiInfo?.ssid24,
+    primaryDevice?.wifiInfo?.ssid24Masked,
+    primaryDevice?.wifiInfo?.primarySsid
+  )
+  const ssid5 = customerDeviceText(
+    primaryDevice?.wifiInfo?.ssid5,
+    primaryDevice?.wifiInfo?.ssid5Masked,
+    primaryDevice?.wifiInfo?.guestSsid5
+  )
+  const wifiPassword = customerDeviceText(
+    primaryDevice?.wifiInfo?.password24Masked,
+    primaryDevice?.wifiInfo?.passwordMasked,
+    primaryDevice?.wifiInfo?.password5Masked
+  )
+  const ipv4 = customerDeviceText(
+    primaryDevice?.wanInfo?.ipv4Address,
+    primaryDevice?.wanInfo?.ipAddress,
+    primaryDevice?.wanInfo?.externalIpAddress,
+    customer.radiusService?.currentIpv4
+  )
+
   return (
     <div className="grid gap-5 lg:grid-cols-3">
       <Card className="lg:col-span-2">
@@ -195,7 +224,7 @@ function OverviewTab({ customer }: { customer: Customer }) {
           <Field label="Customer ID" value={customer.customerId} mono />
           <Field label="Service ID" value={customer.serviceId} mono />
           <Field label="Account Number" value={customer.accountNumber} mono />
-          <Field label="PPPoE Username" value={customer.pppoeUsername} mono />
+          <Field label="PPPoE Username" value={pppoeUsername} mono />
           <Field label="Plan" value={customer.plan?.name} />
           <Field label="Status" value={<StatusBadge status={customer.status} />} />
           <Field label="Zone" value={customer.zoneName || customer.zoneCode} />
@@ -222,6 +251,17 @@ function OverviewTab({ customer }: { customer: Customer }) {
             <div className="flex justify-between"><span className="text-slate-500">BNG</span><span className="font-mono text-slate-700">{customer.radiusService.bngNodeCode || '—'}</span></div>
           </div>
         ) : null}
+        {primaryDevice ? (
+          <div className="mt-5 space-y-2 rounded-xl border border-slate-200 bg-white p-3 text-xs">
+            <div className="font-semibold text-slate-900">Wi-Fi and Device Snapshot</div>
+            <div className="flex justify-between gap-3"><span className="text-slate-500">Device</span><span className="font-mono text-right text-slate-700">{customerDeviceText(primaryDevice.serialNumber, primaryDevice.deviceId) || '—'}</span></div>
+            <div className="flex justify-between gap-3"><span className="text-slate-500">SSID 2.4G</span><span className="text-right text-slate-700">{ssid24 || '—'}</span></div>
+            <div className="flex justify-between gap-3"><span className="text-slate-500">SSID 5G</span><span className="text-right text-slate-700">{ssid5 || '—'}</span></div>
+            <div className="flex justify-between gap-3"><span className="text-slate-500">Wi-Fi Password</span><span className="text-right text-slate-700">{wifiPassword || '—'}</span></div>
+            <div className="flex justify-between gap-3"><span className="text-slate-500">PPPoE</span><span className="font-mono text-right text-slate-700">{pppoeUsername || '—'}</span></div>
+            <div className="flex justify-between gap-3"><span className="text-slate-500">IPv4</span><span className="font-mono text-right text-slate-700">{ipv4 || '—'}</span></div>
+          </div>
+        ) : null}
       </Card>
     </div>
   )
@@ -236,6 +276,25 @@ function Field({ label, value, mono }: { label: string; value?: any; mono?: bool
       </div>
     </div>
   )
+}
+
+function customerDeviceText(...values: any[]) {
+  for (const value of values) {
+    if (value === null || value === undefined) continue
+    if (typeof value === 'string') {
+      const trimmed = value.trim()
+      if (trimmed) return trimmed
+      continue
+    }
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+    if (typeof value === 'object') {
+      if (typeof value._value === 'string' && value._value.trim()) return value._value.trim()
+      if (typeof value.value === 'string' && value.value.trim()) return value.value.trim()
+      if (typeof value.name === 'string' && value.name.trim()) return value.name.trim()
+      if (typeof value.id === 'string' && value.id.trim()) return value.id.trim()
+    }
+  }
+  return ''
 }
 
 function BillingTab({ customer }: { customer: Customer }) {
@@ -337,14 +396,30 @@ function DevicesTab({ customer }: { customer: Customer }) {
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <h4 className="font-bold text-slate-900">{d.serialNumber || d.deviceId}</h4>
+                <h4 className="font-bold text-slate-900">{customerDeviceText(d.serialNumber, d.deviceId) || 'Device linked'}</h4>
                 <StatusBadge status={d.onlineStatus} />
               </div>
-              <p className="text-xs text-slate-500">{d.productClass || 'CPE Device'}</p>
+              <p className="text-xs text-slate-500">{customerDeviceText(d.productClass) || 'CPE Device'}</p>
               <div className="mt-3 grid gap-2 text-xs">
-                {d.wanInfo?.ipv4Address ? <div><span className="text-slate-500">IPv4:</span> <span className="font-mono">{d.wanInfo.ipv4Address}</span></div> : null}
-                {d.wifiInfo?.ssid24 ? <div><span className="text-slate-500">SSID 2.4G:</span> {d.wifiInfo.ssid24}</div> : null}
-                {d.wifiInfo?.ssid5 ? <div><span className="text-slate-500">SSID 5G:</span> {d.wifiInfo.ssid5}</div> : null}
+                {customerDeviceText(d.deviceId) ? <div><span className="text-slate-500">Device ID:</span> <span className="font-mono">{customerDeviceText(d.deviceId)}</span></div> : null}
+                {customerDeviceText(d.wanInfo?.ipv4Address, d.wanInfo?.ipAddress, d.wanInfo?.externalIpAddress) ? (
+                  <div><span className="text-slate-500">IPv4:</span> <span className="font-mono">{customerDeviceText(d.wanInfo?.ipv4Address, d.wanInfo?.ipAddress, d.wanInfo?.externalIpAddress)}</span></div>
+                ) : null}
+                {customerDeviceText(d.wanInfo?.pppoeUsernameMasked, d.wanInfo?.pppoeUsername, d.wanInfo?.username) ? (
+                  <div><span className="text-slate-500">PPPoE:</span> <span className="font-mono">{customerDeviceText(d.wanInfo?.pppoeUsernameMasked, d.wanInfo?.pppoeUsername, d.wanInfo?.username)}</span></div>
+                ) : null}
+                {customerDeviceText(d.wifiInfo?.ssid24, d.wifiInfo?.ssid24Masked, d.wifiInfo?.primarySsid) ? (
+                  <div><span className="text-slate-500">SSID 2.4G:</span> {customerDeviceText(d.wifiInfo?.ssid24, d.wifiInfo?.ssid24Masked, d.wifiInfo?.primarySsid)}</div>
+                ) : null}
+                {customerDeviceText(d.wifiInfo?.ssid5, d.wifiInfo?.ssid5Masked, d.wifiInfo?.guestSsid5) ? (
+                  <div><span className="text-slate-500">SSID 5G:</span> {customerDeviceText(d.wifiInfo?.ssid5, d.wifiInfo?.ssid5Masked, d.wifiInfo?.guestSsid5)}</div>
+                ) : null}
+                {customerDeviceText(d.wifiInfo?.password24Masked, d.wifiInfo?.passwordMasked, d.wifiInfo?.password5Masked) ? (
+                  <div><span className="text-slate-500">Wi-Fi Password:</span> {customerDeviceText(d.wifiInfo?.password24Masked, d.wifiInfo?.passwordMasked, d.wifiInfo?.password5Masked)}</div>
+                ) : null}
+                {customerDeviceText(d.wanInfo?.vlanId) ? (
+                  <div><span className="text-slate-500">VLAN:</span> {customerDeviceText(d.wanInfo?.vlanId)}</div>
+                ) : null}
               </div>
             </div>
           </div>
