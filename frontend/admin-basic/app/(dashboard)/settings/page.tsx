@@ -783,6 +783,9 @@ export default function SettingsPage() {
     companyAddress: '',
     gstNumber: '',
     taxPercent: 18,
+    interstateIgstPercent: 18,
+    intrastateCgstPercent: 9,
+    intrastateSgstPercent: 9,
     taxMode: 'india_gst',
     invoicePrefix: 'JF',
     invoiceSeriesCode: '',
@@ -1421,6 +1424,9 @@ export default function SettingsPage() {
             companyAddress: activeProfile.companyAddress || '',
             gstNumber: activeProfile.gstNumber || '',
             taxPercent: activeProfile.taxPercent ?? 18,
+            interstateIgstPercent: activeProfile.interstateIgstPercent ?? activeProfile.taxPercent ?? 18,
+            intrastateCgstPercent: activeProfile.intrastateCgstPercent ?? 9,
+            intrastateSgstPercent: activeProfile.intrastateSgstPercent ?? 9,
             taxMode: activeProfile.taxMode || 'india_gst',
             invoicePrefix: activeProfile.invoicePrefix || 'JF',
             invoiceSeriesCode: activeProfile.invoiceSeriesCode || '',
@@ -1490,6 +1496,9 @@ export default function SettingsPage() {
           gstNumber: invoiceOrganizationProfile.gstNumber || '',
           taxMode: invoiceOrganizationProfile.taxMode || 'india_gst',
           taxPercent: Number(invoiceOrganizationProfile.taxPercent || 0),
+          interstateIgstPercent: Number(invoiceOrganizationProfile.interstateIgstPercent || invoiceOrganizationProfile.taxPercent || 0),
+          intrastateCgstPercent: Number(invoiceOrganizationProfile.intrastateCgstPercent || 0),
+          intrastateSgstPercent: Number(invoiceOrganizationProfile.intrastateSgstPercent || 0),
           active: true,
         })
         if (!billingProfileRes.success) {
@@ -2649,6 +2658,33 @@ export default function SettingsPage() {
                               className="input"
                               value={Number(invoiceOrganizationProfile.taxPercent || 0)}
                               onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, taxPercent: Number(event.target.value) }))}
+                            />
+                          </label>
+                          <label className="space-y-2">
+                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">IGST %</div>
+                            <input
+                              type="number"
+                              className="input"
+                              value={Number(invoiceOrganizationProfile.interstateIgstPercent || 0)}
+                              onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, interstateIgstPercent: Number(event.target.value) }))}
+                            />
+                          </label>
+                          <label className="space-y-2">
+                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">CGST %</div>
+                            <input
+                              type="number"
+                              className="input"
+                              value={Number(invoiceOrganizationProfile.intrastateCgstPercent || 0)}
+                              onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, intrastateCgstPercent: Number(event.target.value) }))}
+                            />
+                          </label>
+                          <label className="space-y-2">
+                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">SGST %</div>
+                            <input
+                              type="number"
+                              className="input"
+                              value={Number(invoiceOrganizationProfile.intrastateSgstPercent || 0)}
+                              onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, intrastateSgstPercent: Number(event.target.value) }))}
                             />
                           </label>
                           <label className="space-y-2">

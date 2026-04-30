@@ -322,7 +322,10 @@ async function resolveBillingPlan(service = {}) {
 }
 
 function normalizeStateCode(value) {
-  return String(value || "").trim().toUpperCase();
+  const normalized = String(value || "").trim().toUpperCase();
+  if (!normalized) return "";
+  if (STATE_CODE_MAP[normalized]) return normalized;
+  return "";
 }
 
 const STATE_CODE_MAP = {
@@ -360,20 +363,19 @@ function normalizeStateName(value) {
 
 function resolveCustomerBillingState(customer = {}, zoneMapping = null) {
   let stateName = (
-    zoneMapping?.stateName ||
+    customer?.billingStateName ||
+    customer?.billingSnapshot?.billingStateName ||
     customer?.zoneStateName ||
     customer?.billingSnapshot?.zoneStateName ||
-    customer?.billingSnapshot?.billingStateName ||
-    customer?.billingStateName ||
     customer?.address?.state ||
+    zoneMapping?.stateName ||
     ""
   );
   let stateCode = resolveComparableStateCode(
-    zoneMapping?.stateCode ||
+    customer?.billingStateCode ||
+    customer?.billingSnapshot?.billingStateCode ||
     customer?.zoneStateCode ||
     customer?.billingSnapshot?.zoneStateCode ||
-    customer?.billingSnapshot?.billingStateCode ||
-    customer?.billingStateCode ||
     customer?.address?.stateCode,
     stateName
   );
