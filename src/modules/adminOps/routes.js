@@ -639,17 +639,17 @@ function buildInvoiceHtml(invoice, customer, branding) {
       const itemSgst = sgstPart ? Number(sgstPart.amount || 0) * weight : 0;
       const hsnSac = safe(item.code || item.hsnSac || "9984");
       return `<tr>
-        <td style="padding:11px 8px;border-bottom:1px solid #e5e7eb;text-align:center;">${index + 1}</td>
-        <td style="padding:11px 10px;border-bottom:1px solid #e5e7eb;">
-          <div style="font-weight:700;color:#111827;">${safe(item.label)}</div>
-          <div style="margin-top:3px;font-size:11px;color:#6b7280;">${safe(item.categoryLabel || "Service charge")}</div>
+        <td style="padding:12px 8px;border-bottom:1px solid #e5e7eb;text-align:center;">${index + 1}</td>
+        <td style="padding:12px 10px;border-bottom:1px solid #e5e7eb;">
+          <div style="font-size:11px;font-weight:700;color:#111827;">${safe(item.label)}</div>
+          <div style="margin-top:4px;font-size:10px;color:#6b7280;">${safe(item.categoryLabel || "Service charge")}</div>
         </td>
-        <td style="padding:11px 8px;border-bottom:1px solid #e5e7eb;text-align:center;">${hsnSac}</td>
-        <td style="padding:11px 8px;border-bottom:1px solid #e5e7eb;text-align:center;">${qty.toFixed(2)}</td>
-        <td style="padding:11px 8px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatMoney(rate)}</td>
-        <td style="padding:11px 8px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatMoney(itemCgst)}</td>
-        <td style="padding:11px 8px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatMoney(itemSgst)}</td>
-        <td style="padding:11px 8px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;">${formatMoney(item.amount)}</td>
+        <td style="padding:12px 8px;border-bottom:1px solid #e5e7eb;text-align:center;">${hsnSac}</td>
+        <td style="padding:12px 8px;border-bottom:1px solid #e5e7eb;text-align:center;">${qty.toFixed(2)}</td>
+        <td style="padding:12px 8px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatMoney(rate)}</td>
+        <td style="padding:12px 8px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatMoney(itemCgst)}</td>
+        <td style="padding:12px 8px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatMoney(itemSgst)}</td>
+        <td style="padding:12px 8px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;">${formatMoney(item.amount)}</td>
       </tr>`;
     })
     .join("");
@@ -706,24 +706,24 @@ function buildInvoiceHtml(invoice, customer, branding) {
               ${appliedBranding.logoDataUrl ? `<img src="${safe(appliedBranding.logoDataUrl)}" alt="Logo" style="max-width:152px;max-height:58px;object-fit:contain;display:block;" />` : ""}
             </div>
             <div>
-              <div style="font-size:10px;font-weight:800;line-height:1.15;letter-spacing:.01em;color:#111827;text-transform:uppercase;">${safe(appliedBranding.companyName || "Brand Name")}</div>
-              <div style="margin-top:4px;font-size:9px;line-height:1.35;color:#374151;">${companyBlock}</div>
+              <div style="font-size:11px;font-weight:800;line-height:1.15;letter-spacing:.01em;color:#111827;text-transform:uppercase;">${safe(appliedBranding.companyName || "Brand Name")}</div>
+              <div style="margin-top:5px;font-size:9.2px;line-height:1.38;color:#374151;">${companyBlock}</div>
             </div>
           </div>
         </div>
         <div style="width:30%;text-align:right;">
-          <div style="font-size:22px;font-weight:300;letter-spacing:.04em;color:#111827;">TAX INVOICE</div>
-          <div style="margin-top:4px;font-size:11px;font-weight:700;color:#111827;"># ${safe(displayInvoiceNumber)}</div>
+          <div style="font-size:24px;font-weight:300;letter-spacing:.04em;color:#111827;">TAX INVOICE</div>
+          <div style="margin-top:4px;font-size:11.5px;font-weight:700;color:#111827;"># ${safe(displayInvoiceNumber)}</div>
           <div style="margin-top:14px;font-size:10px;font-weight:700;color:#4b5563;">Balance Due</div>
-          <div style="margin-top:2px;font-size:16px;font-weight:800;color:#111827;">${formatMoney(balanceDue)}</div>
+          <div style="margin-top:2px;font-size:17px;font-weight:800;color:#111827;">${formatMoney(balanceDue)}</div>
         </div>
       </div>
       <div class="avoid-break" style="display:flex;justify-content:space-between;gap:18px;margin-top:18px;">
         <div style="width:56%;">
           <div style="font-size:10px;font-weight:700;color:#374151;">Bill To</div>
-          <div style="margin-top:4px;font-size:11px;line-height:1.35;color:#111827;">${addressBlock}</div>
+          <div style="margin-top:4px;font-size:11.2px;line-height:1.38;color:#111827;">${addressBlock}</div>
           ${shouldRenderShipTo ? `<div style="margin-top:10px;font-size:10px;font-weight:700;color:#374151;">Ship To</div>
-          <div style="margin-top:3px;font-size:11px;line-height:1.35;color:#111827;">${shipToBlock}</div>` : ""}
+          <div style="margin-top:3px;font-size:11.2px;line-height:1.38;color:#111827;">${shipToBlock}</div>` : ""}
           <div style="margin-top:12px;font-size:10px;color:#374151;"><span style="font-weight:700;">Place Of Supply:</span> ${safe(invoice.placeOfSupply || invoice.billingStateName || "-")}</div>
         </div>
         <div style="width:30%;padding-top:32px;">
@@ -735,7 +735,7 @@ function buildInvoiceHtml(invoice, customer, branding) {
           </div>
         </div>
       </div>
-      <table class="avoid-break" style="width:100%;border-collapse:collapse;margin-top:16px;font-size:10px;">
+      <table class="avoid-break" style="width:100%;border-collapse:collapse;margin-top:16px;font-size:10.3px;">
         <thead>
           <tr style="background:#3e3e39;color:#ffffff;">
             <th style="padding:8px 8px;text-align:center;width:36px;">#</th>
