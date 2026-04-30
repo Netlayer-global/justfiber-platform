@@ -662,6 +662,39 @@ async function buildCustomerResponse(customer) {
         .lean()
     : null;
   const authTelemetry = bngNode?.lastRadiusAuthTelemetry || null;
+  const activeSession = Array.isArray(radiusSessionHistory)
+    ? radiusSessionHistory.find((session) => session?.live && !session?.stoppedAt) || null
+    : null;
+  const latestUsageAt = radiusUsageSummary?.latestUpdateAt || radiusUsageSummary?.latestSessionStart || null;
+  const latestAuthAt = authTelemetry?.authDate || null;
+  const derivedRadiusState = String(
+    subscriberService?.metadata?.lastRadiusDerivedState ||
+      subscriberService?.metadata?.lastRadiusState ||
+      ""
+  )
+    .trim()
+    .toLowerCase();
+  const explicitOnlineStates = new Set(["online", "authenticated", "connected", "live"]);
+  const explicitOfflineStates = new Set(["offline", "disconnected", "stopped", "terminated", "expired", "suspended", "inactive"]);
+  const latestLiveAt = [activeSession?.updatedAt, activeSession?.startedAt, latestUsageAt, latestAuthAt]
+    .map((value) => (value ? new Date(value).getTime() : Number.NaN))
+    .filter((value) => Number.isFinite(value))
+    .sort((a, b) => b - a)[0];
+  const hasRecentLiveActivity = Number.isFinite(latestLiveAt) && Date.now() - latestLiveAt <= 20 * 60 * 1000;
+  const hasLiveSignal = Boolean(activeSession || subscriberService?.currentIpv4 || hasRecentLiveActivity);
+  const derivedOnline = explicitOnlineStates.has(derivedRadiusState) || hasLiveSignal;
+  const derivedOffline = explicitOfflineStates.has(derivedRadiusState) && !hasLiveSignal;
+  const pppoeSnapshot = subscriberService
+    ? {
+        online: derivedOffline ? false : derivedOnline,
+        derivedState: derivedRadiusState || "unknown",
+        ipAddress: derivedOffline ? null : activeSession?.ipAddress || subscriberService?.currentIpv4 || null,
+        sessionId: activeSession?.sessionId || null,
+        liveSince: activeSession?.startedAt || radiusUsageSummary?.latestSessionStart || null,
+        lastActivityAt: Number.isFinite(latestLiveAt) ? new Date(latestLiveAt) : null,
+        sessionCount: Array.isArray(radiusSessionHistory) ? radiusSessionHistory.length : 0
+      }
+    : null;
 
   return {
     ...customer,
@@ -1532,6 +1565,7 @@ customersRouter.get(
                   reason: authTelemetry.reason || null
                 }
               : null,
+            pppoeSnapshot,
             usageSummary: radiusUsageSummary
               ? {
                   totalInputOctets: Number(radiusUsageSummary.totalInputOctets || 0),

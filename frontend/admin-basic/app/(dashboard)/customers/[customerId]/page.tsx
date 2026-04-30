@@ -416,6 +416,24 @@ function customerDeviceText(...values: any[]) {
 }
 
 function getPppoeSessionSnapshot(customer: Customer) {
+  const backendSnapshot = customer.radiusService?.pppoeSnapshot
+  if (backendSnapshot) {
+    return {
+      online: backendSnapshot.online === true,
+      liveSession: backendSnapshot.sessionId || backendSnapshot.liveSince
+        ? {
+            sessionId: backendSnapshot.sessionId || '',
+            startedAt: backendSnapshot.liveSince || null,
+            updatedAt: backendSnapshot.lastActivityAt || null,
+            ipAddress: backendSnapshot.ipAddress || null,
+            live: backendSnapshot.online === true,
+          }
+        : null,
+      ipAddress: backendSnapshot.ipAddress || null,
+      radiusState: String(backendSnapshot.derivedState || 'unknown').toLowerCase(),
+      sessionCount: Number(backendSnapshot.sessionCount || 0),
+    }
+  }
   const sessions = customer.radiusService?.sessionHistory || []
   const liveSession = sessions.find((session) => session.live && !session.stoppedAt) || null
   const currentIpv4 = String(customer.radiusService?.currentIpv4 || '').trim() || null

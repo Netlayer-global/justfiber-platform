@@ -266,6 +266,15 @@ export interface Customer {
       mismatch?: boolean
       reason?: string | null
     } | null
+    pppoeSnapshot?: {
+      online?: boolean
+      derivedState?: string | null
+      ipAddress?: string | null
+      sessionId?: string | null
+      liveSince?: string | null
+      lastActivityAt?: string | null
+      sessionCount?: number
+    } | null
     usageSummary?: {
       totalInputOctets?: number
       totalOutputOctets?: number
