@@ -216,6 +216,39 @@ function dataUrlToBuffer(dataUrl) {
   }
 }
 
+async function getCustomerInvoiceTemplateBranding(invoice = null) {
+  const config = await SystemConfig.findOne({ key: "settings.invoice_template" }).lean();
+  const baseSettings = config?.value || {};
+  const templates = Array.isArray(baseSettings.templates) && baseSettings.templates.length ? baseSettings.templates : [baseSettings];
+  const requestedTemplateKey = String(
+    invoice?.appliedTemplateKey ||
+    invoice?.metadata?.appliedTemplateKey ||
+    baseSettings.activeTemplate ||
+    templates[0]?.key ||
+    ""
+  ).trim();
+  const selectedTemplate =
+    templates.find((item) => String(item?.key || "").trim() === requestedTemplateKey) ||
+    templates.find((item) => String(item?.key || "").trim() === String(baseSettings.activeTemplate || "").trim()) ||
+    templates[0] ||
+    {};
+  return {
+    companyLegalName: selectedTemplate.companyName || baseSettings.companyName || "",
+    companyAddress: selectedTemplate.companyAddress || baseSettings.companyAddress || "",
+    gstNumber: selectedTemplate.gstNumber || baseSettings.gstNumber || "",
+    website: selectedTemplate.website || baseSettings.website || "",
+    contactPhone: selectedTemplate.phoneNumber || baseSettings.phoneNumber || "",
+    phoneNumber: selectedTemplate.phoneNumber || baseSettings.phoneNumber || "",
+    supportEmail: selectedTemplate.supportEmail || baseSettings.supportEmail || "",
+    bankName: selectedTemplate.bankName || baseSettings.bankName || "",
+    bankAccountNumber: selectedTemplate.bankAccountNumber || baseSettings.bankAccountNumber || "",
+    bankIfscCode: selectedTemplate.bankIfscCode || baseSettings.bankIfscCode || "",
+    paymentInstructions: selectedTemplate.paymentInstructions || baseSettings.paymentInstructions || "",
+    logoDataUrl: selectedTemplate.logoDataUrl || baseSettings.logoDataUrl || "",
+    signatureDataUrl: selectedTemplate.signatureDataUrl || baseSettings.signatureDataUrl || "",
+  };
+}
+
 async function resolvePaymentGatewayForCustomer(customer) {
   const config = await SystemConfig.findOne({ key: "settings.external_integrations" }).lean();
   const paymentGateway = config?.value?.paymentGateway || {};
@@ -3118,13 +3151,18 @@ customerPortalRouter.get(
       throw new ApiError(404, "Invoice not found");
     }
     const profile = await BillingProfile.findOne({ active: true }).sort({ updatedAt: -1 }).lean();
+    const templateBranding = await getCustomerInvoiceTemplateBranding(invoice);
+    const invoiceProfile = {
+      ...(profile || {}),
+      ...templateBranding
+    };
     if (String(req.query.format || "").toLowerCase() === "html") {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
-      return res.send(buildInvoiceHtml(invoice, customer, profile));
+      return res.send(buildInvoiceHtml(invoice, customer, invoiceProfile));
     }
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename=\"${normalizeDisplayInvoiceNumber(invoice.invoiceNumber || invoice.invoiceId)}.pdf\"`);
-    return renderInvoicePdf(invoice, profile, customer).pipe(res);
+    return renderInvoicePdf(invoice, invoiceProfile, customer).pipe(res);
   })
 );
 

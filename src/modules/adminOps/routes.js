@@ -4366,9 +4366,31 @@ adminOpsRouter.post(
       subscriberService,
       plan,
       invoiceMetadata: {
-        ...(invoice.metadata || {}),
         ...(serviceContext.metadata || {}),
         billingBreakup: serviceContext.billingBreakup,
+        baseRecurringAmount:
+          Number(serviceContext.metadata?.baseRecurringAmount || 0) ||
+          Number(serviceContext.metadata?.recurringAmount || 0) ||
+          Number(serviceContext.metadata?.monthlyPrice || 0) ||
+          Number(plan?.monthlyPrice || 0) ||
+          undefined,
+        recurringAmount:
+          Number(serviceContext.metadata?.recurringAmount || 0) ||
+          Number(serviceContext.metadata?.monthlyPrice || 0) ||
+          Number(plan?.monthlyPrice || 0) ||
+          undefined,
+        totalAmount:
+          Number(serviceContext.metadata?.billingTotalAmount || 0) ||
+          Number(serviceContext.metadata?.totalAmount || 0) ||
+          Number(serviceContext.metadata?.recurringAmount || 0) ||
+          Number(plan?.monthlyPrice || 0) ||
+          undefined,
+        billingTotalAmount:
+          Number(serviceContext.metadata?.billingTotalAmount || 0) ||
+          Number(serviceContext.metadata?.totalAmount || 0) ||
+          Number(serviceContext.metadata?.recurringAmount || 0) ||
+          Number(plan?.monthlyPrice || 0) ||
+          undefined,
         planCode: plan?.planCode || customer.planCode || subscriberService?.metadata?.planCode || "",
         planName: plan?.name || customer.planName || subscriberService?.metadata?.planName || ""
       },
