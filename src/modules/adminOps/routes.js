@@ -678,34 +678,51 @@ function buildInvoiceHtml(invoice, customer, branding) {
     .filter(Boolean)
     .join("<br/>");
   return `<!doctype html>
-  <html><head><meta charset="utf-8"/><title>${displayInvoiceNumber}</title></head>
-  <body style="font-family:Arial,sans-serif;background:#eef0f4;margin:0;padding:24px;color:#23262d;">
-    <div style="width:760px;margin:0 auto;background:#ffffff;box-shadow:0 24px 60px rgba(15,23,42,0.10);padding:36px 34px 28px;">
+  <html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>${displayInvoiceNumber}</title>
+    <style>
+      @page { size: A4; margin: 10mm; }
+      * { box-sizing: border-box; }
+      body { font-family: Arial, sans-serif; background: #eef0f4; margin: 0; padding: 16px; color: #23262d; }
+      .invoice-shell { width: 760px; margin: 0 auto; background: #ffffff; box-shadow: 0 24px 60px rgba(15,23,42,0.10); padding: 22px 22px 18px; }
+      .avoid-break { break-inside: avoid; page-break-inside: avoid; }
+      @media print {
+        body { background: #ffffff; padding: 0; }
+        .invoice-shell { width: auto; margin: 0; box-shadow: none; padding: 0; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="invoice-shell">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
         <div style="max-width:54%;">
-          <div style="font-size:34px;font-weight:800;letter-spacing:.01em;color:#111827;">${safe(appliedBranding.companyName || "Brand Name")}</div>
-          <div style="margin-top:10px;width:96px;height:5px;background:#8224e3;border-radius:999px;"></div>
-          <div style="margin-top:14px;font-size:13px;line-height:1.68;color:#374151;">${companyBlock}</div>
+          <div style="font-size:20px;font-weight:800;line-height:1.2;letter-spacing:.01em;color:#111827;">${safe(appliedBranding.companyName || "Brand Name")}</div>
+          <div style="margin-top:8px;width:88px;height:4px;background:#8224e3;border-radius:999px;"></div>
+          <div style="margin-top:10px;font-size:11px;line-height:1.52;color:#374151;">${companyBlock}</div>
         </div>
         <div style="width:34%;text-align:right;">
-          <div style="font-size:18px;font-weight:700;letter-spacing:.08em;color:#8224e3;">TAX INVOICE</div>
-          <div style="margin-top:8px;font-size:12px;font-weight:700;color:#4b5563;"># ${safe(displayInvoiceNumber)}</div>
-          <div style="margin-top:20px;font-size:11px;text-transform:uppercase;color:#6b7280;letter-spacing:.08em;">Grand Total</div>
-          <div style="margin-top:6px;font-size:28px;font-weight:800;color:#111827;">${formatMoney(invoice.totalAmount)}</div>
-          <div style="margin-top:12px;font-size:11px;text-transform:uppercase;color:#6b7280;letter-spacing:.08em;">Balance Due</div>
-          <div style="margin-top:4px;font-size:18px;font-weight:800;color:#111827;">${formatMoney(balanceDue)}</div>
+          <div style="font-size:16px;font-weight:800;letter-spacing:.08em;color:#8224e3;">TAX INVOICE</div>
+          <div style="margin-top:6px;font-size:11px;font-weight:700;color:#4b5563;"># ${safe(displayInvoiceNumber)}</div>
+          <div style="margin-top:14px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:14px;background:#fafafa;">
+            <div style="font-size:10px;text-transform:uppercase;color:#6b7280;letter-spacing:.08em;">Grand Total</div>
+            <div style="margin-top:4px;font-size:22px;font-weight:800;color:#111827;">${formatMoney(invoice.totalAmount)}</div>
+            <div style="margin-top:8px;font-size:10px;text-transform:uppercase;color:#6b7280;letter-spacing:.08em;">Balance Due</div>
+            <div style="margin-top:3px;font-size:15px;font-weight:800;color:#111827;">${formatMoney(balanceDue)}</div>
+          </div>
         </div>
       </div>
-      <div style="display:flex;justify-content:space-between;gap:22px;margin-top:22px;">
+      <div class="avoid-break" style="display:flex;justify-content:space-between;gap:18px;margin-top:16px;">
         <div style="width:54%;">
-          <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;font-weight:700;">Bill To</div>
-          <div style="margin-top:8px;font-size:13px;line-height:1.68;color:#111827;">${addressBlock}</div>
-          ${shouldRenderShipTo ? `<div style="margin-top:14px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;font-weight:700;">Ship To</div>
-          <div style="margin-top:6px;font-size:13px;line-height:1.6;color:#111827;">${shipToBlock}</div>` : ""}
-          <div style="margin-top:14px;font-size:13px;color:#374151;"><span style="font-weight:700;">Place Of Supply:</span> ${safe(invoice.placeOfSupply || invoice.billingStateName || "-")}</div>
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;font-weight:700;">Bill To</div>
+          <div style="margin-top:6px;font-size:12px;line-height:1.5;color:#111827;">${addressBlock}</div>
+          ${shouldRenderShipTo ? `<div style="margin-top:10px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;font-weight:700;">Ship To</div>
+          <div style="margin-top:4px;font-size:12px;line-height:1.46;color:#111827;">${shipToBlock}</div>` : ""}
+          <div style="margin-top:10px;font-size:12px;color:#374151;"><span style="font-weight:700;">Place Of Supply:</span> ${safe(invoice.placeOfSupply || invoice.billingStateName || "-")}</div>
         </div>
         <div style="width:34%;padding-top:4px;">
-          <div style="display:grid;grid-template-columns:108px 1fr;gap:10px 12px;font-size:14px;line-height:1.55;">
+          <div style="display:grid;grid-template-columns:92px 1fr;gap:7px 10px;font-size:12px;line-height:1.45;border:1px solid #e5e7eb;border-radius:14px;padding:12px;background:#fafafa;">
             <div style="font-weight:700;color:#4b5563;">Invoice Date :</div><div style="text-align:right;color:#111827;">${safe(invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleDateString("en-IN") : "-")}</div>
             <div style="font-weight:700;color:#4b5563;">Terms :</div><div style="text-align:right;color:#111827;">${safe(planSummary.durationLabel || "Due end of month")}</div>
             <div style="font-weight:700;color:#4b5563;">Due Date :</div><div style="text-align:right;color:#111827;">${safe(invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-")}</div>
@@ -713,7 +730,7 @@ function buildInvoiceHtml(invoice, customer, branding) {
           </div>
         </div>
       </div>
-      <table style="width:100%;border-collapse:collapse;margin-top:18px;font-size:12px;">
+      <table class="avoid-break" style="width:100%;border-collapse:collapse;margin-top:14px;font-size:11px;">
         <thead>
           <tr style="background:#2d3138;color:#ffffff;">
             <th style="padding:11px 8px;text-align:center;width:36px;">#</th>
@@ -728,26 +745,26 @@ function buildInvoiceHtml(invoice, customer, branding) {
         </thead>
         <tbody>${lineRows}</tbody>
       </table>
-      <div style="display:flex;justify-content:space-between;gap:24px;margin-top:16px;align-items:flex-start;">
+      <div class="avoid-break" style="display:flex;justify-content:space-between;gap:18px;margin-top:12px;align-items:flex-start;">
         <div style="width:42%;">
-          <div style="font-size:14px;font-weight:700;color:#374151;">Notes</div>
-          <div style="margin-top:8px;font-size:12px;line-height:1.7;color:#6b7280;">${paymentTerms}</div>
-          <div style="margin-top:22px;font-size:14px;font-weight:700;color:#374151;">Payment Info</div>
-          <div style="margin-top:8px;font-size:12px;line-height:1.75;color:#6b7280;">${bankMeta || "Add your bank details"}</div>
+          <div style="font-size:12px;font-weight:700;color:#374151;">Notes</div>
+          <div style="margin-top:5px;font-size:11px;line-height:1.48;color:#6b7280;">${paymentTerms}</div>
+          <div style="margin-top:12px;font-size:12px;font-weight:700;color:#374151;">Payment Info</div>
+          <div style="margin-top:5px;font-size:11px;line-height:1.5;color:#6b7280;">${bankMeta || "Add your bank details"}</div>
         </div>
         <div style="width:34%;margin-left:auto;">
-          <table style="width:100%;border-collapse:collapse;font-size:14px;">
-            <tr><td style="padding:7px 0;font-weight:700;color:#475569;">Sub Total</td><td style="padding:7px 0;text-align:right;font-weight:700;color:#111827;">${formatMoney(summaryRows.taxableSubtotal)}</td></tr>
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <tr><td style="padding:5px 0;font-weight:700;color:#475569;">Sub Total</td><td style="padding:5px 0;text-align:right;font-weight:700;color:#111827;">${formatMoney(summaryRows.taxableSubtotal)}</td></tr>
             ${taxRows}
-            <tr><td style="padding:9px 0;font-weight:800;color:#111827;border-top:1px solid #d1d5db;">Grand Total</td><td style="padding:9px 0;text-align:right;font-weight:800;color:#111827;border-top:1px solid #d1d5db;">${formatMoney(invoice.totalAmount)}</td></tr>
+            <tr><td style="padding:7px 0;font-weight:800;color:#111827;border-top:1px solid #d1d5db;">Grand Total</td><td style="padding:7px 0;text-align:right;font-weight:800;color:#111827;border-top:1px solid #d1d5db;">${formatMoney(invoice.totalAmount)}</td></tr>
           </table>
         </div>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:18px;padding-top:12px;border-top:1px solid #e5e7eb;">
-        <div style="font-size:12px;color:#4b5563;">${safe(appliedBranding.phoneNumber || "Phone #")} &nbsp; | &nbsp; ${safe(appliedBranding.companyAddress || "Address")} &nbsp; | &nbsp; ${safe(appliedBranding.website || "Website")}</div>
+      <div class="avoid-break" style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:12px;padding-top:10px;border-top:1px solid #e5e7eb;">
+        <div style="font-size:10px;color:#4b5563;">${safe(appliedBranding.phoneNumber || "Phone #")} &nbsp; | &nbsp; ${safe(appliedBranding.companyAddress || "Address")} &nbsp; | &nbsp; ${safe(appliedBranding.website || "Website")}</div>
         <div style="min-width:180px;text-align:center;">
           <div style="height:2px;background:#8224e3;width:100%;margin-bottom:8px;"></div>
-          <div style="font-size:14px;font-weight:700;">Authorised Sign</div>
+          <div style="font-size:12px;font-weight:700;">Authorised Sign</div>
         </div>
       </div>
     </div>
@@ -1054,15 +1071,16 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
       doc.image(branding.logoBuffer, 42, 42, { fit: [34, 34], align: "left", valign: "center" });
     } catch {}
   }
-  doc.fillColor(dark).font("Helvetica-Bold").fontSize(18).text(branding.companyName || "Brand Name", branding.logoBuffer ? 88 : 42, 44, { width: 246 });
-  doc.fillColor(accent).rect(42, 88, 96, 5).fill();
-  doc.fillColor("#4b5563").font("Helvetica").fontSize(9).text(companyText, 42, 100, { width: 240, lineGap: 2 });
-  doc.fillColor(accent).font("Helvetica-Bold").fontSize(17).text("TAX INVOICE", 356, 46, { width: 197, align: "right" });
+  doc.fillColor(dark).font("Helvetica-Bold").fontSize(14).text(branding.companyName || "Brand Name", branding.logoBuffer ? 88 : 42, 44, { width: 246 });
+  doc.fillColor(accent).rect(42, 80, 84, 4).fill();
+  doc.fillColor("#4b5563").font("Helvetica").fontSize(8).text(companyText, 42, 90, { width: 240, lineGap: 1 });
+  doc.fillColor(accent).font("Helvetica-Bold").fontSize(15).text("TAX INVOICE", 356, 46, { width: 197, align: "right" });
   doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(8.5).text(`# ${displayInvoiceNumber}`, 356, 70, { width: 197, align: "right" });
-  doc.font("Helvetica").fontSize(9).text("Grand Total", 420, 98, { width: 133, align: "right" });
-  doc.fillColor(dark).font("Helvetica-Bold").fontSize(16).text(formatMoney(invoice.totalAmount), 356, 112, { width: 197, align: "right" });
-  doc.fillColor("#4b5563").font("Helvetica").fontSize(8.5).text("Balance Due", 420, 132, { width: 133, align: "right" });
-  doc.fillColor(dark).font("Helvetica-Bold").fontSize(11).text(formatMoney(balanceDue), 356, 144, { width: 197, align: "right" });
+  doc.roundedRect(382, 90, 171, 54, 10).fillAndStroke("#fafafa", "#e5e7eb");
+  doc.fillColor("#4b5563").font("Helvetica").fontSize(8).text("Grand Total", 428, 100, { width: 114, align: "right" });
+  doc.fillColor(dark).font("Helvetica-Bold").fontSize(14).text(formatMoney(invoice.totalAmount), 394, 112, { width: 148, align: "right" });
+  doc.fillColor("#4b5563").font("Helvetica").fontSize(7.5).text("Balance Due", 428, 126, { width: 114, align: "right" });
+  doc.fillColor(dark).font("Helvetica-Bold").fontSize(9.5).text(formatMoney(balanceDue), 394, 136, { width: 148, align: "right" });
 
   const billToY = Math.max(152, 98 + companyDetailsHeight + 14);
   doc.fillColor("#6b7280").font("Helvetica-Bold").fontSize(9.5).text("Bill To", 42, billToY);
@@ -1091,7 +1109,7 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
   doc.fillColor("#374151").font("Helvetica-Bold").fontSize(9.2).text(`Place Of Supply: ${invoice.placeOfSupply || invoice.billingStateName || "-"}`, 42, placeSupplyY, { width: 250 });
 
   const infoX = 360;
-  const infoY = billToY + 12;
+  const infoY = billToY + 6;
   doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(9.5).text("Invoice Date :", infoX, infoY, { width: 92 });
   doc.fillColor(dark).font("Helvetica").fontSize(9.5).text(invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleDateString("en-IN") : "-", infoX + 94, infoY, { width: 99, align: "right" });
   doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(9.5).text("Terms :", infoX, infoY + 20, { width: 92 });
@@ -1102,7 +1120,7 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
   doc.fillColor(dark).font("Helvetica").fontSize(9.5).text(String(invoice.paymentStatus || "-"), infoX + 94, infoY + 60, { width: 99, align: "right" });
 
   const tableX = 42;
-  const tableY = Math.max(placeSupplyY + 18, infoY + 88);
+  const tableY = Math.max(placeSupplyY + 14, infoY + 82);
   const widths = [24, 183, 54, 34, 60, 52, 52, 52];
   const headers = ["#", "Item & Description", "HSN/SAC", "Qty", "Rate", "CGST", "SGST", "Amount"];
   let x = tableX;
@@ -1122,40 +1140,40 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
     const itemCgst = cgstPart ? Number(cgstPart.amount || 0) * weight : 0;
     const itemSgst = sgstPart ? Number(sgstPart.amount || 0) * weight : 0;
     const descriptionHeight = doc.heightOfString(String(row.label || "-"), { width: widths[1] - 10, lineGap: 1 });
-    const rowHeight = Math.max(28, descriptionHeight + 12);
+    const rowHeight = Math.max(24, descriptionHeight + 10);
     x = tableX;
     widths.forEach((width) => {
       doc.rect(x, rowY, width, rowHeight).fillAndStroke("#ffffff", "#e5e7eb");
       x += width;
     });
-    doc.fillColor(dark).font("Helvetica-Bold").fontSize(8.5).text(String(index + 1), tableX + 4, rowY + 10, { width: widths[0] - 8, align: "center" });
-    doc.text(String(row.label || "-"), tableX + widths[0] + 6, rowY + 7, { width: widths[1] - 10, lineGap: 1 });
-    doc.fillColor("#6b7280").font("Helvetica").fontSize(7.5).text(String(row.categoryLabel || "Service charge"), tableX + widths[0] + 6, rowY + rowHeight - 11, { width: widths[1] - 10 });
-    doc.fillColor(dark).font("Helvetica").fontSize(8.5).text(String(row.code || row.hsnSac || "9984"), tableX + widths[0] + widths[1] + 4, rowY + 10, { width: widths[2] - 8, align: "center" });
-    doc.text(qty.toFixed(2), tableX + widths[0] + widths[1] + widths[2] + 4, rowY + 10, { width: widths[3] - 8, align: "center" });
-    doc.text(formatMoney(rate), tableX + widths[0] + widths[1] + widths[2] + widths[3] + 4, rowY + 10, { width: widths[4] - 8, align: "right" });
-    doc.text(formatMoney(itemCgst), tableX + widths[0] + widths[1] + widths[2] + widths[3] + widths[4] + 4, rowY + 10, { width: widths[5] - 8, align: "right" });
-    doc.text(formatMoney(itemSgst), tableX + widths[0] + widths[1] + widths[2] + widths[3] + widths[4] + widths[5] + 4, rowY + 10, { width: widths[6] - 8, align: "right" });
-    doc.font("Helvetica-Bold").text(formatMoney(row.amount), tableX + widths[0] + widths[1] + widths[2] + widths[3] + widths[4] + widths[5] + widths[6] + 4, rowY + 10, { width: widths[7] - 8, align: "right" });
+    doc.fillColor(dark).font("Helvetica-Bold").fontSize(8.1).text(String(index + 1), tableX + 4, rowY + 8, { width: widths[0] - 8, align: "center" });
+    doc.text(String(row.label || "-"), tableX + widths[0] + 6, rowY + 5, { width: widths[1] - 10, lineGap: 1 });
+    doc.fillColor("#6b7280").font("Helvetica").fontSize(7).text(String(row.categoryLabel || "Service charge"), tableX + widths[0] + 6, rowY + rowHeight - 9, { width: widths[1] - 10 });
+    doc.fillColor(dark).font("Helvetica").fontSize(8.1).text(String(row.code || row.hsnSac || "9984"), tableX + widths[0] + widths[1] + 4, rowY + 8, { width: widths[2] - 8, align: "center" });
+    doc.text(qty.toFixed(2), tableX + widths[0] + widths[1] + widths[2] + 4, rowY + 8, { width: widths[3] - 8, align: "center" });
+    doc.text(formatMoney(rate), tableX + widths[0] + widths[1] + widths[2] + widths[3] + 4, rowY + 8, { width: widths[4] - 8, align: "right" });
+    doc.text(formatMoney(itemCgst), tableX + widths[0] + widths[1] + widths[2] + widths[3] + widths[4] + 4, rowY + 8, { width: widths[5] - 8, align: "right" });
+    doc.text(formatMoney(itemSgst), tableX + widths[0] + widths[1] + widths[2] + widths[3] + widths[4] + widths[5] + 4, rowY + 8, { width: widths[6] - 8, align: "right" });
+    doc.font("Helvetica-Bold").text(formatMoney(row.amount), tableX + widths[0] + widths[1] + widths[2] + widths[3] + widths[4] + widths[5] + widths[6] + 4, rowY + 8, { width: widths[7] - 8, align: "right" });
     rowY += rowHeight;
   });
 
   const notesY = rowY + 8;
-  doc.fillColor("#374151").font("Helvetica-Bold").fontSize(10).text("Notes", 42, notesY);
-  doc.fillColor("#6b7280").font("Helvetica").fontSize(9).text(branding.paymentInstructions || "Please pay before the due date to avoid service interruption.", 42, notesY + 16, {
+  doc.fillColor("#374151").font("Helvetica-Bold").fontSize(9).text("Notes", 42, notesY);
+  doc.fillColor("#6b7280").font("Helvetica").fontSize(8).text(branding.paymentInstructions || "Please pay before the due date to avoid service interruption.", 42, notesY + 14, {
     width: 230,
-    lineGap: 2
+    lineGap: 1
   });
-  doc.font("Helvetica-Bold").fontSize(10).fillColor("#374151").text("Payment Info", 42, notesY + 64);
-  doc.fillColor("#6b7280").font("Helvetica").fontSize(9).text(
+  doc.font("Helvetica-Bold").fontSize(9).fillColor("#374151").text("Payment Info", 42, notesY + 46);
+  doc.fillColor("#6b7280").font("Helvetica").fontSize(8).text(
     [
       branding.bankName ? `Bank: ${branding.bankName}` : "",
       branding.bankAccountNumber ? `A/C Name: ${branding.bankAccountNumber}` : "",
       branding.bankIfscCode ? `IFSC: ${branding.bankIfscCode}` : ""
     ].filter(Boolean).join("\n") || "Add your bank details",
     42,
-    notesY + 80,
-    { width: 230, lineGap: 2 }
+    notesY + 58,
+    { width: 230, lineGap: 1 }
   );
 
   const totalsX = 360;
