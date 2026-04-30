@@ -669,7 +669,6 @@ function buildInvoiceHtml(invoice, customer, branding) {
     .join("<br/>");
   const shouldRenderShipTo = shipToBlock !== [safe(customer?.fullName || invoice.customerId), customerAddress].filter(Boolean).join("<br/>");
   const companyBlock = [
-    safe(appliedBranding.companyName || "Brand Name"),
     safe(appliedBranding.companyAddress || ""),
     appliedBranding.gstNumber ? `GSTIN: ${safe(appliedBranding.gstNumber)}` : "",
     appliedBranding.phoneNumber ? `Phone: ${safe(appliedBranding.phoneNumber)}` : "",
@@ -686,7 +685,7 @@ function buildInvoiceHtml(invoice, customer, branding) {
       @page { size: A4; margin: 10mm; }
       * { box-sizing: border-box; }
       body { font-family: Arial, sans-serif; background: #eef0f4; margin: 0; padding: 16px; color: #23262d; }
-      .invoice-shell { width: 760px; margin: 0 auto; background: #ffffff; box-shadow: 0 24px 60px rgba(15,23,42,0.10); padding: 22px 22px 18px; }
+      .invoice-shell { width: 190mm; margin: 0 auto; background: #ffffff; box-shadow: 0 24px 60px rgba(15,23,42,0.10); padding: 14mm 12mm 10mm; }
       .avoid-break { break-inside: avoid; page-break-inside: avoid; }
       @media print {
         body { background: #ffffff; padding: 0; }
@@ -698,19 +697,22 @@ function buildInvoiceHtml(invoice, customer, branding) {
     <div class="invoice-shell">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
         <div style="max-width:54%;">
-          <div style="font-size:20px;font-weight:800;line-height:1.2;letter-spacing:.01em;color:#111827;">${safe(appliedBranding.companyName || "Brand Name")}</div>
-          <div style="margin-top:8px;width:88px;height:4px;background:#8224e3;border-radius:999px;"></div>
-          <div style="margin-top:10px;font-size:11px;line-height:1.52;color:#374151;">${companyBlock}</div>
+          <div style="display:flex;align-items:flex-start;gap:14px;">
+            <div style="width:50px;height:50px;flex:0 0 50px;"></div>
+            <div>
+              <div style="font-size:12px;font-weight:800;line-height:1.2;letter-spacing:.01em;color:#111827;">${safe(appliedBranding.companyName || "Brand Name")}</div>
+              <div style="margin-top:6px;width:72px;height:3px;background:#8224e3;border-radius:999px;"></div>
+              <div style="margin-top:8px;font-size:10px;line-height:1.45;color:#374151;">${companyBlock}</div>
+            </div>
+          </div>
         </div>
         <div style="width:34%;text-align:right;">
           <div style="font-size:16px;font-weight:800;letter-spacing:.08em;color:#8224e3;">TAX INVOICE</div>
           <div style="margin-top:6px;font-size:11px;font-weight:700;color:#4b5563;"># ${safe(displayInvoiceNumber)}</div>
-          <div style="margin-top:14px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:14px;background:#fafafa;">
-            <div style="font-size:10px;text-transform:uppercase;color:#6b7280;letter-spacing:.08em;">Grand Total</div>
-            <div style="margin-top:4px;font-size:22px;font-weight:800;color:#111827;">${formatMoney(invoice.totalAmount)}</div>
-            <div style="margin-top:8px;font-size:10px;text-transform:uppercase;color:#6b7280;letter-spacing:.08em;">Balance Due</div>
-            <div style="margin-top:3px;font-size:15px;font-weight:800;color:#111827;">${formatMoney(balanceDue)}</div>
-          </div>
+          <div style="margin-top:12px;font-size:10px;text-transform:uppercase;color:#6b7280;letter-spacing:.08em;">Grand Total</div>
+          <div style="margin-top:4px;font-size:18px;font-weight:800;color:#111827;">${formatMoney(invoice.totalAmount)}</div>
+          <div style="margin-top:6px;font-size:10px;text-transform:uppercase;color:#6b7280;letter-spacing:.08em;">Balance Due</div>
+          <div style="margin-top:2px;font-size:13px;font-weight:800;color:#111827;">${formatMoney(balanceDue)}</div>
         </div>
       </div>
       <div class="avoid-break" style="display:flex;justify-content:space-between;gap:18px;margin-top:16px;">
@@ -1071,16 +1073,15 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
       doc.image(branding.logoBuffer, 42, 42, { fit: [34, 34], align: "left", valign: "center" });
     } catch {}
   }
-  doc.fillColor(dark).font("Helvetica-Bold").fontSize(14).text(branding.companyName || "Brand Name", branding.logoBuffer ? 88 : 42, 44, { width: 246 });
+  doc.fillColor(dark).font("Helvetica-Bold").fontSize(10.5).text(branding.companyName || "Brand Name", branding.logoBuffer ? 88 : 42, 44, { width: 246 });
   doc.fillColor(accent).rect(42, 80, 84, 4).fill();
   doc.fillColor("#4b5563").font("Helvetica").fontSize(8).text(companyText, 42, 90, { width: 240, lineGap: 1 });
   doc.fillColor(accent).font("Helvetica-Bold").fontSize(15).text("TAX INVOICE", 356, 46, { width: 197, align: "right" });
   doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(8.5).text(`# ${displayInvoiceNumber}`, 356, 70, { width: 197, align: "right" });
-  doc.roundedRect(382, 90, 171, 54, 10).fillAndStroke("#fafafa", "#e5e7eb");
-  doc.fillColor("#4b5563").font("Helvetica").fontSize(8).text("Grand Total", 428, 100, { width: 114, align: "right" });
-  doc.fillColor(dark).font("Helvetica-Bold").fontSize(14).text(formatMoney(invoice.totalAmount), 394, 112, { width: 148, align: "right" });
-  doc.fillColor("#4b5563").font("Helvetica").fontSize(7.5).text("Balance Due", 428, 126, { width: 114, align: "right" });
-  doc.fillColor(dark).font("Helvetica-Bold").fontSize(9.5).text(formatMoney(balanceDue), 394, 136, { width: 148, align: "right" });
+  doc.fillColor("#4b5563").font("Helvetica").fontSize(8).text("Grand Total", 430, 96, { width: 112, align: "right" });
+  doc.fillColor(dark).font("Helvetica-Bold").fontSize(12).text(formatMoney(invoice.totalAmount), 394, 107, { width: 148, align: "right" });
+  doc.fillColor("#4b5563").font("Helvetica").fontSize(7.5).text("Balance Due", 430, 121, { width: 112, align: "right" });
+  doc.fillColor(dark).font("Helvetica-Bold").fontSize(8.8).text(formatMoney(balanceDue), 394, 131, { width: 148, align: "right" });
 
   const billToY = Math.max(152, 98 + companyDetailsHeight + 14);
   doc.fillColor("#6b7280").font("Helvetica-Bold").fontSize(9.5).text("Bill To", 42, billToY);

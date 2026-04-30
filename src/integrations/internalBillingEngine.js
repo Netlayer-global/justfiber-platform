@@ -359,7 +359,7 @@ function normalizeStateName(value) {
 }
 
 function resolveCustomerBillingState(customer = {}, zoneMapping = null) {
-  const stateName = (
+  let stateName = (
     zoneMapping?.stateName ||
     customer?.zoneStateName ||
     customer?.billingSnapshot?.zoneStateName ||
@@ -368,7 +368,7 @@ function resolveCustomerBillingState(customer = {}, zoneMapping = null) {
     customer?.address?.state ||
     ""
   );
-  const stateCode = resolveComparableStateCode(
+  let stateCode = resolveComparableStateCode(
     zoneMapping?.stateCode ||
     customer?.zoneStateCode ||
     customer?.billingSnapshot?.zoneStateCode ||
@@ -377,6 +377,14 @@ function resolveCustomerBillingState(customer = {}, zoneMapping = null) {
     customer?.address?.stateCode,
     stateName
   );
+  if (!stateCode) {
+    const companyFallbackStateName = String(zoneMapping?.companyStateName || "").trim();
+    const companyFallbackStateCode = resolveComparableStateCode(zoneMapping?.companyStateCode, companyFallbackStateName);
+    if (companyFallbackStateCode) {
+      stateCode = companyFallbackStateCode;
+      stateName = companyFallbackStateName || stateName;
+    }
+  }
   return {
     stateName: String(stateName || "").trim(),
     stateCode
