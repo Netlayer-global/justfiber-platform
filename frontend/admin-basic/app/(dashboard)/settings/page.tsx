@@ -785,7 +785,7 @@ export default function SettingsPage() {
     taxPercent: 18,
     taxMode: 'india_gst',
     invoicePrefix: 'JF',
-    invoiceSeriesCode: 'MAIN',
+    invoiceSeriesCode: '',
     dueDays: 0,
     companyStateCode: '',
     companyStateName: '',
@@ -1197,7 +1197,7 @@ export default function SettingsPage() {
         },
         invoiceConfig: {
           invoicePrefix: franchiseCode.slice(0, 3).toUpperCase() || 'ZN',
-          invoiceSeriesCode: 'MAIN',
+          invoiceSeriesCode: '',
           sequencePadding: 4,
           templateKey,
         },
@@ -1423,7 +1423,7 @@ export default function SettingsPage() {
             taxPercent: activeProfile.taxPercent ?? 18,
             taxMode: activeProfile.taxMode || 'india_gst',
             invoicePrefix: activeProfile.invoicePrefix || 'JF',
-            invoiceSeriesCode: activeProfile.invoiceSeriesCode || 'MAIN',
+            invoiceSeriesCode: activeProfile.invoiceSeriesCode || '',
             dueDays: activeProfile.dueDays ?? 0,
             companyStateCode: activeProfile.companyStateCode || '',
             companyStateName: activeProfile.companyStateName || '',
@@ -1484,7 +1484,7 @@ export default function SettingsPage() {
           companyLegalName: invoiceOrganizationProfile.companyLegalName || '',
           companyAddress: invoiceOrganizationProfile.companyAddress || '',
           invoicePrefix: invoiceOrganizationProfile.invoicePrefix || 'JF',
-          invoiceSeriesCode: invoiceOrganizationProfile.invoiceSeriesCode || 'MAIN',
+          invoiceSeriesCode: invoiceOrganizationProfile.invoiceSeriesCode || '',
           companyStateCode: invoiceOrganizationProfile.companyStateCode || '',
           companyStateName: invoiceOrganizationProfile.companyStateName || '',
           gstNumber: invoiceOrganizationProfile.gstNumber || '',
@@ -2676,7 +2676,7 @@ export default function SettingsPage() {
                             />
                           </label>
                           <label className="space-y-2">
-                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Invoice series</div>
+                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Invoice series (optional)</div>
                             <input
                               className="input"
                               value={invoiceOrganizationProfile.invoiceSeriesCode || ''}
@@ -2956,19 +2956,6 @@ export default function SettingsPage() {
                               </option>
                             ))}
                           </select>
-                        </label>
-                        <label className="space-y-2">
-                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Template fallback prefix</div>
-                          <input
-                            className="input"
-                            value={invoiceTemplateSection.invoicePrefix}
-                            onChange={(event) =>
-                              replaceInvoiceTemplateSection({
-                                ...invoiceTemplateSection,
-                                invoicePrefix: event.target.value.toUpperCase(),
-                              })
-                            }
-                          />
                         </label>
                         <div className="space-y-2">
                           <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Edit template</div>

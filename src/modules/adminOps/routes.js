@@ -671,8 +671,10 @@ function buildInvoiceHtml(invoice, customer, branding) {
         <div style="width:34%;text-align:right;">
           <div style="font-size:18px;font-weight:700;letter-spacing:.08em;color:#8224e3;">TAX INVOICE</div>
           <div style="margin-top:8px;font-size:12px;font-weight:700;color:#4b5563;"># ${safe(invoice.invoiceNumber || invoice.invoiceId)}</div>
-          <div style="margin-top:20px;font-size:11px;text-transform:uppercase;color:#6b7280;letter-spacing:.08em;">Balance Due</div>
-          <div style="margin-top:6px;font-size:28px;font-weight:800;color:#111827;">${formatMoney(balanceDue)}</div>
+          <div style="margin-top:20px;font-size:11px;text-transform:uppercase;color:#6b7280;letter-spacing:.08em;">Grand Total</div>
+          <div style="margin-top:6px;font-size:28px;font-weight:800;color:#111827;">${formatMoney(invoice.totalAmount)}</div>
+          <div style="margin-top:12px;font-size:11px;text-transform:uppercase;color:#6b7280;letter-spacing:.08em;">Balance Due</div>
+          <div style="margin-top:4px;font-size:18px;font-weight:800;color:#111827;">${formatMoney(balanceDue)}</div>
         </div>
       </div>
       <div style="display:flex;justify-content:space-between;gap:28px;margin-top:30px;">
@@ -718,12 +720,8 @@ function buildInvoiceHtml(invoice, customer, branding) {
           <table style="width:100%;border-collapse:collapse;font-size:14px;">
             <tr><td style="padding:7px 0;font-weight:700;color:#475569;">Sub Total</td><td style="padding:7px 0;text-align:right;font-weight:700;color:#111827;">${formatMoney(summaryRows.taxableSubtotal)}</td></tr>
             ${taxRows}
-            <tr><td style="padding:9px 0;font-weight:800;color:#111827;border-top:1px solid #d1d5db;">Total</td><td style="padding:9px 0;text-align:right;font-weight:800;color:#111827;border-top:1px solid #d1d5db;">${formatMoney(invoice.totalAmount)}</td></tr>
+            <tr><td style="padding:9px 0;font-weight:800;color:#111827;border-top:1px solid #d1d5db;">Grand Total</td><td style="padding:9px 0;text-align:right;font-weight:800;color:#111827;border-top:1px solid #d1d5db;">${formatMoney(invoice.totalAmount)}</td></tr>
           </table>
-          <div style="margin-top:14px;background:#f5f3ff;color:#111827;padding:13px 16px;display:flex;justify-content:space-between;align-items:center;font-size:18px;font-weight:800;border-left:5px solid #8224e3;">
-            <span>Balance Due</span>
-            <span>${formatMoney(balanceDue)}</span>
-          </div>
         </div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:28px;padding-top:16px;border-top:1px solid #e5e7eb;">
@@ -1041,8 +1039,10 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
   doc.fillColor("#4b5563").font("Helvetica").fontSize(9).text(companyText, 42, 100, { width: 240, lineGap: 2 });
   doc.fillColor(accent).font("Helvetica-Bold").fontSize(17).text("TAX INVOICE", 356, 46, { width: 197, align: "right" });
   doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(8.5).text(`# ${invoice.invoiceNumber || invoice.invoiceId}`, 356, 70, { width: 197, align: "right" });
-  doc.font("Helvetica").fontSize(9).text("Balance Due", 420, 98, { width: 133, align: "right" });
-  doc.fillColor(dark).font("Helvetica-Bold").fontSize(16).text(formatMoney(balanceDue), 356, 112, { width: 197, align: "right" });
+  doc.font("Helvetica").fontSize(9).text("Grand Total", 420, 98, { width: 133, align: "right" });
+  doc.fillColor(dark).font("Helvetica-Bold").fontSize(16).text(formatMoney(invoice.totalAmount), 356, 112, { width: 197, align: "right" });
+  doc.fillColor("#4b5563").font("Helvetica").fontSize(8.5).text("Balance Due", 420, 132, { width: 133, align: "right" });
+  doc.fillColor(dark).font("Helvetica-Bold").fontSize(11).text(formatMoney(balanceDue), 356, 144, { width: 197, align: "right" });
 
   const billToY = Math.max(160, 100 + companyDetailsHeight + 18);
   doc.fillColor("#6b7280").font("Helvetica-Bold").fontSize(9.5).text("Bill To", 42, billToY);
@@ -1117,7 +1117,7 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
     rowY += rowHeight;
   });
 
-  const notesY = Math.max(rowY + 18, 610);
+  const notesY = rowY + 12;
   doc.fillColor("#374151").font("Helvetica-Bold").fontSize(10).text("Notes", 42, notesY);
   doc.fillColor("#6b7280").font("Helvetica").fontSize(9).text(branding.paymentInstructions || "Please pay before the due date to avoid service interruption.", 42, notesY + 16, {
     width: 230,
@@ -1147,12 +1147,8 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
   });
   doc.moveTo(totalsX, totalsY + 2).lineTo(553, totalsY + 2).stroke("#d1d5db");
   totalsY += 10;
-  doc.fillColor(dark).font("Helvetica-Bold").fontSize(11).text("Total", totalsX, totalsY, { width: 94 });
+  doc.fillColor(dark).font("Helvetica-Bold").fontSize(11).text("Grand Total", totalsX, totalsY, { width: 94 });
   doc.text(formatMoney(invoice.totalAmount), totalsX + 98, totalsY, { width: 95, align: "right" });
-  totalsY += 24;
-  doc.rect(totalsX, totalsY - 6, 193, 24).fill("#f5f3ff");
-  doc.fillColor(dark).font("Helvetica-Bold").fontSize(11).text("Balance Due", totalsX + 8, totalsY, { width: 90 });
-  doc.text(formatMoney(balanceDue), totalsX + 98, totalsY, { width: 87, align: "right" });
 
   doc.moveTo(42, 796).lineTo(320, 796).stroke("#d1d5db");
   doc.fillColor("#4b5563").font("Helvetica").fontSize(8.5).text(

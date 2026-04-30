@@ -481,8 +481,11 @@ function buildGstAmounts(totalAmount, billingProfile, customer) {
     zoneMapping?.stateCode || customer?.billingStateCode || customer?.address?.stateCode || customer?.billingSnapshot?.billingStateCode,
     customerStateName
   );
-  const companyStateName = billingProfile?.companyStateName || zoneMapping?.companyStateName || "";
-  const companyStateCode = resolveComparableStateCode(billingProfile?.companyStateCode, companyStateName);
+  const companyStateName = billingProfile?.companyStateName || zoneMapping?.companyStateName || customerStateName || "";
+  const companyStateCode = resolveComparableStateCode(
+    billingProfile?.companyStateCode || zoneMapping?.companyStateCode || customerStateCode,
+    companyStateName
+  );
   const override = (billingProfile?.stateOverrides || []).find((item) => normalizeStateCode(item.stateCode) === customerStateCode);
 
   const isIntrastate =
@@ -600,24 +603,24 @@ async function createInvoiceLedgerEntry(invoice) {
 async function buildInvoiceNumber({ billingProfile, zoneMapping, customer, billCycle, selectedTemplate }) {
   const prefix = normalizeSeriesCode(
     zoneMapping?.invoicePrefix ||
-    selectedTemplate?.invoicePrefix ||
     billingProfile?.invoicePrefix ||
     "JF",
     "JF"
   );
   const zoneSeries = normalizeSeriesCode(zoneMapping?.invoiceSeriesCode || "", "");
   const stateSeries = normalizeSeriesCode(customer?.billingStateCode || customer?.billingSnapshot?.billingStateCode || "", "");
-  const profileSeries = normalizeSeriesCode(billingProfile?.invoiceSeriesCode || "MAIN", "MAIN");
+  const profileSeries = normalizeSeriesCode(billingProfile?.invoiceSeriesCode || "", "");
   const seriesCode = zoneSeries || stateSeries || profileSeries;
   const periodCode = String(billCycle || buildBillCycle()).replace(/[^0-9]+/g, "");
   const padding = Math.max(3, Math.min(8, Number(billingProfile?.invoiceSequencePadding || 4)));
-  const invoiceRegex = new RegExp(`^${prefix}-${seriesCode}-${periodCode}-`);
+  const seriesPart = seriesCode ? `${seriesCode}-` : "";
+  const invoiceRegex = new RegExp(`^${prefix}-${seriesPart}${periodCode}-`);
   const existingCount = await BillingInvoice.countDocuments({ invoiceNumber: invoiceRegex });
   const sequence = String(existingCount + 1).padStart(padding, "0");
   return {
-    invoiceNumber: `${prefix}-${seriesCode}-${periodCode}-${sequence}`,
+    invoiceNumber: `${prefix}-${seriesPart}${periodCode}-${sequence}`,
     invoicePrefix: prefix,
-    invoiceSeriesCode: seriesCode,
+    invoiceSeriesCode: seriesCode || "",
     invoiceSequenceNumber: existingCount + 1,
   };
 }
