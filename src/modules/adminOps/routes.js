@@ -57,6 +57,18 @@ export const adminOpsRouter = Router();
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const WAIVER_APPROVAL_THRESHOLD = 1000;
 
+function normalizeDisplayInvoiceNumber(value = "") {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const parts = raw.split("-").map((item) => item.trim()).filter(Boolean);
+  if (parts.length < 3) return raw;
+  const prefix = parts[0];
+  const numericIndex = parts.findIndex((part, index) => index > 0 && /\d/.test(part));
+  if (numericIndex > 1) return [prefix, ...parts.slice(numericIndex)].join("-");
+  if (parts[1] === prefix || parts[1] === "MAIN") return [prefix, ...parts.slice(2)].join("-");
+  return raw;
+}
+
 function resolveSupportZone(customer = {}) {
   const zoneCode = String(
     customer.billingZoneCode ||
@@ -579,6 +591,7 @@ function rebuildInvoiceLineItems(invoice = {}, service = {}, plan = null) {
 }
 
 function buildInvoiceHtml(invoice, customer, branding) {
+  const displayInvoiceNumber = normalizeDisplayInvoiceNumber(invoice.invoiceNumber || invoice.invoiceId);
   const appliedBranding = resolveInvoiceBranding(branding, invoice);
   const planSummary = resolveInvoicePlanSummary(invoice);
   const summaryRows = buildInvoiceSummaryRows(invoice);
@@ -659,7 +672,7 @@ function buildInvoiceHtml(invoice, customer, branding) {
     .filter(Boolean)
     .join("<br/>");
   return `<!doctype html>
-  <html><head><meta charset="utf-8"/><title>${invoice.invoiceNumber}</title></head>
+  <html><head><meta charset="utf-8"/><title>${displayInvoiceNumber}</title></head>
   <body style="font-family:Arial,sans-serif;background:#eef0f4;margin:0;padding:24px;color:#23262d;">
     <div style="width:760px;margin:0 auto;background:#ffffff;box-shadow:0 24px 60px rgba(15,23,42,0.10);padding:36px 34px 28px;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
@@ -670,7 +683,7 @@ function buildInvoiceHtml(invoice, customer, branding) {
         </div>
         <div style="width:34%;text-align:right;">
           <div style="font-size:18px;font-weight:700;letter-spacing:.08em;color:#8224e3;">TAX INVOICE</div>
-          <div style="margin-top:8px;font-size:12px;font-weight:700;color:#4b5563;"># ${safe(invoice.invoiceNumber || invoice.invoiceId)}</div>
+          <div style="margin-top:8px;font-size:12px;font-weight:700;color:#4b5563;"># ${safe(displayInvoiceNumber)}</div>
           <div style="margin-top:20px;font-size:11px;text-transform:uppercase;color:#6b7280;letter-spacing:.08em;">Grand Total</div>
           <div style="margin-top:6px;font-size:28px;font-weight:800;color:#111827;">${formatMoney(invoice.totalAmount)}</div>
           <div style="margin-top:12px;font-size:11px;text-transform:uppercase;color:#6b7280;letter-spacing:.08em;">Balance Due</div>
@@ -1003,6 +1016,7 @@ function drawPdfFooter(doc, branding, generatedText, startY = 720) {
 }
 
 function renderInvoicePdf(invoice, profile, customer, templateSettings) {
+  const displayInvoiceNumber = normalizeDisplayInvoiceNumber(invoice.invoiceNumber || invoice.invoiceId);
   const branding = resolveInvoiceBranding(pickBranding(profile, templateSettings), invoice);
   const planSummary = resolveInvoicePlanSummary(invoice);
   const summaryRows = buildInvoiceSummaryRows(invoice);
@@ -1038,7 +1052,7 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
   doc.fillColor(accent).rect(42, 88, 96, 5).fill();
   doc.fillColor("#4b5563").font("Helvetica").fontSize(9).text(companyText, 42, 100, { width: 240, lineGap: 2 });
   doc.fillColor(accent).font("Helvetica-Bold").fontSize(17).text("TAX INVOICE", 356, 46, { width: 197, align: "right" });
-  doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(8.5).text(`# ${invoice.invoiceNumber || invoice.invoiceId}`, 356, 70, { width: 197, align: "right" });
+  doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(8.5).text(`# ${displayInvoiceNumber}`, 356, 70, { width: 197, align: "right" });
   doc.font("Helvetica").fontSize(9).text("Grand Total", 420, 98, { width: 133, align: "right" });
   doc.fillColor(dark).font("Helvetica-Bold").fontSize(16).text(formatMoney(invoice.totalAmount), 356, 112, { width: 197, align: "right" });
   doc.fillColor("#4b5563").font("Helvetica").fontSize(8.5).text("Balance Due", 420, 132, { width: 133, align: "right" });
@@ -3289,7 +3303,7 @@ adminOpsRouter.get(
       return res.send(buildInvoiceHtml(invoice, customer, branding));
     }
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename=\"${invoice.invoiceNumber || invoice.invoiceId}.pdf\"`);
+    res.setHeader("Content-Disposition", `inline; filename=\"${normalizeDisplayInvoiceNumber(invoice.invoiceNumber || invoice.invoiceId)}.pdf\"`);
     return renderInvoicePdf(invoice, profile, customer, selectedTemplateSettings).pipe(res);
   })
 );

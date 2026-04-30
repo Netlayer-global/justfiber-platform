@@ -969,11 +969,23 @@ function mapCustomerTicket(ticket: any): CustomerTicket {
   }
 }
 
+function normalizeDisplayInvoiceNumber(value: any) {
+  const raw = renderSafeText(value)
+  if (!raw) return ''
+  const parts = raw.split('-').map((item) => item.trim()).filter(Boolean)
+  if (parts.length < 3) return raw
+  const prefix = parts[0]
+  const numericIndex = parts.findIndex((part, index) => index > 0 && /\d/.test(part))
+  if (numericIndex > 1) return [prefix, ...parts.slice(numericIndex)].join('-')
+  if (parts[1] === prefix || parts[1] === 'MAIN') return [prefix, ...parts.slice(2)].join('-')
+  return raw
+}
+
 function mapCustomerInvoice(invoice: any): CustomerInvoice {
   return {
     id: invoice._id || invoice.invoiceId || '',
     invoiceId: invoice.invoiceId || invoice._id || '',
-    invoiceNumber: invoice.invoiceNumber,
+    invoiceNumber: normalizeDisplayInvoiceNumber(invoice.invoiceNumber),
     amount: Number(invoice.totalAmount || invoice.amount || 0),
     paymentStatus: invoice.paymentStatus || invoice.status,
     generatedAt: invoice.generatedAt,
@@ -1382,7 +1394,7 @@ function mapBillingItem(invoice: any): BillingData {
           ? 'overdue'
           : 'pending',
     invoiceId: invoice.invoiceId || invoice._id || '',
-    invoiceNumber: invoice.invoiceNumber,
+    invoiceNumber: normalizeDisplayInvoiceNumber(invoice.invoiceNumber),
     billCycle: invoice.billCycle,
     generatedAt: invoice.generatedAt,
     paymentStatus: invoice.paymentStatus,
