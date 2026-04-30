@@ -92,7 +92,7 @@ export default function CustomerDetailPage() {
     const value = String(identifier || '').trim()
     if (!value) return null
     const lookup = await adminAPI.getCustomers(1, 20, { search: value, zoneCode: null }).catch(() => null)
-    const candidates = lookup?.data || []
+    const candidates = lookup?.data?.items || []
     const match = candidates.find((item) =>
       [item.customerId, item.id, item.accountNumber, item.serviceId, item.pppoeUsername]
         .filter(Boolean)
