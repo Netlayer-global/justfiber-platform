@@ -18,7 +18,7 @@ import { buildPagination } from "../../common/pagination.js";
 import { ApiError } from "../../common/ApiError.js";
 import { auditFromRequest } from "../../common/audit.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
-import { internalBillingEngine } from "../../integrations/internalBillingEngine.js";
+import { internalBillingEngine, regenerateExistingInvoice } from "../../integrations/internalBillingEngine.js";
 import {
   buildJustFiberWifiName,
   detectOntBrand
@@ -662,6 +662,7 @@ function buildInvoiceHtml(invoice, customer, branding) {
   ]
     .filter(Boolean)
     .join("<br/>");
+  const shouldRenderShipTo = shipToBlock !== [safe(customer?.fullName || invoice.customerId), customerAddress].filter(Boolean).join("<br/>");
   const companyBlock = [
     safe(appliedBranding.companyName || "Brand Name"),
     safe(appliedBranding.companyAddress || ""),
@@ -690,13 +691,13 @@ function buildInvoiceHtml(invoice, customer, branding) {
           <div style="margin-top:4px;font-size:18px;font-weight:800;color:#111827;">${formatMoney(balanceDue)}</div>
         </div>
       </div>
-      <div style="display:flex;justify-content:space-between;gap:28px;margin-top:30px;">
+      <div style="display:flex;justify-content:space-between;gap:22px;margin-top:22px;">
         <div style="width:54%;">
           <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;font-weight:700;">Bill To</div>
           <div style="margin-top:8px;font-size:13px;line-height:1.68;color:#111827;">${addressBlock}</div>
-          <div style="margin-top:18px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;font-weight:700;">Ship To</div>
-          <div style="margin-top:8px;font-size:13px;line-height:1.68;color:#111827;">${shipToBlock}</div>
-          <div style="margin-top:18px;font-size:13px;color:#374151;"><span style="font-weight:700;">Place Of Supply:</span> ${safe(invoice.placeOfSupply || invoice.billingStateName || "-")}</div>
+          ${shouldRenderShipTo ? `<div style="margin-top:14px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;font-weight:700;">Ship To</div>
+          <div style="margin-top:6px;font-size:13px;line-height:1.6;color:#111827;">${shipToBlock}</div>` : ""}
+          <div style="margin-top:14px;font-size:13px;color:#374151;"><span style="font-weight:700;">Place Of Supply:</span> ${safe(invoice.placeOfSupply || invoice.billingStateName || "-")}</div>
         </div>
         <div style="width:34%;padding-top:4px;">
           <div style="display:grid;grid-template-columns:108px 1fr;gap:10px 12px;font-size:14px;line-height:1.55;">
@@ -707,7 +708,7 @@ function buildInvoiceHtml(invoice, customer, branding) {
           </div>
         </div>
       </div>
-      <table style="width:100%;border-collapse:collapse;margin-top:28px;font-size:13px;">
+      <table style="width:100%;border-collapse:collapse;margin-top:18px;font-size:12px;">
         <thead>
           <tr style="background:#2d3138;color:#ffffff;">
             <th style="padding:11px 8px;text-align:center;width:36px;">#</th>
@@ -722,7 +723,7 @@ function buildInvoiceHtml(invoice, customer, branding) {
         </thead>
         <tbody>${lineRows}</tbody>
       </table>
-      <div style="display:flex;justify-content:space-between;gap:32px;margin-top:20px;align-items:flex-start;">
+      <div style="display:flex;justify-content:space-between;gap:24px;margin-top:16px;align-items:flex-start;">
         <div style="width:42%;">
           <div style="font-size:14px;font-weight:700;color:#374151;">Notes</div>
           <div style="margin-top:8px;font-size:12px;line-height:1.7;color:#6b7280;">${paymentTerms}</div>
@@ -737,7 +738,7 @@ function buildInvoiceHtml(invoice, customer, branding) {
           </table>
         </div>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:28px;padding-top:16px;border-top:1px solid #e5e7eb;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:18px;padding-top:12px;border-top:1px solid #e5e7eb;">
         <div style="font-size:12px;color:#4b5563;">${safe(appliedBranding.phoneNumber || "Phone #")} &nbsp; | &nbsp; ${safe(appliedBranding.companyAddress || "Address")} &nbsp; | &nbsp; ${safe(appliedBranding.website || "Website")}</div>
         <div style="min-width:180px;text-align:center;">
           <div style="height:2px;background:#8224e3;width:100%;margin-bottom:8px;"></div>
@@ -1039,7 +1040,7 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
     branding.supportEmail ? `Email ${branding.supportEmail}` : ""
   ].filter(Boolean);
   const companyText = companyLines.join("\n");
-  doc.font("Helvetica").fontSize(9);
+  doc.font("Helvetica").fontSize(8.5);
   const companyDetailsHeight = companyText ? doc.heightOfString(companyText, { width: 240, lineGap: 2 }) : 0;
 
   doc.rect(0, 0, 595, 842).fill("#ffffff");
@@ -1058,7 +1059,7 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
   doc.fillColor("#4b5563").font("Helvetica").fontSize(8.5).text("Balance Due", 420, 132, { width: 133, align: "right" });
   doc.fillColor(dark).font("Helvetica-Bold").fontSize(11).text(formatMoney(balanceDue), 356, 144, { width: 197, align: "right" });
 
-  const billToY = Math.max(160, 100 + companyDetailsHeight + 18);
+  const billToY = Math.max(152, 98 + companyDetailsHeight + 14);
   doc.fillColor("#6b7280").font("Helvetica-Bold").fontSize(9.5).text("Bill To", 42, billToY);
   doc.fillColor(dark).font("Helvetica-Bold").fontSize(10.5).text(customer?.fullName || invoice.customerId, 42, billToY + 14, { width: 250 });
   const billToText = [
@@ -1068,17 +1069,20 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
     `Customer ID: ${invoice.customerId}`,
     `Plan: ${planSummary.planName}`
   ].filter(Boolean).join("\n");
+  const shipToText = [customer?.fullName || invoice.customerId, ...customerAddress].filter(Boolean).join("\n") || (invoice.placeOfSupply || invoice.billingStateName || "-");
+  const shouldRenderShipTo = shipToText !== [customer?.fullName || invoice.customerId, ...customerAddress].filter(Boolean).join("\n");
   doc.font("Helvetica").fontSize(8.8);
   const billToHeight = billToText ? doc.heightOfString(billToText, { width: 250, lineGap: 2 }) : 0;
   doc.fillColor("#374151").font("Helvetica").fontSize(8.8).text(billToText, 42, billToY + 30, { width: 250, lineGap: 2 });
 
-  const shipToY = billToY + 30 + billToHeight + 18;
-  doc.fillColor("#6b7280").font("Helvetica-Bold").fontSize(9.5).text("Ship To", 42, shipToY);
-  const shipToText = [customer?.fullName || invoice.customerId, ...customerAddress].filter(Boolean).join("\n") || (invoice.placeOfSupply || invoice.billingStateName || "-");
-  const shipToHeight = shipToText ? doc.heightOfString(shipToText, { width: 250, lineGap: 2 }) : 0;
-  doc.fillColor(dark).font("Helvetica").fontSize(8.8).text(shipToText, 42, shipToY + 14, { width: 250, lineGap: 2 });
-
-  const placeSupplyY = shipToY + 14 + shipToHeight + 14;
+  let placeSupplyY = billToY + 30 + billToHeight + 12;
+  if (shouldRenderShipTo) {
+    const shipToY = placeSupplyY;
+    doc.fillColor("#6b7280").font("Helvetica-Bold").fontSize(9.5).text("Ship To", 42, shipToY);
+    const shipToHeight = shipToText ? doc.heightOfString(shipToText, { width: 250, lineGap: 2 }) : 0;
+    doc.fillColor(dark).font("Helvetica").fontSize(8.8).text(shipToText, 42, shipToY + 14, { width: 250, lineGap: 2 });
+    placeSupplyY = shipToY + 14 + shipToHeight + 10;
+  }
   doc.fillColor("#374151").font("Helvetica-Bold").fontSize(9.2).text(`Place Of Supply: ${invoice.placeOfSupply || invoice.billingStateName || "-"}`, 42, placeSupplyY, { width: 250 });
 
   const infoX = 360;
@@ -1093,7 +1097,7 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
   doc.fillColor(dark).font("Helvetica").fontSize(9.5).text(String(invoice.paymentStatus || "-"), infoX + 94, infoY + 60, { width: 99, align: "right" });
 
   const tableX = 42;
-  const tableY = Math.max(placeSupplyY + 28, infoY + 92);
+  const tableY = Math.max(placeSupplyY + 18, infoY + 88);
   const widths = [24, 183, 54, 34, 60, 52, 52, 52];
   const headers = ["#", "Item & Description", "HSN/SAC", "Qty", "Rate", "CGST", "SGST", "Amount"];
   let x = tableX;
@@ -1113,7 +1117,7 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
     const itemCgst = cgstPart ? Number(cgstPart.amount || 0) * weight : 0;
     const itemSgst = sgstPart ? Number(sgstPart.amount || 0) * weight : 0;
     const descriptionHeight = doc.heightOfString(String(row.label || "-"), { width: widths[1] - 10, lineGap: 1 });
-    const rowHeight = Math.max(34, descriptionHeight + 16);
+    const rowHeight = Math.max(28, descriptionHeight + 12);
     x = tableX;
     widths.forEach((width) => {
       doc.rect(x, rowY, width, rowHeight).fillAndStroke("#ffffff", "#e5e7eb");
@@ -1131,7 +1135,7 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
     rowY += rowHeight;
   });
 
-  const notesY = rowY + 12;
+  const notesY = rowY + 8;
   doc.fillColor("#374151").font("Helvetica-Bold").fontSize(10).text("Notes", 42, notesY);
   doc.fillColor("#6b7280").font("Helvetica").fontSize(9).text(branding.paymentInstructions || "Please pay before the due date to avoid service interruption.", 42, notesY + 16, {
     width: 230,
@@ -4319,16 +4323,19 @@ adminOpsRouter.post(
         {}
     };
 
-    invoice.lineItems = rebuildInvoiceLineItems(invoice.toObject ? invoice.toObject() : invoice, serviceContext, plan);
-    invoice.markModified("lineItems");
-    invoice.metadata = {
-      ...(invoice.metadata || {}),
-      regeneratedAt: new Date(),
-      regeneratedByAdminId: req.admin?._id || null,
-      planCode: plan?.planCode || invoice.metadata?.planCode || "",
-      planName: plan?.name || invoice.metadata?.planName || ""
-    };
-    invoice.markModified("metadata");
+    await regenerateExistingInvoice(invoice, {
+      customer,
+      subscriberService,
+      plan,
+      invoiceMetadata: {
+        ...(invoice.metadata || {}),
+        ...(serviceContext.metadata || {}),
+        billingBreakup: serviceContext.billingBreakup,
+        planCode: plan?.planCode || invoice.metadata?.planCode || "",
+        planName: plan?.name || invoice.metadata?.planName || ""
+      },
+      adminId: req.admin?._id || null
+    });
     await invoice.save();
 
     await auditFromRequest(req, {

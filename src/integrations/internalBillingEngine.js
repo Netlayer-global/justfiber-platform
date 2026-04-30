@@ -600,7 +600,7 @@ async function createInvoiceLedgerEntry(invoice) {
   });
 }
 
-async function buildInvoiceNumber({ billingProfile, zoneMapping, customer, billCycle, selectedTemplate }) {
+async function buildInvoiceNumber({ billingProfile, zoneMapping, customer, billCycle, selectedTemplate, existingInvoiceId = "" }) {
   const prefix = normalizeSeriesCode(
     zoneMapping?.invoicePrefix ||
     billingProfile?.invoicePrefix ||
@@ -610,7 +610,10 @@ async function buildInvoiceNumber({ billingProfile, zoneMapping, customer, billC
   const periodCode = String(billCycle || buildBillCycle()).replace(/[^0-9]+/g, "");
   const padding = Math.max(3, Math.min(8, Number(billingProfile?.invoiceSequencePadding || 4)));
   const invoiceRegex = new RegExp(`^${prefix}-${periodCode}-`);
-  const existingCount = await BillingInvoice.countDocuments({ invoiceNumber: invoiceRegex });
+  const existingCount = await BillingInvoice.countDocuments({
+    invoiceNumber: invoiceRegex,
+    ...(existingInvoiceId ? { invoiceId: { $ne: existingInvoiceId } } : {})
+  });
   const sequence = String(existingCount + 1).padStart(padding, "0");
   return {
     invoiceNumber: `${prefix}-${periodCode}-${sequence}`,
@@ -618,6 +621,166 @@ async function buildInvoiceNumber({ billingProfile, zoneMapping, customer, billC
     invoiceSeriesCode: "",
     invoiceSequenceNumber: existingCount + 1,
   };
+}
+
+export async function regenerateExistingInvoice(invoice, {
+  customer = null,
+  subscriberService = null,
+  plan = null,
+  invoiceMetadata = {},
+  adminId = null
+} = {}) {
+  if (!invoice?.invoiceId || !invoice?.customerId) {
+    throw new Error("Invoice context is required to regenerate invoice");
+  }
+
+  const safeCustomer = customer || await Customer.findOne({ customerId: invoice.customerId }).lean();
+  if (!safeCustomer) {
+    throw new Error("Customer not found");
+  }
+
+  const safeSubscriberService = subscriberService
+    || (invoice.serviceId
+      ? await SubscriberService.findOne({ serviceId: invoice.serviceId }).lean()
+      : await SubscriberService.findOne({ customerId: invoice.customerId }).lean())
+    || null;
+
+  const safePlan = plan || await resolveBillingPlan({
+    ...(safeSubscriberService || {}),
+    metadata: {
+      ...(safeSubscriberService?.metadata || {}),
+      ...(invoice.metadata || {}),
+      ...(invoiceMetadata || {})
+    }
+  });
+
+  const billingProfile = safeSubscriberService?.billingProfileCode
+    ? await BillingProfile.findOne({ code: safeSubscriberService.billingProfileCode, active: true }).lean()
+    : await BillingProfile.findOne({ active: true }).sort({ createdAt: 1 }).lean();
+  if (!billingProfile) {
+    throw new Error("Active billing profile not found");
+  }
+
+  const durationMonths = resolveDurationMonths({
+    durationMonths:
+      invoice.metadata?.durationMonths ||
+      invoiceMetadata?.durationMonths ||
+      safeSubscriberService?.billingPeriodMonths ||
+      safeSubscriberService?.metadata?.durationMonths ||
+      1
+  });
+  const billCycleLabel = invoice.metadata?.billCycleLabel || invoiceMetadata?.billCycleLabel || resolveBillCycleLabel(durationMonths);
+  const totalAmount = Number(
+    invoice.metadata?.baseRecurringAmount ||
+    invoiceMetadata?.baseRecurringAmount ||
+    deriveAmount({
+      ...(safeSubscriberService || {}),
+      metadata: {
+        ...(safeSubscriberService?.metadata || {}),
+        ...(invoice.metadata || {}),
+        ...(invoiceMetadata || {})
+      },
+      billingBreakup:
+        safeSubscriberService?.billingBreakup ||
+        safeSubscriberService?.metadata?.billingBreakup ||
+        invoice.metadata?.billingBreakup ||
+        invoiceMetadata?.billingBreakup ||
+        safePlan?.billingBreakup ||
+        {}
+    }, safePlan)
+  );
+
+  const zoneMapping = resolveZoneMapping(billingProfile, safeCustomer);
+  const invoiceTemplateSettings = await getInvoiceTemplateSettings();
+  const selectedTemplate = selectInvoiceTemplateSettings(invoiceTemplateSettings, safeCustomer, billingProfile);
+  const billMode = resolveBillMode(safeSubscriberService || { metadata: invoice.metadata || {} }, billingProfile, safeCustomer, zoneMapping);
+  const amounts =
+    billingProfile?.taxMode === "india_gst"
+      ? buildGstAmounts(totalAmount, billingProfile, safeCustomer)
+      : buildInvoiceAmounts(totalAmount, billingProfile?.taxPercent ?? 18);
+
+  const lineItems = buildInvoiceLineItems(
+    {
+      ...(safeSubscriberService || {}),
+      metadata: {
+        ...(safeSubscriberService?.metadata || {}),
+        ...(invoice.metadata || {}),
+        ...(invoiceMetadata || {})
+      },
+      billingBreakup:
+        safeSubscriberService?.billingBreakup ||
+        safeSubscriberService?.metadata?.billingBreakup ||
+        invoice.metadata?.billingBreakup ||
+        invoiceMetadata?.billingBreakup ||
+        safePlan?.billingBreakup ||
+        {}
+    },
+    safePlan,
+    amounts.amount,
+    totalAmount,
+    durationMonths,
+    billCycleLabel
+  );
+  const numbering = await buildInvoiceNumber({
+    billingProfile,
+    zoneMapping,
+    customer: safeCustomer,
+    billCycle: invoice.billCycle,
+    selectedTemplate,
+    existingInvoiceId: invoice.invoiceId
+  });
+
+  const zoneCode = safeCustomer?.billingZoneCode || safeCustomer?.billingSnapshot?.billingZoneCode || zoneMapping?.zoneCode || "";
+  const zoneName = safeCustomer?.billingZoneName || safeCustomer?.billingSnapshot?.billingZoneName || zoneMapping?.zoneName || "";
+  const legalName = selectedTemplate.companyName || zoneMapping?.companyLegalName || billingProfile?.companyLegalName || "";
+  const companyAddress = selectedTemplate.companyAddress || zoneMapping?.companyAddress || billingProfile?.companyAddress || "";
+  const gstNumber = selectedTemplate.gstNumber || zoneMapping?.gstNumber || amounts.gstNumber || billingProfile?.gstNumber || "";
+
+  invoice.invoiceNumber = numbering.invoiceNumber;
+  invoice.invoicePrefix = numbering.invoicePrefix;
+  invoice.invoiceSeriesCode = numbering.invoiceSeriesCode;
+  invoice.invoiceSequenceNumber = numbering.invoiceSequenceNumber;
+  invoice.amount = amounts.amount;
+  invoice.taxAmount = amounts.taxAmount;
+  invoice.totalAmount = amounts.totalAmount;
+  invoice.taxMode = amounts.taxMode || billingProfile?.taxMode || "india_gst";
+  invoice.billingStateCode = amounts.billingStateCode;
+  invoice.billingStateName = amounts.billingStateName;
+  invoice.placeOfSupply = amounts.placeOfSupply;
+  invoice.gstNumber = gstNumber;
+  invoice.taxBreakdown = amounts.taxBreakdown || [];
+  invoice.lineItems = lineItems;
+  invoice.billingZoneCode = zoneCode;
+  invoice.billingZoneName = zoneName;
+  invoice.appliedTemplateKey = selectedTemplate.templateKey || "";
+  invoice.appliedTemplateName = selectedTemplate.templateName || "";
+  invoice.companyLegalName = legalName;
+  invoice.companyAddress = companyAddress;
+  invoice.metadata = {
+    ...(invoice.metadata || {}),
+    regeneratedAt: new Date(),
+    regeneratedByAdminId: adminId || null,
+    durationMonths,
+    billCycleLabel,
+    billMode,
+    billingZoneCode: zoneCode,
+    billingZoneName: zoneName,
+    appliedTemplateKey: selectedTemplate.templateKey || "",
+    appliedTemplateName: selectedTemplate.templateName || "",
+    companyLegalName: legalName,
+    companyAddress,
+    invoicePrefix: numbering.invoicePrefix,
+    invoiceSeriesCode: numbering.invoiceSeriesCode,
+    invoiceSequenceNumber: numbering.invoiceSequenceNumber,
+    planCode: safePlan?.planCode || invoice.metadata?.planCode || "",
+    planName: safePlan?.name || invoice.metadata?.planName || "",
+    ...(invoiceMetadata || {})
+  };
+
+  invoice.markModified("lineItems");
+  invoice.markModified("taxBreakdown");
+  invoice.markModified("metadata");
+  return invoice;
 }
 
 function resolveServiceDurationMonths(service) {
