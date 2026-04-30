@@ -391,6 +391,8 @@ function pickBranding(profile, templateSettings = {}) {
     footerNote: templateSettings.footerNote || "Thank you for choosing JustFiber.",
     paymentInstructions: templateSettings.paymentInstructions || "",
     companyState: profile?.companyStateName || profile?.companyStateCode || "",
+    logoDataUrl: templateSettings.logoDataUrl || "",
+    signatureDataUrl: templateSettings.signatureDataUrl || "",
     logoBuffer: dataUrlToBuffer(templateSettings.logoDataUrl),
     headerImageBuffer: dataUrlToBuffer(templateSettings.headerImageDataUrl),
     signatureBuffer: dataUrlToBuffer(templateSettings.signatureDataUrl),
@@ -700,7 +702,9 @@ function buildInvoiceHtml(invoice, customer, branding) {
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
         <div style="max-width:54%;">
           <div style="display:flex;align-items:flex-start;gap:14px;">
-            <div style="width:50px;height:50px;flex:0 0 50px;"></div>
+            <div style="width:50px;height:50px;flex:0 0 50px;display:flex;align-items:center;justify-content:center;">
+              ${appliedBranding.logoDataUrl ? `<img src="${safe(appliedBranding.logoDataUrl)}" alt="Logo" style="max-width:50px;max-height:50px;object-fit:contain;display:block;" />` : ""}
+            </div>
             <div>
               <div style="font-size:13px;font-weight:800;line-height:1.2;letter-spacing:.01em;color:#111827;">${safe(appliedBranding.companyName || "Brand Name")}</div>
               <div style="margin-top:6px;width:72px;height:3px;background:#8224e3;border-radius:999px;"></div>
@@ -758,6 +762,15 @@ function buildInvoiceHtml(invoice, customer, branding) {
             ${taxRows}
             <tr><td style="padding:7px 0;font-weight:800;color:#111827;border-top:1px solid #d1d5db;">Grand Total</td><td style="padding:7px 0;text-align:right;font-weight:800;color:#111827;border-top:1px solid #d1d5db;">${formatMoney(invoice.totalAmount)}</td></tr>
           </table>
+        </div>
+      </div>
+      <div class="avoid-break" style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:10px;padding-top:8px;border-top:1px solid #e5e7eb;">
+        <div style="font-size:9px;color:#6b7280;">${safe(appliedBranding.phoneNumber || "Phone #")} &nbsp; | &nbsp; ${safe(appliedBranding.website || "Website")}</div>
+        <div style="width:132px;text-align:center;">
+          <div style="height:34px;display:flex;align-items:flex-end;justify-content:center;">
+            ${appliedBranding.signatureDataUrl ? `<img src="${safe(appliedBranding.signatureDataUrl)}" alt="Authorised Signatory" style="max-width:110px;max-height:30px;object-fit:contain;display:block;" />` : ""}
+          </div>
+          <div style="margin-top:4px;border-top:1px solid #8224e3;padding-top:4px;font-size:10px;font-weight:700;color:#111827;">Authorised Signatory</div>
         </div>
       </div>
     </div>
@@ -1177,6 +1190,22 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
   totalsY += 10;
   doc.fillColor(dark).font("Helvetica-Bold").fontSize(11).text("Grand Total", totalsX, totalsY, { width: 94 });
   doc.text(formatMoney(invoice.totalAmount), totalsX + 98, totalsY, { width: 95, align: "right" });
+
+  const footerY = 778;
+  doc.moveTo(42, footerY).lineTo(250, footerY).stroke("#d1d5db");
+  doc.fillColor("#6b7280").font("Helvetica").fontSize(7.5).text(
+    `${branding.phoneNumber || "Phone #"}  |  ${branding.website || "Website"}`,
+    42,
+    footerY + 6,
+    { width: 220 }
+  );
+  if (branding.signatureBuffer) {
+    try {
+      doc.image(branding.signatureBuffer, 430, footerY - 26, { fit: [90, 26], align: "center", valign: "bottom" });
+    } catch {}
+  }
+  doc.moveTo(418, footerY).lineTo(553, footerY).stroke(accent);
+  doc.fillColor(dark).font("Helvetica-Bold").fontSize(8.5).text("Authorised Signatory", 420, footerY + 6, { width: 130, align: "center" });
 
   doc.end();
   return doc;
