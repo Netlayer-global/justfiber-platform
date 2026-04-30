@@ -597,6 +597,14 @@ function rebuildInvoiceLineItems(invoice = {}, service = {}, plan = null) {
   return items;
 }
 
+function resolvePlanRecurringAmountForDuration(plan = null, durationMonths = 1) {
+  if (!plan) return 0;
+  if (durationMonths >= 12) return Number(plan.yearlyPrice || plan.monthlyPrice * 12 || 0) || 0;
+  if (durationMonths >= 6) return Number(plan.halfYearlyPrice || plan.monthlyPrice * 6 || 0) || 0;
+  if (durationMonths >= 3) return Number(plan.quarterlyPrice || plan.monthlyPrice * 3 || 0) || 0;
+  return Number(plan.monthlyPrice || plan.amount || 0) || 0;
+}
+
 function buildInvoiceHtml(invoice, customer, branding) {
   const displayInvoiceNumber = normalizeDisplayInvoiceNumber(invoice.invoiceNumber || invoice.invoiceId);
   const appliedBranding = resolveInvoiceBranding(branding, invoice);
@@ -4360,6 +4368,29 @@ adminOpsRouter.post(
         plan?.billingBreakup ||
         {}
     };
+    const durationMonths = Math.max(
+      1,
+      Number(
+        invoice.metadata?.durationMonths ||
+        serviceContext.metadata?.durationMonths ||
+        subscriberService?.billingPeriodMonths ||
+        1
+      ) || 1
+    );
+    const recurringAmount = Number(
+      serviceContext.metadata?.recurringAmount ||
+      serviceContext.metadata?.baseRecurringAmount ||
+      serviceContext.metadata?.monthlyPrice ||
+      resolvePlanRecurringAmountForDuration(plan, durationMonths) ||
+      0
+    ) || 0;
+    const routerFee = Number(
+      serviceContext.metadata?.routerRental ||
+      subscriberService?.routerRental ||
+      plan?.routerRental ||
+      0
+    ) || 0;
+    const totalAmount = Number((recurringAmount + (routerFee > 0 ? routerFee * durationMonths : 0)).toFixed(2));
 
     await regenerateExistingInvoice(invoice, {
       customer,
@@ -4369,28 +4400,18 @@ adminOpsRouter.post(
         ...(serviceContext.metadata || {}),
         billingBreakup: serviceContext.billingBreakup,
         baseRecurringAmount:
-          Number(serviceContext.metadata?.baseRecurringAmount || 0) ||
-          Number(serviceContext.metadata?.recurringAmount || 0) ||
-          Number(serviceContext.metadata?.monthlyPrice || 0) ||
-          Number(plan?.monthlyPrice || 0) ||
+          recurringAmount ||
           undefined,
         recurringAmount:
-          Number(serviceContext.metadata?.recurringAmount || 0) ||
-          Number(serviceContext.metadata?.monthlyPrice || 0) ||
-          Number(plan?.monthlyPrice || 0) ||
+          recurringAmount ||
           undefined,
         totalAmount:
-          Number(serviceContext.metadata?.billingTotalAmount || 0) ||
-          Number(serviceContext.metadata?.totalAmount || 0) ||
-          Number(serviceContext.metadata?.recurringAmount || 0) ||
-          Number(plan?.monthlyPrice || 0) ||
+          totalAmount ||
           undefined,
         billingTotalAmount:
-          Number(serviceContext.metadata?.billingTotalAmount || 0) ||
-          Number(serviceContext.metadata?.totalAmount || 0) ||
-          Number(serviceContext.metadata?.recurringAmount || 0) ||
-          Number(plan?.monthlyPrice || 0) ||
+          totalAmount ||
           undefined,
+        durationMonths,
         planCode: plan?.planCode || customer.planCode || subscriberService?.metadata?.planCode || "",
         planName: plan?.name || customer.planName || subscriberService?.metadata?.planName || ""
       },

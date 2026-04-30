@@ -216,13 +216,24 @@ function dataUrlToBuffer(dataUrl) {
   }
 }
 
-async function getCustomerInvoiceTemplateBranding(invoice = null) {
+async function getCustomerInvoiceTemplateBranding(customer = null, invoice = null) {
   const config = await SystemConfig.findOne({ key: "settings.invoice_template" }).lean();
   const baseSettings = config?.value || {};
   const templates = Array.isArray(baseSettings.templates) && baseSettings.templates.length ? baseSettings.templates : [baseSettings];
+  const zoneCode = String(
+    invoice?.billingZoneCode ||
+    invoice?.metadata?.billingZoneCode ||
+    customer?.billingZoneCode ||
+    customer?.billingSnapshot?.billingZoneCode ||
+    customer?.zoneCode ||
+    ""
+  ).trim().toUpperCase();
+  const mappings = Array.isArray(baseSettings.zoneTemplateMappings) ? baseSettings.zoneTemplateMappings : [];
+  const mappedTemplateKey = mappings.find((item) => String(item?.zoneCode || "").trim().toUpperCase() === zoneCode)?.templateKey;
   const requestedTemplateKey = String(
     invoice?.appliedTemplateKey ||
     invoice?.metadata?.appliedTemplateKey ||
+    mappedTemplateKey ||
     baseSettings.activeTemplate ||
     templates[0]?.key ||
     ""
@@ -3151,7 +3162,7 @@ customerPortalRouter.get(
       throw new ApiError(404, "Invoice not found");
     }
     const profile = await BillingProfile.findOne({ active: true }).sort({ updatedAt: -1 }).lean();
-    const templateBranding = await getCustomerInvoiceTemplateBranding(invoice);
+    const templateBranding = await getCustomerInvoiceTemplateBranding(customer, invoice);
     const invoiceProfile = {
       ...(profile || {}),
       ...templateBranding
