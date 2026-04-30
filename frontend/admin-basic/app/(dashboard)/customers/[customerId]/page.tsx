@@ -419,6 +419,8 @@ function getPppoeSessionSnapshot(customer: Customer) {
   const sessions = customer.radiusService?.sessionHistory || []
   const liveSession = sessions.find((session) => session.live && !session.stoppedAt) || null
   const currentIpv4 = String(customer.radiusService?.currentIpv4 || '').trim() || null
+  const latestUsageAt = customer.radiusService?.usageSummary?.latestUpdateAt || customer.radiusService?.usageSummary?.latestSessionStart || null
+  const latestAuthAt = customer.radiusService?.lastAuthTelemetry?.authDate || null
   const radiusState = String(
     customer.radiusService?.lastRadiusDerivedState ||
       customer.radiusService?.lastRadiusState ||
@@ -428,16 +430,18 @@ function getPppoeSessionSnapshot(customer: Customer) {
     .toLowerCase()
   const explicitOnlineStates = new Set(['online', 'authenticated', 'connected', 'live'])
   const explicitOfflineStates = new Set(['offline', 'disconnected', 'stopped', 'terminated', 'expired', 'suspended', 'inactive'])
-  const hasLiveSignal = Boolean(liveSession || currentIpv4)
-  const online = explicitOfflineStates.has(radiusState)
-    ? false
-    : explicitOnlineStates.has(radiusState)
-      ? true
-      : hasLiveSignal
+  const latestLiveAt = [liveSession?.updatedAt, liveSession?.startedAt, latestUsageAt, latestAuthAt]
+    .map((value) => (value ? new Date(value).getTime() : Number.NaN))
+    .filter((value) => Number.isFinite(value))
+    .sort((a, b) => b - a)[0]
+  const hasRecentLiveActivity = Number.isFinite(latestLiveAt) && Date.now() - latestLiveAt <= 20 * 60 * 1000
+  const hasLiveSignal = Boolean(liveSession || currentIpv4 || hasRecentLiveActivity)
+  const online = explicitOnlineStates.has(radiusState) || hasLiveSignal
+  const offline = explicitOfflineStates.has(radiusState) && !hasLiveSignal
   const ipAddress = online ? liveSession?.ipAddress || currentIpv4 || null : null
 
   return {
-    online,
+    online: offline ? false : online,
     liveSession,
     ipAddress,
     radiusState: radiusState || 'unknown',
