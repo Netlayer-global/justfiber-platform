@@ -1696,10 +1696,6 @@ export default function BillingPage() {
                   <td className="table-cell">
                     <div className="font-mono text-sm">{item.invoiceNumber || item.invoiceId}</div>
                     <div className="mt-1 text-xs text-slate-500">{item.billCycle || '-'}</div>
-                    <div className="mt-1 text-xs text-slate-500">
-                      {(item.invoicePrefix || 'JF')} / {(item.invoiceSeriesCode || 'MAIN')}
-                      {item.invoiceSequenceNumber ? ` / #${item.invoiceSequenceNumber}` : ''}
-                    </div>
                     {item.billingReady === false ? (
                       <div className="mt-2 text-xs font-medium text-amber-600">
                         Needs review: {item.validationIssues?.[0] || 'Billing setup incomplete'}
