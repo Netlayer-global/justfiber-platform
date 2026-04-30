@@ -417,19 +417,22 @@ function customerDeviceText(...values: any[]) {
 
 function getPppoeSessionSnapshot(customer: Customer) {
   const sessions = customer.radiusService?.sessionHistory || []
-  const liveSession = sessions.find((session) => session.live) || null
+  const liveSession = sessions.find((session) => session.live && !session.stoppedAt) || null
   const radiusState = String(
     customer.radiusService?.lastRadiusDerivedState ||
       customer.radiusService?.lastRadiusState ||
-      customer.radiusService?.status ||
       ''
-  ).toLowerCase()
-  const online =
-    Boolean(liveSession) ||
-    radiusState === 'online' ||
-    radiusState === 'active' ||
-    radiusState === 'authenticated'
-  const ipAddress = liveSession?.ipAddress || customer.radiusService?.currentIpv4 || null
+  )
+    .trim()
+    .toLowerCase()
+  const explicitOnlineStates = new Set(['online', 'authenticated', 'connected', 'live'])
+  const explicitOfflineStates = new Set(['offline', 'disconnected', 'stopped', 'terminated', 'expired', 'suspended', 'inactive'])
+  const online = explicitOfflineStates.has(radiusState)
+    ? false
+    : explicitOnlineStates.has(radiusState)
+      ? true
+      : Boolean(liveSession)
+  const ipAddress = online ? liveSession?.ipAddress || customer.radiusService?.currentIpv4 || null : null
 
   return {
     online,
