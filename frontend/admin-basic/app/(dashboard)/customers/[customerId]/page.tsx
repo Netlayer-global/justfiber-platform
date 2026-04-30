@@ -264,13 +264,18 @@ function OverviewTab({ customer, onRefresh }: { customer: Customer; onRefresh: (
   async function handlePppoeSave() {
     try {
       setSavingPppoe(true)
+      const fallbackCustomerId = customer.customerId?.trim()
+      if (!primaryDevice?.deviceId && !fallbackCustomerId) {
+        toast.error('Customer ID missing for PPPoE update')
+        return
+      }
       const payload = {
         pppoeUsername: pppoeUserInput || undefined,
         pppoePassword: pppoePasswordInput || undefined,
       }
       const res = primaryDevice?.deviceId
         ? await adminAPI.updateDeviceWifi(primaryDevice.deviceId, payload)
-        : await adminAPI.provisionCustomerPppoe(customer.customerId, payload)
+        : await adminAPI.provisionCustomerPppoe(fallbackCustomerId as string, payload)
       if (!res.success) {
         toast.error(typeof res.error === 'string' ? res.error : 'Failed to update PPPoE')
         return
