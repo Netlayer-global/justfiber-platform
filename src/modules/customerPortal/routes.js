@@ -521,26 +521,26 @@ function renderInvoicePdf(invoice, profile, customer) {
     `Customer ID: ${invoice.customerId}`,
     `Bill cycle: ${invoice.billCycle || "-"}`
   ].filter(Boolean).join("\n");
-  doc.font("Helvetica").fontSize(8.8);
+  doc.font("Helvetica").fontSize(8.1);
   const billToHeight = billToText ? doc.heightOfString(billToText, { width: 250, lineGap: 2 }) : 0;
-  doc.fillColor("#374151").font("Helvetica").fontSize(8.8).text(billToText, 42, billToY + 30, { width: 250, lineGap: 2 });
+  doc.fillColor("#374151").font("Helvetica").fontSize(8.1).text(billToText, 42, billToY + 26, { width: 250, lineGap: 1 });
 
-  const placeSupplyY = billToY + 30 + billToHeight + 12;
-  doc.fillColor("#374151").font("Helvetica-Bold").fontSize(9.2).text(`Place Of Supply: ${invoice.placeOfSupply || invoice.billingStateName || "-"}`, 42, placeSupplyY, { width: 250 });
+  const placeSupplyY = billToY + 26 + billToHeight + 10;
+  doc.fillColor("#374151").font("Helvetica-Bold").fontSize(8.7).text(`Place Of Supply: ${invoice.placeOfSupply || invoice.billingStateName || "-"}`, 42, placeSupplyY, { width: 250 });
 
   const infoX = 360;
   const infoY = billToY + 6;
-  doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(9.5).text("Invoice Date :", infoX, infoY, { width: 92 });
-  doc.fillColor(dark).font("Helvetica").fontSize(9.5).text(invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleDateString("en-IN") : "-", infoX + 94, infoY, { width: 99, align: "right" });
-  doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(9.5).text("Terms :", infoX, infoY + 20, { width: 92 });
-  doc.fillColor(dark).font("Helvetica").fontSize(9.5).text(invoice.billCycle || "-", infoX + 94, infoY + 20, { width: 99, align: "right" });
-  doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(9.5).text("Due Date :", infoX, infoY + 40, { width: 92 });
-  doc.fillColor(dark).font("Helvetica").fontSize(9.5).text(invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-", infoX + 94, infoY + 40, { width: 99, align: "right" });
-  doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(9.5).text("Status :", infoX, infoY + 60, { width: 92 });
-  doc.fillColor(dark).font("Helvetica").fontSize(9.5).text(String(invoice.paymentStatus || "-"), infoX + 94, infoY + 60, { width: 99, align: "right" });
+  doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(8.8).text("Invoice Date :", infoX, infoY, { width: 92 });
+  doc.fillColor(dark).font("Helvetica").fontSize(8.8).text(invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleDateString("en-IN") : "-", infoX + 94, infoY, { width: 99, align: "right" });
+  doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(8.8).text("Terms :", infoX, infoY + 18, { width: 92 });
+  doc.fillColor(dark).font("Helvetica").fontSize(8.8).text(invoice.billCycle || "-", infoX + 94, infoY + 18, { width: 99, align: "right" });
+  doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(8.8).text("Due Date :", infoX, infoY + 36, { width: 92 });
+  doc.fillColor(dark).font("Helvetica").fontSize(8.8).text(invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-", infoX + 94, infoY + 36, { width: 99, align: "right" });
+  doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(8.8).text("Status :", infoX, infoY + 54, { width: 92 });
+  doc.fillColor(dark).font("Helvetica").fontSize(8.8).text(String(invoice.paymentStatus || "-"), infoX + 94, infoY + 54, { width: 99, align: "right" });
 
   const tableX = 42;
-  const tableY = Math.max(placeSupplyY + 14, infoY + 82);
+  const tableY = Math.max(placeSupplyY + 12, infoY + 74);
   const widths = [24, 183, 54, 34, 60, 52, 52, 52];
   const headers = ["#", "Item & Description", "HSN/SAC", "Qty", "Rate", "CGST", "SGST", "Amount"];
   let x = tableX;
@@ -560,7 +560,7 @@ function renderInvoicePdf(invoice, profile, customer) {
     const itemCgst = cgstPart ? Number(cgstPart.amount || 0) * weight : 0;
     const itemSgst = sgstPart ? Number(sgstPart.amount || 0) * weight : 0;
     const descriptionHeight = doc.heightOfString(String(row.label || "-"), { width: widths[1] - 10, lineGap: 1 });
-    const rowHeight = Math.max(24, descriptionHeight + 10);
+    const rowHeight = Math.max(20, descriptionHeight + 8);
     x = tableX;
     widths.forEach((width) => {
       doc.rect(x, rowY, width, rowHeight).fillAndStroke("#ffffff", "#e5e7eb");
@@ -577,9 +577,9 @@ function renderInvoicePdf(invoice, profile, customer) {
     doc.font("Helvetica-Bold").text(formatMoney(row.amount), tableX + widths[0] + widths[1] + widths[2] + widths[3] + widths[4] + widths[5] + widths[6] + 4, rowY + 8, { width: widths[7] - 8, align: "right" });
     rowY += rowHeight;
   });
-  const notesY = rowY + 8;
+  const notesY = rowY + 6;
   doc.fillColor("#374151").font("Helvetica-Bold").fontSize(9).text("Notes", 42, notesY);
-  doc.fillColor("#6b7280").font("Helvetica").fontSize(8).text("Please pay before the due date to avoid service interruption.", 42, notesY + 14, { width: 230, lineGap: 1 });
+  doc.fillColor("#6b7280").font("Helvetica").fontSize(7.5).text("Please pay before the due date to avoid service interruption.", 42, notesY + 12, { width: 230, lineGap: 1 });
   const totalsX = 360;
   let totalsY = notesY;
   doc.fillColor("#475569").font("Helvetica-Bold").fontSize(10).text("Sub Total", totalsX, totalsY, { width: 94 });

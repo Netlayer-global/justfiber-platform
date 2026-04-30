@@ -514,12 +514,16 @@ function buildGstAmounts(totalAmount, billingProfile, customer) {
   }
 
   const zoneMapping = resolveZoneMapping(billingProfile, customer);
-  const { stateName: customerStateName, stateCode: customerStateCode } = resolveCustomerBillingState(customer, zoneMapping);
+  let { stateName: customerStateName, stateCode: customerStateCode } = resolveCustomerBillingState(customer, zoneMapping);
   const companyStateName = billingProfile?.companyStateName || zoneMapping?.companyStateName || customerStateName || "";
   const companyStateCode = resolveComparableStateCode(
     billingProfile?.companyStateCode || zoneMapping?.companyStateCode || customerStateCode,
     companyStateName
   );
+  if (!customerStateCode && companyStateCode) {
+    customerStateCode = companyStateCode;
+    customerStateName = STATE_CODE_MAP[companyStateCode] || companyStateName || customerStateName;
+  }
   const override = (billingProfile?.stateOverrides || []).find((item) => normalizeStateCode(item.stateCode) === customerStateCode);
 
   const isIntrastate =
@@ -557,7 +561,7 @@ function buildGstAmounts(totalAmount, billingProfile, customer) {
     taxBreakdown,
     billingStateCode: customerStateCode,
     billingStateName: customerStateName,
-    placeOfSupply: customerStateName || customerStateCode,
+    placeOfSupply: customerStateName || companyStateName || customerStateCode || companyStateCode,
     taxMode: billingProfile?.taxMode || "india_gst",
     gstNumber: billingProfile?.gstNumber || ""
   };
