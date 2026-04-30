@@ -30,6 +30,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
 import { SkeletonCard } from '@/components/ui/skeleton'
 import { Tabs } from '@/components/ui/tabs'
+import { toast } from 'sonner'
 
 export default function CustomerDetailPage() {
   const params = useParams<{ customerId: string }>()
@@ -107,7 +108,7 @@ export default function CustomerDetailPage() {
   }
 
   const tabs = [
-    { id: 'overview', label: 'Overview', content: <OverviewTab customer={customer} /> },
+    { id: 'overview', label: 'Overview', content: <OverviewTab customer={customer} onRefresh={load} /> },
     { id: 'billing', label: 'Billing', icon: CreditCard, badge: customer.invoices?.length || 0, content: <BillingTab customer={customer} /> },
     { id: 'devices', label: 'Devices', icon: HardDrive, badge: customer.devices?.length || 0, content: <DevicesTab customer={customer} /> },
     { id: 'tickets', label: 'Tickets', icon: Ticket, badge: customer.tickets?.length || 0, content: <TicketsTab customer={customer} /> },
@@ -186,7 +187,7 @@ function QuickStat({ label, value, tone }: { label: string; value: string; tone:
   )
 }
 
-function OverviewTab({ customer }: { customer: Customer }) {
+function OverviewTab({ customer, onRefresh }: { customer: Customer; onRefresh: () => Promise<void> }) {
   const primaryDevice = customer.devices?.[0]
   const pppoeUsername = customerDeviceText(
     customer.pppoeUsername,
@@ -215,6 +216,69 @@ function OverviewTab({ customer }: { customer: Customer }) {
     primaryDevice?.wanInfo?.externalIpAddress,
     customer.radiusService?.currentIpv4
   )
+  const [wifi24, setWifi24] = useState(ssid24)
+  const [wifi5, setWifi5] = useState(ssid5)
+  const [wifiPasswordInput, setWifiPasswordInput] = useState('')
+  const [pppoeUserInput, setPppoeUserInput] = useState(pppoeUsername)
+  const [pppoePasswordInput, setPppoePasswordInput] = useState('')
+  const [savingWifi, setSavingWifi] = useState(false)
+  const [savingPppoe, setSavingPppoe] = useState(false)
+
+  useEffect(() => {
+    setWifi24(ssid24)
+    setWifi5(ssid5)
+    setPppoeUserInput(pppoeUsername)
+  }, [ssid24, ssid5, pppoeUsername, customer.id])
+
+  async function handleWifiSave() {
+    if (!primaryDevice?.deviceId) {
+      toast.error('No linked device found for Wi‑Fi update')
+      return
+    }
+    try {
+      setSavingWifi(true)
+      const res = await adminAPI.updateDeviceWifi(primaryDevice.deviceId, {
+        ssid24: wifi24 || undefined,
+        ssid5: wifi5 || undefined,
+        password: wifiPasswordInput || undefined,
+      })
+      if (!res.success) {
+        toast.error(typeof res.error === 'string' ? res.error : 'Failed to update Wi‑Fi')
+        return
+      }
+      setWifiPasswordInput('')
+      toast.success('Wi‑Fi config updated')
+      await onRefresh()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update Wi‑Fi')
+    } finally {
+      setSavingWifi(false)
+    }
+  }
+
+  async function handlePppoeSave() {
+    try {
+      setSavingPppoe(true)
+      const payload = {
+        pppoeUsername: pppoeUserInput || undefined,
+        pppoePassword: pppoePasswordInput || undefined,
+      }
+      const res = primaryDevice?.deviceId
+        ? await adminAPI.updateDeviceWifi(primaryDevice.deviceId, payload)
+        : await adminAPI.provisionCustomerPppoe(customer.customerId, payload)
+      if (!res.success) {
+        toast.error(typeof res.error === 'string' ? res.error : 'Failed to update PPPoE')
+        return
+      }
+      setPppoePasswordInput('')
+      toast.success('PPPoE config updated')
+      await onRefresh()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update PPPoE')
+    } finally {
+      setSavingPppoe(false)
+    }
+  }
 
   return (
     <div className="grid gap-5 lg:grid-cols-3">
@@ -236,7 +300,7 @@ function OverviewTab({ customer }: { customer: Customer }) {
 
       <Card>
         <CardTitle>Service Control</CardTitle>
-        <p className="mt-1 text-xs text-slate-500">PPPoE service controls.</p>
+        <p className="mt-1 text-xs text-slate-500">Wi‑Fi and PPPoE management.</p>
         <div className="mt-4 space-y-2">
           <Button variant="secondary" className="w-full justify-start" icon={<Power className="h-4 w-4" />}>
             {customer.status === 'active' ? 'Suspend Service' : 'Resume Service'}
@@ -262,6 +326,42 @@ function OverviewTab({ customer }: { customer: Customer }) {
             <div className="flex justify-between gap-3"><span className="text-slate-500">IPv4</span><span className="font-mono text-right text-slate-700">{ipv4 || '—'}</span></div>
           </div>
         ) : null}
+        <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4">
+          <div className="text-sm font-semibold text-slate-900">Change Wi‑Fi</div>
+          <div className="mt-3 grid gap-3">
+            <label className="space-y-1">
+              <div className="text-xs font-medium text-slate-500">SSID 2.4G</div>
+              <input className="input" value={wifi24} onChange={(event) => setWifi24(event.target.value)} placeholder="Enter 2.4G SSID" />
+            </label>
+            <label className="space-y-1">
+              <div className="text-xs font-medium text-slate-500">SSID 5G</div>
+              <input className="input" value={wifi5} onChange={(event) => setWifi5(event.target.value)} placeholder="Enter 5G SSID" />
+            </label>
+            <label className="space-y-1">
+              <div className="text-xs font-medium text-slate-500">New Wi‑Fi Password</div>
+              <input className="input" value={wifiPasswordInput} onChange={(event) => setWifiPasswordInput(event.target.value)} placeholder="Enter new Wi‑Fi password" />
+            </label>
+            <Button variant="secondary" onClick={() => void handleWifiSave()} disabled={savingWifi || !primaryDevice?.deviceId}>
+              {savingWifi ? 'Saving...' : 'Save Wi‑Fi'}
+            </Button>
+          </div>
+        </div>
+        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+          <div className="text-sm font-semibold text-slate-900">Change PPPoE</div>
+          <div className="mt-3 grid gap-3">
+            <label className="space-y-1">
+              <div className="text-xs font-medium text-slate-500">PPPoE Username</div>
+              <input className="input font-mono" value={pppoeUserInput} onChange={(event) => setPppoeUserInput(event.target.value)} placeholder="Enter PPPoE username" />
+            </label>
+            <label className="space-y-1">
+              <div className="text-xs font-medium text-slate-500">New PPPoE Password</div>
+              <input className="input" value={pppoePasswordInput} onChange={(event) => setPppoePasswordInput(event.target.value)} placeholder="Enter new PPPoE password" />
+            </label>
+            <Button variant="secondary" onClick={() => void handlePppoeSave()} disabled={savingPppoe || !pppoeUserInput.trim()}>
+              {savingPppoe ? 'Saving...' : 'Save PPPoE'}
+            </Button>
+          </div>
+        </div>
       </Card>
     </div>
   )
