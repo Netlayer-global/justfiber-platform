@@ -1222,14 +1222,15 @@ customersRouter.post(
   })
 );
 
-customersRouter.get(
-  "/:customerId/caf/pdf",
-  requirePermission(permissions.customerRead),
-  asyncHandler(async (req, res) => {
-    const customer = await Customer.findOne({ customerId: req.params.customerId }).lean();
-    if (!customer) {
-      throw new ApiError(404, "Customer not found");
-    }
+  customersRouter.get(
+    "/:customerId/caf/pdf",
+    requirePermission(permissions.customerRead),
+    asyncHandler(async (req, res) => {
+      const customer = await Customer.findOne({ customerId: req.params.customerId }).lean()
+        || await Customer.findById(req.params.customerId).lean();
+      if (!customer) {
+        throw new ApiError(404, "Customer not found");
+      }
     assertCustomerZoneAccess(req, customer);
     const phone = String(customer.phone || customer.mobile || "").replace(/\D/g, "");
     const [plan, cafSettings, lead, latestMobileKyc, latestBooking] = await Promise.all([
@@ -1454,14 +1455,15 @@ customersRouter.post(
   })
 );
 
-customersRouter.get(
-  "/:customerId",
-  requirePermission(permissions.customerRead),
-  asyncHandler(async (req, res) => {
-    const customer = await Customer.findOne({ customerId: req.params.customerId }).lean();
-    if (!customer) {
-      throw new ApiError(404, "Customer not found");
-    }
+  customersRouter.get(
+    "/:customerId",
+    requirePermission(permissions.customerRead),
+    asyncHandler(async (req, res) => {
+      const customer = await Customer.findOne({ customerId: req.params.customerId }).lean()
+        || await Customer.findById(req.params.customerId).lean();
+      if (!customer) {
+        throw new ApiError(404, "Customer not found");
+      }
     assertCustomerZoneAccess(req, customer);
     const linkedUsers = await CustomerUser.find({
       $or: [
