@@ -107,6 +107,8 @@ export default function CustomerDetailPage() {
     )
   }
 
+  const pppoeSession = getPppoeSessionSnapshot(customer)
+
   const tabs = [
     { id: 'overview', label: 'Overview', content: <OverviewTab customer={customer} onRefresh={load} /> },
     { id: 'billing', label: 'Billing', icon: CreditCard, badge: customer.invoices?.length || 0, content: <BillingTab customer={customer} /> },
@@ -140,17 +142,19 @@ export default function CustomerDetailPage() {
 
       <Card>
         <div className="flex flex-col items-start gap-5 md:flex-row md:items-center">
-          <Avatar name={customer.name} size="xl" status={customer.status === 'active' ? 'online' : customer.status === 'suspended' ? 'busy' : 'offline'} />
+          <Avatar name={customer.name} size="xl" status={pppoeSession.online ? 'online' : customer.status === 'suspended' ? 'busy' : 'offline'} />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="text-xl font-bold text-slate-900">{customer.name}</h2>
               <StatusBadge status={customer.status} />
               <Badge variant="brand"><Cable className="h-3 w-3" /> {customer.plan?.name || 'No plan'}</Badge>
+              {pppoeSession.online ? <Badge variant="success" withDot pulse>PPPoE Online</Badge> : <Badge variant="neutral">PPPoE Offline</Badge>}
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-slate-600">
               {customer.phone ? <span className="inline-flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-slate-400" /> {customer.phone}</span> : null}
               {customer.email && customer.email !== '-' ? <span className="inline-flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-slate-400" /> {customer.email}</span> : null}
               {customer.address && customer.address !== '-' ? <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-slate-400" /> {customer.address}</span> : null}
+              {pppoeSession.ipAddress ? <span className="inline-flex items-center gap-1.5 font-mono"><Wifi className="h-3.5 w-3.5 text-slate-400" /> {pppoeSession.ipAddress}</span> : null}
             </div>
           </div>
           <div className="flex flex-col gap-2 md:items-end">
@@ -164,7 +168,7 @@ export default function CustomerDetailPage() {
         <QuickStat label="Outstanding" value={formatCurrency((customer.invoiceSummary as any)?.dueAmount || 0)} tone={(customer.invoiceSummary as any)?.dueAmount > 0 ? 'rose' : 'emerald'} />
         <QuickStat label="Total Paid" value={formatCurrency((customer.invoiceSummary as any)?.paidAmount || 0)} tone="emerald" />
         <QuickStat label="Active Devices" value={String(customer.devices?.length || 0)} tone="purple" />
-        <QuickStat label="Open Tickets" value={String(customer.tickets?.filter((t) => !['closed', 'resolved'].includes(t.status)).length || 0)} tone="amber" />
+        <QuickStat label="PPPoE Session" value={pppoeSession.online ? 'Online' : 'Offline'} tone={pppoeSession.online ? 'emerald' : 'amber'} />
       </div>
 
       <Tabs items={tabs} />
@@ -216,6 +220,7 @@ function OverviewTab({ customer, onRefresh }: { customer: Customer; onRefresh: (
     primaryDevice?.wanInfo?.externalIpAddress,
     customer.radiusService?.currentIpv4
   )
+  const pppoeSession = getPppoeSessionSnapshot(customer)
   const [wifi24, setWifi24] = useState(ssid24)
   const [wifi5, setWifi5] = useState(ssid5)
   const [wifiPasswordInput, setWifiPasswordInput] = useState('')
@@ -289,6 +294,11 @@ function OverviewTab({ customer, onRefresh }: { customer: Customer; onRefresh: (
           <Field label="Service ID" value={customer.serviceId} mono />
           <Field label="Account Number" value={customer.accountNumber} mono />
           <Field label="PPPoE Username" value={pppoeUsername} mono />
+          <Field
+            label="PPPoE Session"
+            value={pppoeSession.online ? <Badge variant="success" withDot pulse>Online</Badge> : <Badge variant="neutral">Offline</Badge>}
+          />
+          <Field label="Session IP" value={pppoeSession.ipAddress || '—'} mono />
           <Field label="Plan" value={customer.plan?.name} />
           <Field label="Status" value={<StatusBadge status={customer.status} />} />
           <Field label="Zone" value={customer.zoneName || customer.zoneCode} />
@@ -311,8 +321,11 @@ function OverviewTab({ customer, onRefresh }: { customer: Customer; onRefresh: (
         {customer.radiusService ? (
           <div className="mt-5 space-y-2 rounded-xl bg-slate-50 p-3 text-xs">
             <div className="flex justify-between"><span className="text-slate-500">RADIUS</span><Badge variant="info">{customer.radiusService.status}</Badge></div>
+            <div className="flex justify-between"><span className="text-slate-500">PPPoE</span>{pppoeSession.online ? <Badge variant="success" withDot pulse>Online</Badge> : <Badge variant="neutral">Offline</Badge>}</div>
             <div className="flex justify-between"><span className="text-slate-500">IPv4</span><span className="font-mono text-slate-700">{customer.radiusService.currentIpv4 || '—'}</span></div>
             <div className="flex justify-between"><span className="text-slate-500">BNG</span><span className="font-mono text-slate-700">{customer.radiusService.bngNodeCode || '—'}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500">Session Count</span><span className="font-mono text-slate-700">{pppoeSession.sessionCount}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500">Live Since</span><span className="text-slate-700">{pppoeSession.liveSession?.startedAt ? formatDate(pppoeSession.liveSession.startedAt, true) : '—'}</span></div>
           </div>
         ) : null}
         {primaryDevice ? (
@@ -395,6 +408,31 @@ function customerDeviceText(...values: any[]) {
     }
   }
   return ''
+}
+
+function getPppoeSessionSnapshot(customer: Customer) {
+  const sessions = customer.radiusService?.sessionHistory || []
+  const liveSession = sessions.find((session) => session.live) || null
+  const radiusState = String(
+    customer.radiusService?.lastRadiusDerivedState ||
+      customer.radiusService?.lastRadiusState ||
+      customer.radiusService?.status ||
+      ''
+  ).toLowerCase()
+  const online =
+    Boolean(liveSession) ||
+    radiusState === 'online' ||
+    radiusState === 'active' ||
+    radiusState === 'authenticated'
+  const ipAddress = liveSession?.ipAddress || customer.radiusService?.currentIpv4 || null
+
+  return {
+    online,
+    liveSession,
+    ipAddress,
+    radiusState: radiusState || 'unknown',
+    sessionCount: sessions.length,
+  }
 }
 
 function BillingTab({ customer }: { customer: Customer }) {
