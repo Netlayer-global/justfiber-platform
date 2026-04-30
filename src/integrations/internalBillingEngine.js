@@ -358,6 +358,31 @@ function normalizeStateName(value) {
   return String(value || "").trim().toUpperCase().replace(/[^A-Z]+/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function resolveCustomerBillingState(customer = {}, zoneMapping = null) {
+  const stateName = (
+    zoneMapping?.stateName ||
+    customer?.zoneStateName ||
+    customer?.billingSnapshot?.zoneStateName ||
+    customer?.billingSnapshot?.billingStateName ||
+    customer?.billingStateName ||
+    customer?.address?.state ||
+    ""
+  );
+  const stateCode = resolveComparableStateCode(
+    zoneMapping?.stateCode ||
+    customer?.zoneStateCode ||
+    customer?.billingSnapshot?.zoneStateCode ||
+    customer?.billingSnapshot?.billingStateCode ||
+    customer?.billingStateCode ||
+    customer?.address?.stateCode,
+    stateName
+  );
+  return {
+    stateName: String(stateName || "").trim(),
+    stateCode
+  };
+}
+
 function resolveComparableStateCode(code, name = "") {
   const normalizedCode = normalizeStateCode(code);
   if (normalizedCode) return normalizedCode;
@@ -476,11 +501,7 @@ function buildGstAmounts(totalAmount, billingProfile, customer) {
   }
 
   const zoneMapping = resolveZoneMapping(billingProfile, customer);
-  const customerStateName = zoneMapping?.stateName || customer?.billingStateName || customer?.address?.state || customer?.billingSnapshot?.billingStateName || "";
-  const customerStateCode = resolveComparableStateCode(
-    zoneMapping?.stateCode || customer?.billingStateCode || customer?.address?.stateCode || customer?.billingSnapshot?.billingStateCode,
-    customerStateName
-  );
+  const { stateName: customerStateName, stateCode: customerStateCode } = resolveCustomerBillingState(customer, zoneMapping);
   const companyStateName = billingProfile?.companyStateName || zoneMapping?.companyStateName || customerStateName || "";
   const companyStateCode = resolveComparableStateCode(
     billingProfile?.companyStateCode || zoneMapping?.companyStateCode || customerStateCode,
@@ -523,7 +544,7 @@ function buildGstAmounts(totalAmount, billingProfile, customer) {
     taxBreakdown,
     billingStateCode: customerStateCode,
     billingStateName: customerStateName,
-    placeOfSupply: customerStateCode || customerStateName,
+    placeOfSupply: customerStateName || customerStateCode,
     taxMode: billingProfile?.taxMode || "india_gst",
     gstNumber: billingProfile?.gstNumber || ""
   };

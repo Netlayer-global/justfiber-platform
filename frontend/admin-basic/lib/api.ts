@@ -975,6 +975,9 @@ function normalizeDisplayInvoiceNumber(value: any) {
   const parts = raw.split('-').map((item) => item.trim()).filter(Boolean)
   if (parts.length < 3) return raw
   const prefix = parts[0]
+  const periodCode = [...parts].reverse().find((part) => /^\d{6}$/.test(part))
+  const sequenceCode = parts[parts.length - 1]
+  if (periodCode && /^\d{3,}$/.test(sequenceCode)) return [prefix, periodCode, sequenceCode].join('-')
   const numericIndex = parts.findIndex((part, index) => index > 0 && /\d/.test(part))
   if (numericIndex > 1) return [prefix, ...parts.slice(numericIndex)].join('-')
   if (parts[1] === prefix || parts[1] === 'MAIN') return [prefix, ...parts.slice(2)].join('-')
