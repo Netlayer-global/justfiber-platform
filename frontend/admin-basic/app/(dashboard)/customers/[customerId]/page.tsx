@@ -68,12 +68,38 @@ export default function CustomerDetailPage() {
               : null),
         }
         setCustomer(merged)
-      } else setError(typeof res.error === 'string' ? res.error : 'Customer not found')
+      } else {
+        const fallback = await resolveCustomerRoute(id as string)
+        if (fallback) {
+          router.replace(`/customers/${fallback}`)
+          return
+        }
+        setError(typeof res.error === 'string' ? res.error : 'Customer not found')
+      }
     } catch (e) {
+      const fallback = await resolveCustomerRoute(id as string)
+      if (fallback) {
+        router.replace(`/customers/${fallback}`)
+        return
+      }
       setError(e instanceof Error ? e.message : 'Failed to load customer')
     } finally {
       setLoading(false)
     }
+  }
+
+  async function resolveCustomerRoute(identifier: string) {
+    const value = String(identifier || '').trim()
+    if (!value) return null
+    const lookup = await adminAPI.getCustomers(1, 20, { search: value, zoneCode: null }).catch(() => null)
+    const candidates = lookup?.data || []
+    const match = candidates.find((item) =>
+      [item.customerId, item.id, item.accountNumber, item.serviceId, item.pppoeUsername]
+        .filter(Boolean)
+        .some((candidate) => String(candidate).trim() === value)
+    ) || candidates[0]
+    const resolved = match?.customerId || match?.id || null
+    return resolved && resolved !== value ? resolved : null
   }
 
   async function handleDelete() {
