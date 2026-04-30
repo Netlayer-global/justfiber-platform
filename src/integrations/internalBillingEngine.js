@@ -686,8 +686,8 @@ export async function regenerateExistingInvoice(invoice, {
   const safePlan = plan || await resolveBillingPlan({
     ...(safeSubscriberService || {}),
     metadata: {
-      ...(safeSubscriberService?.metadata || {}),
       ...(invoice.metadata || {}),
+      ...(safeSubscriberService?.metadata || {}),
       ...(invoiceMetadata || {})
     }
   });
@@ -709,13 +709,14 @@ export async function regenerateExistingInvoice(invoice, {
   });
   const billCycleLabel = invoice.metadata?.billCycleLabel || invoiceMetadata?.billCycleLabel || resolveBillCycleLabel(durationMonths);
   const totalAmount = Number(
-    invoice.metadata?.baseRecurringAmount ||
     invoiceMetadata?.baseRecurringAmount ||
+    safeSubscriberService?.metadata?.baseRecurringAmount ||
+    invoice.metadata?.baseRecurringAmount ||
     deriveAmount({
       ...(safeSubscriberService || {}),
       metadata: {
-        ...(safeSubscriberService?.metadata || {}),
         ...(invoice.metadata || {}),
+        ...(safeSubscriberService?.metadata || {}),
         ...(invoiceMetadata || {})
       },
       billingBreakup:
@@ -741,8 +742,8 @@ export async function regenerateExistingInvoice(invoice, {
     {
       ...(safeSubscriberService || {}),
       metadata: {
-        ...(safeSubscriberService?.metadata || {}),
         ...(invoice.metadata || {}),
+        ...(safeSubscriberService?.metadata || {}),
         ...(invoiceMetadata || {})
       },
       billingBreakup:

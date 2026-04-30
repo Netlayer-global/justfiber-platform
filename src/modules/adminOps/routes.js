@@ -4338,8 +4338,8 @@ adminOpsRouter.post(
     const subscriberService = invoice.serviceId
       ? await SubscriberService.findOne({ serviceId: invoice.serviceId }).lean()
       : await SubscriberService.findOne({ customerId: invoice.customerId }).lean();
-    const planCode = String(invoice.metadata?.planCode || subscriberService?.metadata?.planCode || customer.planCode || "").trim();
-    const planName = String(invoice.metadata?.planName || subscriberService?.metadata?.planName || customer.planName || "").trim();
+    const planCode = String(customer.planCode || subscriberService?.metadata?.planCode || invoice.metadata?.planCode || "").trim();
+    const planName = String(customer.planName || subscriberService?.metadata?.planName || invoice.metadata?.planName || "").trim();
     const plan =
       (planCode && await PlanCatalog.findOne({ planCode, archivedAt: { $exists: false } }).lean()) ||
       (planName && await PlanCatalog.findOne({ name: planName, archivedAt: { $exists: false } }).lean()) ||
@@ -4348,8 +4348,10 @@ adminOpsRouter.post(
     const serviceContext = {
       ...(subscriberService || {}),
       metadata: {
-        ...(subscriberService?.metadata || {}),
         ...(invoice.metadata || {}),
+        ...(subscriberService?.metadata || {}),
+        planCode: plan?.planCode || customer.planCode || subscriberService?.metadata?.planCode || "",
+        planName: plan?.name || customer.planName || subscriberService?.metadata?.planName || "",
       },
       billingBreakup:
         subscriberService?.billingBreakup ||
@@ -4367,8 +4369,8 @@ adminOpsRouter.post(
         ...(invoice.metadata || {}),
         ...(serviceContext.metadata || {}),
         billingBreakup: serviceContext.billingBreakup,
-        planCode: plan?.planCode || invoice.metadata?.planCode || "",
-        planName: plan?.name || invoice.metadata?.planName || ""
+        planCode: plan?.planCode || customer.planCode || subscriberService?.metadata?.planCode || "",
+        planName: plan?.name || customer.planName || subscriberService?.metadata?.planName || ""
       },
       adminId: req.admin?._id || null
     });

@@ -2309,6 +2309,38 @@ customersRouter.post(
       nextPlanChangeMode: payload.effectiveMode
     };
     await customer.save();
+    if (customer.serviceId) {
+      const nextPlanAmount = Number(plan.monthlyPrice || plan.amount || 0) || 0;
+      await SubscriberService.updateOne(
+        { serviceId: customer.serviceId },
+        {
+          $set: {
+            planCode: plan.planCode,
+            planName: plan.name,
+            routerRental: Number(plan.routerRental || 0) || 0,
+            billingBreakup: plan.billingBreakup || {},
+            "metadata.planCode": plan.planCode,
+            "metadata.planName": plan.name,
+            "metadata.planAmount": nextPlanAmount,
+            "metadata.monthlyPrice": Number(plan.monthlyPrice || 0) || 0,
+            "metadata.quarterlyPrice": Number(plan.quarterlyPrice || 0) || 0,
+            "metadata.halfYearlyPrice": Number(plan.halfYearlyPrice || 0) || 0,
+            "metadata.yearlyPrice": Number(plan.yearlyPrice || 0) || 0,
+            "metadata.totalAmount": nextPlanAmount,
+            "metadata.billingTotalAmount": nextPlanAmount,
+            "metadata.recurringAmount": nextPlanAmount,
+            "metadata.speedMbps": plan.speedMbps || customer.billingSnapshot?.speedMbps || 100,
+            "metadata.uploadSpeedMbps":
+              plan.uploadSpeedMbps ||
+              customer.billingSnapshot?.uploadSpeedMbps ||
+              Math.max(2, Math.round((plan.speedMbps || customer.billingSnapshot?.speedMbps || 100) * 0.35)),
+            "metadata.dataPolicy": plan.dataPolicy || customer.billingSnapshot?.dataPolicy || "unlimited",
+            "metadata.dataLimitGb": Number(plan.dataLimitGb || customer.billingSnapshot?.dataLimitGb || 0) || null,
+            "metadata.fupSpeedMbps": Number(plan.fupSpeedMbps || customer.billingSnapshot?.fupSpeedMbps || 0) || null
+          }
+        }
+      );
+    }
     const request = await ServiceRequest.create({
       requestNumber: `SR${Date.now().toString().slice(-6)}`,
       customerId: customer.customerId,
