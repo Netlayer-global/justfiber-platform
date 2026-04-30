@@ -776,6 +776,24 @@ async function buildCustomerResponse(customer) {
   };
 }
 
+async function findCustomerByIdentifier(identifier, { lean = true } = {}) {
+  const value = String(identifier || "").trim();
+  if (!value) return null;
+  const query = {
+    $or: [
+      { customerId: value },
+      { accountNumber: value },
+      { serviceId: value }
+    ]
+  };
+  let customer = lean ? await Customer.findOne(query).lean() : await Customer.findOne(query);
+  if (customer) return customer;
+  if (/^[a-f\d]{24}$/i.test(value)) {
+    customer = lean ? await Customer.findById(value).lean() : await Customer.findById(value);
+  }
+  return customer || null;
+}
+
 async function createPlanChangeBillingNote({ customer, type, amount, reasonCode, note, metadata, createdByAdminId }) {
   const result = await applyBillingNoteAdjustment({
     customer,
@@ -1226,8 +1244,7 @@ customersRouter.post(
     "/:customerId/caf/pdf",
     requirePermission(permissions.customerRead),
     asyncHandler(async (req, res) => {
-      const customer = await Customer.findOne({ customerId: req.params.customerId }).lean()
-        || await Customer.findById(req.params.customerId).lean();
+      const customer = await findCustomerByIdentifier(req.params.customerId, { lean: true });
       if (!customer) {
         throw new ApiError(404, "Customer not found");
       }
@@ -1251,13 +1268,12 @@ customersRouter.post(
   })
 );
 
-customersRouter.get(
-  "/:customerId/lead-kyc",
-  requirePermission(permissions.customerRead),
-  asyncHandler(async (req, res) => {
-    const customer = await Customer.findOne({ customerId: req.params.customerId }).lean()
-      || await Customer.findById(req.params.customerId).lean();
-    if (!customer) throw new ApiError(404, "Customer not found");
+  customersRouter.get(
+    "/:customerId/lead-kyc",
+    requirePermission(permissions.customerRead),
+    asyncHandler(async (req, res) => {
+      const customer = await findCustomerByIdentifier(req.params.customerId, { lean: true });
+      if (!customer) throw new ApiError(404, "Customer not found");
     assertCustomerZoneAccess(req, customer);
     const phone = String(customer.phone || customer.mobile || "").replace(/\D/g, "");
     const [lead, latestBooking] = await Promise.all([
@@ -1459,8 +1475,7 @@ customersRouter.post(
     "/:customerId",
     requirePermission(permissions.customerRead),
     asyncHandler(async (req, res) => {
-      const customer = await Customer.findOne({ customerId: req.params.customerId }).lean()
-        || await Customer.findById(req.params.customerId).lean();
+      const customer = await findCustomerByIdentifier(req.params.customerId, { lean: true });
       if (!customer) {
         throw new ApiError(404, "Customer not found");
       }

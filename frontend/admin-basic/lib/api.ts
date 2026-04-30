@@ -2039,12 +2039,12 @@ export const adminAPI = {
     }
   },
   getCustomer: async (id: string) => {
-    const res = await request<any>(`/api/v1/admin/customers/${id}`)
-    return {
-      ...res,
-      data: res.data ? mapCustomer(res.data) : undefined,
-    }
-  },
+      const res = await request<any>(`/api/v1/admin/customers/${encodeURIComponent(id)}`)
+      return {
+        ...res,
+        data: res.data ? mapCustomer(res.data) : undefined,
+      }
+    },
   createCustomer: async (data: ManualCustomerCreatePayload) => {
     const res = await request<any>('/api/v1/admin/customers', {
       method: 'POST',
