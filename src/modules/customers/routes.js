@@ -36,6 +36,7 @@ import { InstallerJob } from "../../models/InstallerJob.js";
 import { InstallerNotification } from "../../models/InstallerNotification.js";
 import { SubscriberService } from "../../models/SubscriberService.js";
 import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
+import { mikrotikBngManager } from "../../integrations/mikrotikBngManager.js";
 import { buildPppoeCredentials, buildWifiCredentials } from "../../common/networkProvisioning.js";
 import { AccessProfile } from "../../models/AccessProfile.js";
 import { BillingProfile } from "../../models/BillingProfile.js";
@@ -656,6 +657,13 @@ async function buildCustomerResponse(customer) {
           limit: 5
         }).catch(() => [])
       : [];
+  const liveBngSession =
+    subscriberService?.radiusUsername
+      ? await mikrotikBngManager.getSubscriberActiveSession({
+          serviceId: subscriberService.serviceId,
+          radiusUsername: subscriberService.radiusUsername
+        }).catch(() => null)
+      : null;
   const bngNode = subscriberService?.bngNodeCode
     ? await BngNode.findOne({ nodeCode: subscriberService.bngNodeCode })
         .select({ lastRadiusAuthTelemetry: 1 })
@@ -666,8 +674,15 @@ async function buildCustomerResponse(customer) {
     subscriberService,
     radiusSessionHistory,
     radiusUsageSummary,
-    authTelemetry
+    authTelemetry,
+    liveBngSession
   });
+  const effectiveSessionHistory =
+    Array.isArray(radiusSessionHistory) && radiusSessionHistory.length
+      ? radiusSessionHistory
+      : liveBngSession?.session
+        ? [liveBngSession.session]
+        : [];
 
   return {
     ...customer,
@@ -741,7 +756,7 @@ async function buildCustomerResponse(customer) {
                 latestUpdateAt: radiusUsageSummary.latestUpdateAt || null
               }
             : null,
-          sessionHistory: Array.isArray(radiusSessionHistory) ? radiusSessionHistory : [],
+          sessionHistory: effectiveSessionHistory,
           radcheck: Array.isArray(radiusSnapshot?.radcheck) ? radiusSnapshot.radcheck : [],
           radreply: Array.isArray(radiusSnapshot?.radreply) ? radiusSnapshot.radreply : []
         }
@@ -767,11 +782,12 @@ async function findCustomerByIdentifier(identifier, { lean = true } = {}) {
   return customer || null;
 }
 
-function buildPppoeSnapshot({ subscriberService, radiusSessionHistory, radiusUsageSummary, authTelemetry }) {
+function buildPppoeSnapshot({ subscriberService, radiusSessionHistory, radiusUsageSummary, authTelemetry, liveBngSession = null }) {
   if (!subscriberService) return null;
   const activeSession = Array.isArray(radiusSessionHistory)
     ? radiusSessionHistory.find((session) => session?.live && !session?.stoppedAt) || null
     : null;
+  const bngActiveSession = liveBngSession?.session || null;
   const latestUsageAt = radiusUsageSummary?.latestUpdateAt || radiusUsageSummary?.latestSessionStart || null;
   const latestAuthAt = authTelemetry?.authDate || null;
   const derivedRadiusState = String(
@@ -783,22 +799,24 @@ function buildPppoeSnapshot({ subscriberService, radiusSessionHistory, radiusUsa
     .toLowerCase();
   const explicitOnlineStates = new Set(["online", "authenticated", "connected", "live"]);
   const explicitOfflineStates = new Set(["offline", "disconnected", "stopped", "terminated", "expired", "suspended", "inactive"]);
-  const latestLiveAt = [activeSession?.updatedAt, activeSession?.startedAt, latestUsageAt, latestAuthAt]
+  const latestLiveAt = [activeSession?.updatedAt, activeSession?.startedAt, bngActiveSession?.updatedAt, bngActiveSession?.startedAt, latestUsageAt, latestAuthAt]
     .map((value) => (value ? new Date(value).getTime() : Number.NaN))
     .filter((value) => Number.isFinite(value))
     .sort((a, b) => b - a)[0];
   const hasRecentLiveActivity = Number.isFinite(latestLiveAt) && Date.now() - latestLiveAt <= 20 * 60 * 1000;
-  const hasLiveSignal = Boolean(activeSession || subscriberService?.currentIpv4 || hasRecentLiveActivity);
+  const hasLiveSignal = Boolean(activeSession || bngActiveSession || subscriberService?.currentIpv4 || hasRecentLiveActivity);
   const derivedOnline = explicitOnlineStates.has(derivedRadiusState) || hasLiveSignal;
   const derivedOffline = explicitOfflineStates.has(derivedRadiusState) && !hasLiveSignal;
   return {
     online: derivedOffline ? false : derivedOnline,
     derivedState: derivedRadiusState || "unknown",
-    ipAddress: derivedOffline ? null : activeSession?.ipAddress || subscriberService?.currentIpv4 || null,
-    sessionId: activeSession?.sessionId || null,
-    liveSince: activeSession?.startedAt || radiusUsageSummary?.latestSessionStart || null,
+    ipAddress: derivedOffline ? null : activeSession?.ipAddress || bngActiveSession?.ipAddress || subscriberService?.currentIpv4 || null,
+    sessionId: activeSession?.sessionId || bngActiveSession?.sessionId || null,
+    liveSince: activeSession?.startedAt || bngActiveSession?.startedAt || radiusUsageSummary?.latestSessionStart || null,
     lastActivityAt: Number.isFinite(latestLiveAt) ? new Date(latestLiveAt) : null,
-    sessionCount: Array.isArray(radiusSessionHistory) ? radiusSessionHistory.length : 0
+    sessionCount: Array.isArray(radiusSessionHistory) && radiusSessionHistory.length
+      ? radiusSessionHistory.length
+      : Number(liveBngSession?.sessionCount || 0)
   };
 }
 
@@ -1545,6 +1563,13 @@ customersRouter.post(
             limit: 5
           }).catch(() => [])
         : [];
+    const liveBngSession =
+      subscriberService?.radiusUsername
+        ? await mikrotikBngManager.getSubscriberActiveSession({
+            serviceId: subscriberService.serviceId,
+            radiusUsername: subscriberService.radiusUsername
+          }).catch(() => null)
+        : null;
     const bngNode = subscriberService?.bngNodeCode
       ? await BngNode.findOne({ nodeCode: subscriberService.bngNodeCode })
           .select({ lastRadiusAuthTelemetry: 1 })
@@ -1555,8 +1580,15 @@ customersRouter.post(
       subscriberService,
       radiusSessionHistory,
       radiusUsageSummary,
-      authTelemetry
+      authTelemetry,
+      liveBngSession
     });
+    const effectiveSessionHistory =
+      Array.isArray(radiusSessionHistory) && radiusSessionHistory.length
+        ? radiusSessionHistory
+        : liveBngSession?.session
+          ? [liveBngSession.session]
+          : [];
     return ok(res, {
       ...customer,
       devices,
@@ -1606,7 +1638,7 @@ customersRouter.post(
                   latestUpdateAt: radiusUsageSummary.latestUpdateAt || null
                 }
               : null,
-            sessionHistory: Array.isArray(radiusSessionHistory) ? radiusSessionHistory : [],
+            sessionHistory: effectiveSessionHistory,
             radcheck: Array.isArray(radiusSnapshot?.radcheck) ? radiusSnapshot.radcheck : [],
             radreply: Array.isArray(radiusSnapshot?.radreply) ? radiusSnapshot.radreply : []
           }

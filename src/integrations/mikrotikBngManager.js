@@ -260,6 +260,58 @@ async function runDisconnect({ host, port, secret, payload }) {
 }
 
 export class MikrotikBngManager {
+  async getSubscriberActiveSession({ serviceId, radiusUsername } = {}) {
+    const service =
+      (serviceId && (await SubscriberService.findOne({ serviceId }))) ||
+      (radiusUsername && (await SubscriberService.findOne({ radiusUsername })));
+    if (!service) {
+      return { found: false, reason: "service_not_found" };
+    }
+    const username = radiusUsername || service.radiusUsername;
+    if (!username) {
+      return { found: false, reason: "missing_radius_username" };
+    }
+    if (!service.bngNodeCode) {
+      return { found: false, reason: "missing_bng_node" };
+    }
+
+    const bngNode = await BngNode.findOne({ nodeCode: service.bngNodeCode }).lean();
+    if (!bngNode) {
+      return { found: false, reason: "bng_node_not_found" };
+    }
+    if (bngNode.vendor !== "mikrotik") {
+      return { found: false, reason: "unsupported_vendor", vendor: bngNode.vendor };
+    }
+
+    try {
+      const sessions = await findActivePppSessions(bngNode, username);
+      const primary = sessions[0] || null;
+      return {
+        found: Boolean(primary),
+        radiusUsername: username,
+        bngNodeCode: bngNode.nodeCode,
+        sessionCount: sessions.length,
+        session: primary
+          ? {
+              sessionId: String(primary[".id"] || "").trim(),
+              ipAddress: String(primary.address || "").trim() || null,
+              service: String(primary.service || "").trim() || null,
+              startedAt: null,
+              updatedAt: null,
+              live: true
+            }
+          : null
+      };
+    } catch (error) {
+      return {
+        found: false,
+        reason: error instanceof Error ? error.message : "router_api_failed",
+        radiusUsername: username,
+        bngNodeCode: bngNode.nodeCode
+      };
+    }
+  }
+
   async disconnectSubscriberSession({ serviceId, radiusUsername, reason = "refresh", sessionHint = null } = {}) {
     const service =
       (serviceId && (await SubscriberService.findOne({ serviceId }))) ||
