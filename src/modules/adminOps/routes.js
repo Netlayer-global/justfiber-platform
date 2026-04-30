@@ -605,6 +605,12 @@ function resolvePlanRecurringAmountForDuration(plan = null, durationMonths = 1) 
   return Number(plan.monthlyPrice || plan.amount || 0) || 0;
 }
 
+function resolvePlanTotalAmountForDuration(plan = null, durationMonths = 1) {
+  const recurringAmount = resolvePlanRecurringAmountForDuration(plan, durationMonths);
+  const routerRental = Number(plan?.routerRental || 0) || 0;
+  return Number((recurringAmount + routerRental * durationMonths).toFixed(2));
+}
+
 function buildInvoiceHtml(invoice, customer, branding) {
   const displayInvoiceNumber = normalizeDisplayInvoiceNumber(invoice.invoiceNumber || invoice.invoiceId);
   const appliedBranding = resolveInvoiceBranding(branding, invoice);
@@ -4378,19 +4384,20 @@ adminOpsRouter.post(
       ) || 1
     );
     const recurringAmount = Number(
+      resolvePlanRecurringAmountForDuration(plan, durationMonths) ||
       serviceContext.metadata?.recurringAmount ||
       serviceContext.metadata?.baseRecurringAmount ||
       serviceContext.metadata?.monthlyPrice ||
-      resolvePlanRecurringAmountForDuration(plan, durationMonths) ||
       0
     ) || 0;
-    const routerFee = Number(
-      serviceContext.metadata?.routerRental ||
-      subscriberService?.routerRental ||
-      plan?.routerRental ||
+    const totalAmount = Number(
+      resolvePlanTotalAmountForDuration(plan, durationMonths) ||
+      serviceContext.metadata?.billingTotalAmount ||
+      serviceContext.metadata?.totalAmount ||
+      serviceContext.metadata?.planAmount ||
+      recurringAmount ||
       0
     ) || 0;
-    const totalAmount = Number((recurringAmount + (routerFee > 0 ? routerFee * durationMonths : 0)).toFixed(2));
 
     await regenerateExistingInvoice(invoice, {
       customer,

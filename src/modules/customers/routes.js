@@ -259,6 +259,13 @@ function computePlanChangePreview({ customer, currentPlan, nextPlan, effectiveMo
   };
 }
 
+function resolvePlanChargeForDuration(plan = {}, durationMonths = 1) {
+  if (durationMonths >= 12) return Number(plan?.yearlyPrice || (Number(plan?.monthlyPrice || 0) * 12) || 0) || 0;
+  if (durationMonths >= 6) return Number(plan?.halfYearlyPrice || (Number(plan?.monthlyPrice || 0) * 6) || 0) || 0;
+  if (durationMonths >= 3) return Number(plan?.quarterlyPrice || (Number(plan?.monthlyPrice || 0) * 3) || 0) || 0;
+  return Number(plan?.monthlyPrice || plan?.amount || 0) || 0;
+}
+
 function buildBookingTracking(status, existingTracking = {}, note) {
   const stepMap = {
     initiated: "booking_placed",
@@ -2310,25 +2317,40 @@ customersRouter.post(
     };
     await customer.save();
     if (customer.serviceId) {
-      const nextPlanAmount = Number(plan.monthlyPrice || plan.amount || 0) || 0;
+      const existingService = await SubscriberService.findOne({ serviceId: customer.serviceId }).lean();
+      const durationMonths = Math.max(
+        1,
+        Number(
+          existingService?.billingPeriodMonths ||
+          existingService?.metadata?.durationMonths ||
+          customer.billingSnapshot?.durationMonths ||
+          1
+        ) || 1
+      );
+      const recurringAmount = resolvePlanChargeForDuration(plan, durationMonths);
+      const routerRental = Number(plan.routerRental || 0) || 0;
+      const totalPlanAmount = Number((recurringAmount + routerRental * durationMonths).toFixed(2));
       await SubscriberService.updateOne(
         { serviceId: customer.serviceId },
         {
           $set: {
             planCode: plan.planCode,
             planName: plan.name,
-            routerRental: Number(plan.routerRental || 0) || 0,
+            routerRental,
             billingBreakup: plan.billingBreakup || {},
             "metadata.planCode": plan.planCode,
             "metadata.planName": plan.name,
-            "metadata.planAmount": nextPlanAmount,
+            "metadata.planAmount": recurringAmount,
             "metadata.monthlyPrice": Number(plan.monthlyPrice || 0) || 0,
             "metadata.quarterlyPrice": Number(plan.quarterlyPrice || 0) || 0,
             "metadata.halfYearlyPrice": Number(plan.halfYearlyPrice || 0) || 0,
             "metadata.yearlyPrice": Number(plan.yearlyPrice || 0) || 0,
-            "metadata.totalAmount": nextPlanAmount,
-            "metadata.billingTotalAmount": nextPlanAmount,
-            "metadata.recurringAmount": nextPlanAmount,
+            "metadata.durationMonths": durationMonths,
+            "metadata.totalAmount": totalPlanAmount,
+            "metadata.billingTotalAmount": totalPlanAmount,
+            "metadata.recurringAmount": recurringAmount,
+            "metadata.baseRecurringAmount": recurringAmount,
+            "metadata.routerRental": routerRental,
             "metadata.speedMbps": plan.speedMbps || customer.billingSnapshot?.speedMbps || 100,
             "metadata.uploadSpeedMbps":
               plan.uploadSpeedMbps ||
