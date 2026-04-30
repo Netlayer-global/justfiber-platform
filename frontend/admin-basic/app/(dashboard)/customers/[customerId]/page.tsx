@@ -70,16 +70,22 @@ export default function CustomerDetailPage() {
         setCustomer(merged)
       } else {
         const fallback = await resolveCustomerRoute(id as string)
-        if (fallback) {
-          router.replace(`/customers/${fallback}`)
+        if (fallback?.customer) {
+          setCustomer(fallback.customer)
+        }
+        if (fallback?.routeId) {
+          router.replace(`/customers/${fallback.routeId}`)
           return
         }
         setError(typeof res.error === 'string' ? res.error : 'Customer not found')
       }
     } catch (e) {
       const fallback = await resolveCustomerRoute(id as string)
-      if (fallback) {
-        router.replace(`/customers/${fallback}`)
+      if (fallback?.customer) {
+        setCustomer(fallback.customer)
+      }
+      if (fallback?.routeId) {
+        router.replace(`/customers/${fallback.routeId}`)
         return
       }
       setError(e instanceof Error ? e.message : 'Failed to load customer')
@@ -90,7 +96,7 @@ export default function CustomerDetailPage() {
 
   async function resolveCustomerRoute(identifier: string) {
     const value = String(identifier || '').trim()
-    if (!value) return null
+    if (!value) return { routeId: null, customer: null }
     const lookup = await adminAPI.getCustomers(1, 20, { search: value, zoneCode: null }).catch(() => null)
     const candidates = lookup?.data?.items || []
     const match = candidates.find((item) =>
@@ -99,7 +105,10 @@ export default function CustomerDetailPage() {
         .some((candidate) => String(candidate).trim() === value)
     ) || candidates[0]
     const resolved = match?.customerId || match?.id || null
-    return resolved && resolved !== value ? resolved : null
+    return {
+      routeId: resolved && resolved !== value ? resolved : null,
+      customer: match || null,
+    }
   }
 
   async function handleDelete() {
