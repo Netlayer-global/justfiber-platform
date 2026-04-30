@@ -1592,7 +1592,6 @@ function buildInvoiceValidationIssues(invoice = {}) {
   if (!invoice.appliedTemplateKey && !invoice.appliedTemplateName) issues.push("Missing invoice template");
   if (!invoice.companyLegalName) issues.push("Missing legal name");
   if (!invoice.invoicePrefix) issues.push("Missing invoice prefix");
-  if (!invoice.invoiceSeriesCode) issues.push("Missing invoice series");
   if (!Number(invoice.invoiceSequenceNumber || 0)) issues.push("Missing invoice sequence");
 
   if (taxMode === "india_gst") {

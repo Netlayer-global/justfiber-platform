@@ -607,20 +607,15 @@ async function buildInvoiceNumber({ billingProfile, zoneMapping, customer, billC
     "JF",
     "JF"
   );
-  const zoneSeries = normalizeSeriesCode(zoneMapping?.invoiceSeriesCode || "", "");
-  const stateSeries = normalizeSeriesCode(customer?.billingStateCode || customer?.billingSnapshot?.billingStateCode || "", "");
-  const profileSeries = normalizeSeriesCode(billingProfile?.invoiceSeriesCode || "", "");
-  const seriesCode = zoneSeries || stateSeries || profileSeries;
   const periodCode = String(billCycle || buildBillCycle()).replace(/[^0-9]+/g, "");
   const padding = Math.max(3, Math.min(8, Number(billingProfile?.invoiceSequencePadding || 4)));
-  const seriesPart = seriesCode ? `${seriesCode}-` : "";
-  const invoiceRegex = new RegExp(`^${prefix}-${seriesPart}${periodCode}-`);
+  const invoiceRegex = new RegExp(`^${prefix}-${periodCode}-`);
   const existingCount = await BillingInvoice.countDocuments({ invoiceNumber: invoiceRegex });
   const sequence = String(existingCount + 1).padStart(padding, "0");
   return {
-    invoiceNumber: `${prefix}-${seriesPart}${periodCode}-${sequence}`,
+    invoiceNumber: `${prefix}-${periodCode}-${sequence}`,
     invoicePrefix: prefix,
-    invoiceSeriesCode: seriesCode || "",
+    invoiceSeriesCode: "",
     invoiceSequenceNumber: existingCount + 1,
   };
 }
