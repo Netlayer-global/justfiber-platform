@@ -70,6 +70,36 @@ const SEEDED_SALES_AGENT_CODES = ["SAL-1001"];
 const SEEDED_LEAD_NUMBERS = ["LD100101"];
 const SEEDED_CUSTOMER_USER_MOBILES = ["9876543210"];
 
+function runDetachedCustomerTask(label, task) {
+  setImmediate(() => {
+    Promise.resolve()
+      .then(task)
+      .catch((error) => {
+        console.error(`[customers] ${label} failed:`, error);
+      });
+  });
+}
+
+function buildFastCustomerResponse(customer, extras = {}) {
+  return {
+    ...customer,
+    ...extras,
+    pppoeUsername:
+      extras.pppoeUsername ||
+      customer?.pppoeUsername ||
+      customer?.radiusService?.radiusUsername ||
+      null,
+    cafDocument:
+      extras.cafDocument ||
+      customer?.cafDocument ||
+      (customer?.customerId
+        ? {
+            pdfUrl: `/api/v1/admin/customers/${encodeURIComponent(customer.customerId)}/caf/pdf`
+          }
+        : null)
+  };
+}
+
 function assertCustomerZoneAccess(req, customer) {
   const customerZoneCode = customer?.billingZoneCode || customer?.billingSnapshot?.billingZoneCode || customer?.zoneCode;
   return assertAdminZoneAccess(req.admin, customerZoneCode);
@@ -1172,161 +1202,166 @@ customersRouter.post(
     );
 
     if (payload.createRadius !== false) {
-      await radiusServiceManager.createSubscriberAccess({
-        serviceId,
-        customerId,
-        radiusUsername,
-        radiusPassword,
-        accessProfileCode: accessProfile?.code || payload.accessProfileCode,
-        billingProfileCode: billingProfile?.code || payload.billingProfileCode,
-        bngNodeCode: bngNode?.nodeCode || payload.bngNodeCode,
-        metadata: {
-          source: "admin_manual_create",
-          networkProfile
-        }
+      runDetachedCustomerTask(`radius provisioning for ${customerId}`, async () => {
+        await radiusServiceManager.createSubscriberAccess({
+          serviceId,
+          customerId,
+          radiusUsername,
+          radiusPassword,
+          accessProfileCode: accessProfile?.code || payload.accessProfileCode,
+          billingProfileCode: billingProfile?.code || payload.billingProfileCode,
+          bngNodeCode: bngNode?.nodeCode || payload.bngNodeCode,
+          metadata: {
+            source: "admin_manual_create",
+            networkProfile
+          }
+        });
       });
     }
 
-    const subscriberService = await SubscriberService.findOne({ serviceId }).lean();
-    if (subscriberService) {
+    runDetachedCustomerTask(`initial invoice generation for ${customerId}`, async () => {
+      const subscriberService = await SubscriberService.findOne({ serviceId }).lean();
+      if (!subscriberService) return;
       await internalBillingEngine.generateInvoiceForService(subscriberService, {
         generatedAt: startDate,
         billingAnchorDate: startDate,
         durationMonths,
         source: "admin_manual_create",
         sourceEvent: "admin_manual_create"
-      }).catch((error) => {
-        console.error("[customers] Failed to generate initial invoice:", error);
       });
-    }
-
-    const installerCandidates = await Installer.find({
-      status: "active",
-      availabilityStatus: { $ne: "on_leave" }
-    })
-      .sort({ availabilityStatus: 1, updatedAt: 1 })
-      .lean();
-    const matchedInstaller = installerCandidates.find((item) =>
-      resolvedZoneCode && item.assignedZones?.some((zone) => String(zone || "").trim().toUpperCase() === String(resolvedZoneCode || "").trim().toUpperCase())
-    ) || installerCandidates.find((item) =>
-      payload.address.city && String(item.assignedCity || "").trim().toLowerCase() === String(payload.address.city || "").trim().toLowerCase()
-    ) || null;
-
-    const installerJob = await InstallerJob.create({
-      jobNumber: `JOB-${Date.now()}`,
-      type: "installation",
-      status: "assigned",
-      customerId,
-      serviceId,
-      installerId: matchedInstaller?._id,
-      priority: "medium",
-      assignment: {
-        assignedAt: new Date(),
-        assignedBy: req.admin._id,
-        autoAssigned: true,
-        poolVisible: !matchedInstaller,
-        zone: resolvedZoneCode || null
-      },
-      customerSnapshot: {
-        customerId,
-        accountNumber,
-        serviceId,
-        fullName: payload.fullName,
-        phone: payload.phone,
-        email: payload.email || "",
-        address: [
-          payload.address.line1,
-          payload.address.line2,
-          payload.address.area,
-          payload.address.city,
-          payload.address.state,
-          payload.address.pinCode
-        ].filter(Boolean).join(", "),
-        planName: plan.name,
-        planCode: plan.planCode,
-        planCategory: plan.category || payload.customerType || "home",
-        monthlyPrice: Number(plan.monthlyPrice || 0),
-        otcCharge: Number(plan.otcCharge || 0),
-        installationCharge: Number(plan.installationCharge || 0),
-        speedMbps: networkProfile.speedMbps,
-        uploadSpeedMbps: networkProfile.uploadSpeedMbps,
-        burstDownloadMbps: Number(plan.burstDownloadMbps || accessProfile?.burstDownMbps || 0) || null,
-        burstUploadMbps: Number(plan.burstUploadMbps || accessProfile?.burstUpMbps || 0) || null,
-        dataPolicy: networkProfile.dataPolicy,
-        dataLimitGb: networkProfile.dataLimitGb || null,
-        fupSpeedMbps: networkProfile.fupSpeedMbps || null,
-        fairUsageResetPolicy: plan.fairUsageResetPolicy || "monthly",
-        latencyClass: plan.latencyClass || "standard",
-        contentionRatio: plan.contentionRatio || null,
-        routerIncluded: Boolean(plan.routerIncluded),
-        routerModel: plan.routerModel || "",
-        routerRental: Number(plan.routerRental || 0) || null,
-        tags: Array.isArray(plan.tags) ? plan.tags : [],
-        staticBenefits: Array.isArray(plan.staticBenefits) ? plan.staticBenefits : [],
-        features: Array.isArray(plan.features)
-          ? plan.features.filter(Boolean)
-          : typeof plan.features === "string"
-            ? [plan.features]
-            : [],
-        ottApps: Array.isArray(plan.ottApps) ? plan.ottApps : [],
-        planProvisioning: plan.provisioning || null
-      },
-      activation: {
-        source: "admin_manual_create",
-        preparedCredentials: {
-          pppoe: {
-            username: radiusUsername,
-            password: radiusPassword
-          },
-          wifi: generatedWifi,
-          vlanId: plan.provisioning?.vlanId || 100
-        }
-      },
-      timeline: [
-        {
-          event: matchedInstaller ? "job.assigned" : "job.created",
-          actorType: "admin",
-          actorId: req.admin._id,
-          note: matchedInstaller
-            ? `Customer created from admin and assigned to ${matchedInstaller.fullName || matchedInstaller.installerCode || "installer"}`
-            : "Customer created from admin and exposed to zone installer pool",
-          at: new Date()
-        }
-      ]
     });
 
-    if (matchedInstaller) {
-      await Installer.updateOne({ _id: matchedInstaller._id }, { $set: { availabilityStatus: "busy" } });
-      await InstallerNotification.create({
-        installerId: matchedInstaller._id,
-        type: "new_job",
-        title: "New customer installation assigned",
-        body: `${payload.fullName} installation has been assigned from admin customer creation.`,
-        payload: { customerId, serviceId, installerJobId: installerJob._id }
+    runDetachedCustomerTask(`installer assignment for ${customerId}`, async () => {
+      const installerCandidates = await Installer.find({
+        status: "active",
+        availabilityStatus: { $ne: "on_leave" }
+      })
+        .sort({ availabilityStatus: 1, updatedAt: 1 })
+        .lean();
+      const matchedInstaller = installerCandidates.find((item) =>
+        resolvedZoneCode && item.assignedZones?.some((zone) => String(zone || "").trim().toUpperCase() === String(resolvedZoneCode || "").trim().toUpperCase())
+      ) || installerCandidates.find((item) =>
+        payload.address.city && String(item.assignedCity || "").trim().toLowerCase() === String(payload.address.city || "").trim().toLowerCase()
+      ) || null;
+
+      const installerJob = await InstallerJob.create({
+        jobNumber: `JOB-${Date.now()}`,
+        type: "installation",
+        status: "assigned",
+        customerId,
+        serviceId,
+        installerId: matchedInstaller?._id,
+        priority: "medium",
+        assignment: {
+          assignedAt: new Date(),
+          assignedBy: req.admin._id,
+          autoAssigned: true,
+          poolVisible: !matchedInstaller,
+          zone: resolvedZoneCode || null
+        },
+        customerSnapshot: {
+          customerId,
+          accountNumber,
+          serviceId,
+          fullName: payload.fullName,
+          phone: payload.phone,
+          email: payload.email || "",
+          address: [
+            payload.address.line1,
+            payload.address.line2,
+            payload.address.area,
+            payload.address.city,
+            payload.address.state,
+            payload.address.pinCode
+          ].filter(Boolean).join(", "),
+          planName: plan.name,
+          planCode: plan.planCode,
+          planCategory: plan.category || payload.customerType || "home",
+          monthlyPrice: Number(plan.monthlyPrice || 0),
+          otcCharge: Number(plan.otcCharge || 0),
+          installationCharge: Number(plan.installationCharge || 0),
+          speedMbps: networkProfile.speedMbps,
+          uploadSpeedMbps: networkProfile.uploadSpeedMbps,
+          burstDownloadMbps: Number(plan.burstDownloadMbps || accessProfile?.burstDownMbps || 0) || null,
+          burstUploadMbps: Number(plan.burstUploadMbps || accessProfile?.burstUpMbps || 0) || null,
+          dataPolicy: networkProfile.dataPolicy,
+          dataLimitGb: networkProfile.dataLimitGb || null,
+          fupSpeedMbps: networkProfile.fupSpeedMbps || null,
+          fairUsageResetPolicy: plan.fairUsageResetPolicy || "monthly",
+          latencyClass: plan.latencyClass || "standard",
+          contentionRatio: plan.contentionRatio || null,
+          routerIncluded: Boolean(plan.routerIncluded),
+          routerModel: plan.routerModel || "",
+          routerRental: Number(plan.routerRental || 0) || null,
+          tags: Array.isArray(plan.tags) ? plan.tags : [],
+          staticBenefits: Array.isArray(plan.staticBenefits) ? plan.staticBenefits : [],
+          features: Array.isArray(plan.features)
+            ? plan.features.filter(Boolean)
+            : typeof plan.features === "string"
+              ? [plan.features]
+              : [],
+          ottApps: Array.isArray(plan.ottApps) ? plan.ottApps : [],
+          planProvisioning: plan.provisioning || null
+        },
+        activation: {
+          source: "admin_manual_create",
+          preparedCredentials: {
+            pppoe: {
+              username: radiusUsername,
+              password: radiusPassword
+            },
+            wifi: generatedWifi,
+            vlanId: plan.provisioning?.vlanId || 100
+          }
+        },
+        timeline: [
+          {
+            event: matchedInstaller ? "job.assigned" : "job.created",
+            actorType: "admin",
+            actorId: req.admin._id,
+            note: matchedInstaller
+              ? `Customer created from admin and assigned to ${matchedInstaller.fullName || matchedInstaller.installerCode || "installer"}`
+              : "Customer created from admin and exposed to zone installer pool",
+            at: new Date()
+          }
+        ]
       });
-    }
+
+      if (matchedInstaller) {
+        await Installer.updateOne({ _id: matchedInstaller._id }, { $set: { availabilityStatus: "busy" } });
+        await InstallerNotification.create({
+          installerId: matchedInstaller._id,
+          type: "new_job",
+          title: "New customer installation assigned",
+          body: `${payload.fullName} installation has been assigned from admin customer creation.`,
+          payload: { customerId, serviceId, installerJobId: installerJob._id }
+        });
+      }
+    });
 
     const portalIdentityClauses = [
       ...(payload.phone ? [{ mobile: payload.phone }] : []),
       ...(payload.email ? [{ email: payload.email }] : [])
     ];
     if (portalIdentityClauses.length) {
-      await CustomerUser.findOneAndUpdate(
-        { $or: portalIdentityClauses },
-        {
-          $set: {
-            fullName: payload.fullName,
-            mobile: payload.phone || undefined,
-            email: payload.email || undefined,
-            authMode: payload.phone ? "mobile_otp" : "email_otp",
-            state: customer.operationalStatus === "suspended" ? "suspended_customer" : "active_customer"
+      runDetachedCustomerTask(`customer portal identity sync for ${customerId}`, async () => {
+        await CustomerUser.findOneAndUpdate(
+          { $or: portalIdentityClauses },
+          {
+            $set: {
+              fullName: payload.fullName,
+              mobile: payload.phone || undefined,
+              email: payload.email || undefined,
+              authMode: payload.phone ? "mobile_otp" : "email_otp",
+              state: customer.operationalStatus === "suspended" ? "suspended_customer" : "active_customer"
+            },
+            $addToSet: {
+              linkedCustomerIds: customerId
+            }
           },
-          $addToSet: {
-            linkedCustomerIds: customerId
-          }
-        },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+      });
     }
 
     await auditFromRequest(req, {
@@ -1339,12 +1374,27 @@ customersRouter.post(
           planCode: plan.planCode,
           createRadius: payload.createRadius !== false,
           cafNumber: cafDocument.cafNumber,
-          installerJobId: installerJob._id,
-          installerId: matchedInstaller?._id || null
+          installerJobQueued: true,
+          installerId: null
         }
       });
 
-    return ok(res, await buildCustomerResponse(customer), { created: true, installerJobId: installerJob._id });
+    return ok(
+      res,
+      buildFastCustomerResponse(customer, {
+        pppoeUsername: radiusUsername,
+        cafDocument: {
+          ...(cafDocument || {}),
+          pdfUrl: `/api/v1/admin/customers/${encodeURIComponent(customer.customerId)}/caf/pdf`
+        }
+      }),
+      {
+        created: true,
+        provisioningQueued: payload.createRadius !== false,
+        invoiceQueued: true,
+        installerAssignmentQueued: true
+      }
+    );
   })
 );
 
@@ -1797,6 +1847,7 @@ customersRouter.patch(
       }
     }
     let radiusSyncApplied = false;
+    let radiusSyncQueued = false;
     let bngAutoSelected = false;
     if (radiusServicePayload) {
       const subscriberService =
@@ -1838,7 +1889,7 @@ customersRouter.patch(
         await subscriberService.save();
 
         if (subscriberService.status === "active" && subscriberService.metadata?.radiusPassword) {
-          await radiusServiceManager.createSubscriberAccess({
+          const radiusPayload = {
             serviceId: subscriberService.serviceId,
             customerId: subscriberService.customerId,
             radiusUsername: subscriberService.radiusUsername,
@@ -1849,8 +1900,12 @@ customersRouter.patch(
             currentIpv4: subscriberService.currentIpv4,
             ipv4Pool: subscriberService.ipv4Pool,
             metadata: subscriberService.metadata || {}
+          };
+          runDetachedCustomerTask(`radius sync for ${customer.customerId}`, async () => {
+            await radiusServiceManager.createSubscriberAccess(radiusPayload);
           });
           radiusSyncApplied = true;
+          radiusSyncQueued = true;
         }
       }
     }
@@ -1860,7 +1915,7 @@ customersRouter.patch(
       entityId: customer.customerId,
       metadata: Object.keys(payload)
     });
-    return ok(res, await buildCustomerResponse(customer.toObject()), { radiusSyncApplied, bngAutoSelected });
+    return ok(res, buildFastCustomerResponse(customer.toObject()), { radiusSyncApplied, radiusSyncQueued, bngAutoSelected });
   })
 );
 
