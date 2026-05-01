@@ -237,6 +237,8 @@ function QuickStat({ label, value, tone }: { label: string; value: string; tone:
 
 function OverviewTab({ customer, onRefresh }: { customer: Customer; onRefresh: () => Promise<void> }) {
   const primaryDevice = customer.devices?.[0]
+  const pendingPlanChange = customer.billingSnapshot?.pendingPlanChange as Record<string, any> | null | undefined
+  const hasPendingPlanChange = Boolean(pendingPlanChange?.planCode || pendingPlanChange?.planName)
   const pppoeUsername = customerDeviceText(
     customer.pppoeUsername,
     customer.radiusService?.radiusUsername,
@@ -379,6 +381,56 @@ function OverviewTab({ customer, onRefresh }: { customer: Customer; onRefresh: (
             <div className="flex justify-between"><span className="text-slate-500">BNG</span><span className="font-mono text-slate-700">{customer.radiusService.bngNodeCode || '—'}</span></div>
             <div className="flex justify-between"><span className="text-slate-500">Session Count</span><span className="font-mono text-slate-700">{pppoeSession.sessionCount}</span></div>
             <div className="flex justify-between"><span className="text-slate-500">Live Since</span><span className="text-slate-700">{pppoeSession.liveSession?.startedAt ? formatDate(pppoeSession.liveSession.startedAt, true) : '—'}</span></div>
+          </div>
+        ) : null}
+        {hasPendingPlanChange ? (
+          <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">Plan Change Desk</div>
+                <div className="mt-1 text-xs text-slate-600">
+                  Pending {String(pendingPlanChange?.effectiveMode || 'immediate').replace('_', ' ')} change waiting for payment or cycle execution.
+                </div>
+              </div>
+              {Number(customer.billingSnapshot?.dueAmount || 0) > 0 ? (
+                <Badge variant="warning">Payment Required</Badge>
+              ) : (
+                <Badge variant="info">Ready to Apply</Badge>
+              )}
+            </div>
+            <div className="mt-4 grid gap-3 text-xs sm:grid-cols-2">
+              <div>
+                <div className="text-slate-500">Next Plan</div>
+                <div className="font-semibold text-slate-900">{customerDeviceText(pendingPlanChange?.planName, pendingPlanChange?.planCode) || '—'}</div>
+              </div>
+              <div>
+                <div className="text-slate-500">Mode</div>
+                <div className="font-medium capitalize text-slate-900">{String(pendingPlanChange?.effectiveMode || 'immediate').replace('_', ' ')}</div>
+              </div>
+              <div>
+                <div className="text-slate-500">Billing Term</div>
+                <div className="font-medium capitalize text-slate-900">{String(pendingPlanChange?.billingTerm || customer.billingSnapshot?.nextPlanTerm || 'monthly')}</div>
+              </div>
+              <div>
+                <div className="text-slate-500">Payable Now</div>
+                <div className="font-semibold text-slate-900">{formatCurrency(Math.max(0, Number(customer.billingSnapshot?.dueAmount || 0)))}</div>
+              </div>
+              <div>
+                <div className="text-slate-500">Adjustment Preview</div>
+                <div className="font-medium text-slate-900">{formatCurrency(Number(customer.billingSnapshot?.adjustmentPreview || 0))}</div>
+              </div>
+              <div>
+                <div className="text-slate-500">Requested At</div>
+                <div className="font-medium text-slate-900">{pendingPlanChange?.requestedAt ? formatDate(pendingPlanChange.requestedAt, true) : '—'}</div>
+              </div>
+            </div>
+            <div className="mt-3 rounded-lg bg-white/70 p-3 text-xs text-slate-700">
+              {Number(customer.billingSnapshot?.dueAmount || 0) > 0
+                ? 'Upgrade will apply automatically after successful payment settlement.'
+                : String(pendingPlanChange?.effectiveMode || '') === 'next_cycle'
+                  ? 'This change is scheduled and will auto-apply on the next billing date before the next invoice is generated.'
+                  : 'Pending plan change is ready and should auto-apply on the next successful settlement trigger.'}
+            </div>
           </div>
         ) : null}
         {primaryDevice ? (
