@@ -432,6 +432,31 @@ function parseExpandedInvoicePrefix(value = "") {
   };
 }
 
+function resolveExistingInvoiceNumbering(invoice = {}) {
+  const currentSequence = Number(
+    invoice?.invoiceSequenceNumber ||
+    invoice?.metadata?.invoiceSequenceNumber ||
+    0
+  ) || 0;
+  const currentPrefix = String(
+    invoice?.invoicePrefix ||
+    invoice?.metadata?.invoicePrefix ||
+    ""
+  ).trim();
+  const currentNumber = String(invoice?.invoiceNumber || "").trim();
+  const parsedFromPrefix = parseExpandedInvoicePrefix(currentPrefix);
+  const parsedFromNumber = parseExpandedInvoicePrefix(currentNumber);
+  const parsed = parsedFromPrefix || parsedFromNumber;
+  if (!parsed || currentSequence <= 0) return null;
+  const stableInvoiceNumber = parsedFromNumber?.fullPrefix || parsedFromPrefix?.fullPrefix || currentNumber;
+  return {
+    invoiceNumber: stableInvoiceNumber,
+    invoicePrefix: parsed.fullPrefix,
+    invoiceSeriesCode: parsed.basePrefix,
+    invoiceSequenceNumber: currentSequence
+  };
+}
+
 async function getInvoiceTemplateSettings() {
   const config = await SystemConfig.findOne({ key: "settings.invoice_template" }).lean();
   return config?.value || {};
@@ -805,14 +830,16 @@ export async function regenerateExistingInvoice(invoice, {
     durationMonths,
     billCycleLabel
   );
-  const numbering = await buildInvoiceNumber({
-    billingProfile,
-    zoneMapping,
-    customer: safeCustomer,
-    billCycle: invoice.billCycle,
-    selectedTemplate,
-    existingInvoiceId: invoice.invoiceId
-  });
+  const numbering =
+    resolveExistingInvoiceNumbering(invoice) ||
+    await buildInvoiceNumber({
+      billingProfile,
+      zoneMapping,
+      customer: safeCustomer,
+      billCycle: invoice.billCycle,
+      selectedTemplate,
+      existingInvoiceId: invoice.invoiceId
+    });
 
   const zoneCode = safeCustomer?.billingZoneCode || safeCustomer?.billingSnapshot?.billingZoneCode || zoneMapping?.zoneCode || "";
   const zoneName = safeCustomer?.billingZoneName || safeCustomer?.billingSnapshot?.billingZoneName || zoneMapping?.zoneName || "";
