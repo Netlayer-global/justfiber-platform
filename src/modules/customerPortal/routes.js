@@ -220,6 +220,19 @@ function buildInvoiceSummaryRows(invoice = {}) {
   };
 }
 
+function resolveInvoicePlanSummary(invoice = {}) {
+  const metadata = invoice?.metadata || {};
+  const planName = String(metadata.planName || metadata.planCode || "").trim();
+  const durationMonths = Number(metadata.durationMonths || 0);
+  const cycleLabel = String(metadata.billCycleLabel || "").trim();
+  return {
+    planName: planName || "Broadband plan",
+    durationLabel:
+      cycleLabel ||
+      (durationMonths > 0 ? `${durationMonths} Month${durationMonths > 1 ? "s" : ""}` : invoice.billCycle || "-"),
+  };
+}
+
 function resolveRecurringAmountForDuration(plan = null, durationMonths = 1) {
   if (!plan) return 0;
   if (durationMonths >= 12) return Number(plan.yearlyPrice || (Number(plan.monthlyPrice || 0) * 12) || 0) || 0;
@@ -329,6 +342,7 @@ async function resolvePaymentGatewayForCustomer(customer) {
 function buildInvoiceHtml(invoice, customer, profile) {
   const displayInvoiceNumber = buildDisplayInvoiceNumber(invoice);
   const summaryRows = buildInvoiceSummaryRows(invoice);
+  const planSummary = resolveInvoicePlanSummary(invoice);
   const formatMoney = (amount) => `Rs ${Number(amount || 0).toFixed(2)}`;
   const branding = pickBillingBranding(profile, invoice);
   const safe = (value) =>
@@ -339,7 +353,7 @@ function buildInvoiceHtml(invoice, customer, profile) {
       .replace(/"/g, "&quot;");
   const rows = summaryRows.chargeRows.length
     ? summaryRows.chargeRows
-    : [{ label: invoice.billCycle || "Broadband plan", categoryLabel: "Charge", amount: Number(summaryRows.taxableSubtotal || 0) }];
+    : [{ label: `${planSummary.planName} - ${planSummary.durationLabel}`, categoryLabel: "Charge", amount: Number(summaryRows.taxableSubtotal || 0) }];
   const taxableSubtotal = Number(summaryRows.taxableSubtotal || 0);
   const cgstPart = summaryRows.taxRows.find((item) => /cgst/i.test(item.label)) || null;
   const sgstPart = summaryRows.taxRows.find((item) => /sgst/i.test(item.label)) || null;
@@ -394,7 +408,8 @@ function buildInvoiceHtml(invoice, customer, profile) {
     customer?.mobile ? `Phone: ${safe(customer.mobile)}` : "",
     customer?.email ? `Email: ${safe(customer.email)}` : "",
     `Customer ID: ${safe(invoice.customerId)}`,
-    `Bill cycle: ${safe(invoice.billCycle || "-")}`
+    `Plan: ${safe(planSummary.planName)}`,
+    `Duration: ${safe(planSummary.durationLabel)}`
   ]
     .filter(Boolean)
     .join("<br/>");
@@ -453,7 +468,7 @@ function buildInvoiceHtml(invoice, customer, profile) {
         <div style="width:30%;padding-top:32px;">
           <div style="display:grid;grid-template-columns:88px 1fr;gap:8px 10px;font-size:10px;line-height:1.35;">
             <div style="font-weight:700;color:#374151;">Invoice Date :</div><div style="text-align:right;color:#111827;">${safe(invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleDateString("en-IN") : "-")}</div>
-            <div style="font-weight:700;color:#374151;">Terms :</div><div style="text-align:right;color:#111827;">${safe(invoice.billCycle || "-")}</div>
+            <div style="font-weight:700;color:#374151;">Terms :</div><div style="text-align:right;color:#111827;">${safe(planSummary.durationLabel || "-")}</div>
             <div style="font-weight:700;color:#374151;">Due Date :</div><div style="text-align:right;color:#111827;">${safe(invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-")}</div>
             <div style="font-weight:700;color:#374151;">Status :</div><div style="text-align:right;text-transform:capitalize;color:#111827;">${safe(invoice.paymentStatus || "-")}</div>
           </div>
@@ -625,13 +640,14 @@ function renderInvoicePdf(invoice, profile, customer) {
   const displayInvoiceNumber = buildDisplayInvoiceNumber(invoice);
   const branding = pickBillingBranding(profile, invoice);
   const summaryRows = buildInvoiceSummaryRows(invoice);
+  const planSummary = resolveInvoicePlanSummary(invoice);
   const doc = new PDFDocument({ margin: 40, size: "A4" });
   const accent = "#8224e3";
   const dark = "#2d3138";
   const formatMoney = (amount) => `Rs ${Number(amount || 0).toFixed(2)}`;
   const rows = summaryRows.chargeRows.length
     ? summaryRows.chargeRows
-    : [{ label: invoice.billCycle || "Broadband plan", categoryLabel: "Charge", amount: Number(summaryRows.taxableSubtotal || 0) }];
+    : [{ label: `${planSummary.planName} - ${planSummary.durationLabel}`, categoryLabel: "Charge", amount: Number(summaryRows.taxableSubtotal || 0) }];
   const taxableSubtotal = Number(summaryRows.taxableSubtotal || 0);
   const cgstPart = summaryRows.taxRows.find((item) => /cgst/i.test(item.label)) || null;
   const sgstPart = summaryRows.taxRows.find((item) => /sgst/i.test(item.label)) || null;
@@ -674,7 +690,8 @@ function renderInvoicePdf(invoice, profile, customer) {
     customer?.mobile ? `Phone: ${customer.mobile}` : "",
     customer?.email ? `Email: ${customer.email}` : "",
     `Customer ID: ${invoice.customerId}`,
-    `Bill cycle: ${invoice.billCycle || "-"}`
+    `Plan: ${planSummary.planName}`,
+    `Duration: ${planSummary.durationLabel}`
   ].filter(Boolean).join("\n");
   doc.font("Helvetica").fontSize(8.8);
   const billToHeight = billToText ? doc.heightOfString(billToText, { width: 270, lineGap: 1 }) : 0;
@@ -688,7 +705,7 @@ function renderInvoicePdf(invoice, profile, customer) {
   doc.fillColor("#374151").font("Helvetica-Bold").fontSize(9).text("Invoice Date :", infoX, infoY, { width: 92 });
   doc.fillColor(dark).font("Helvetica").fontSize(9).text(invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleDateString("en-IN") : "-", infoX + 94, infoY, { width: 99, align: "right" });
   doc.fillColor("#374151").font("Helvetica-Bold").fontSize(9).text("Terms :", infoX, infoY + 20, { width: 92 });
-  doc.fillColor(dark).font("Helvetica").fontSize(9).text(invoice.billCycle || "-", infoX + 94, infoY + 20, { width: 99, align: "right" });
+  doc.fillColor(dark).font("Helvetica").fontSize(9).text(planSummary.durationLabel || "-", infoX + 94, infoY + 20, { width: 99, align: "right" });
   doc.fillColor("#374151").font("Helvetica-Bold").fontSize(9).text("Due Date :", infoX, infoY + 40, { width: 92 });
   doc.fillColor(dark).font("Helvetica").fontSize(9).text(invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-", infoX + 94, infoY + 40, { width: 99, align: "right" });
   doc.fillColor("#374151").font("Helvetica-Bold").fontSize(9).text("Status :", infoX, infoY + 60, { width: 92 });

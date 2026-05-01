@@ -15,10 +15,8 @@ function resolveDurationMonths(source = {}) {
 }
 
 function resolveBillCycleLabel(durationMonths) {
-  if (durationMonths >= 12) return "Yearly";
-  if (durationMonths >= 6) return "Half-yearly";
-  if (durationMonths >= 3) return "Quarterly";
-  return "Monthly";
+  const safeMonths = Math.max(1, Number(durationMonths || 1));
+  return `${safeMonths} Month${safeMonths > 1 ? "s" : ""}`;
 }
 
 function buildBillCycle(date = new Date()) {
@@ -314,7 +312,7 @@ function buildInvoiceLineItems(service, plan, taxableAmount, totalAmount, durati
     items.push({
       code: "service_charge",
       category: "connectivity",
-      description: "Broadband service charge",
+      description: `Broadband service charge${billCycleLabel ? ` - ${billCycleLabel}` : ""}`,
       quantity: 1,
       unitAmount: safeTaxableAmount,
       amount: safeTaxableAmount
@@ -789,7 +787,12 @@ export async function regenerateExistingInvoice(invoice, {
       safeSubscriberService?.metadata?.durationMonths ||
       1
   });
-  const billCycleLabel = invoice.metadata?.billCycleLabel || invoiceMetadata?.billCycleLabel || resolveBillCycleLabel(durationMonths);
+  const billCycleLabel =
+    String(
+      invoiceMetadata?.billCycleLabel ||
+      safeSubscriberService?.metadata?.billCycleLabel ||
+      ""
+    ).trim() || resolveBillCycleLabel(durationMonths);
 
   // Derive totalAmount from the live plan catalog first — avoids using stale invoice metadata
   // when an admin has changed the plan and regenerates the invoice.
@@ -965,6 +968,7 @@ export async function repriceOpenInvoicesForCustomer({
       plan: safePlan,
       invoiceMetadata: {
         durationMonths,
+        billCycleLabel: resolveBillCycleLabel(durationMonths),
         planCode: safePlan.planCode || customer.planCode || "",
         planName: safePlan.name || customer.planName || ""
       },
