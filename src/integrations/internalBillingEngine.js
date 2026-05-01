@@ -640,6 +640,7 @@ async function createInvoiceLedgerEntry(invoice) {
 
 async function buildInvoiceNumber({ billingProfile, zoneMapping, customer, billCycle, selectedTemplate, existingInvoiceId = "" }) {
   const prefix = normalizeSeriesCode(
+    selectedTemplate?.invoicePrefix ||
     zoneMapping?.invoicePrefix ||
     billingProfile?.invoicePrefix ||
     "JF",
