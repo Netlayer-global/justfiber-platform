@@ -460,6 +460,7 @@ function selectInvoiceTemplateSettings(baseSettings = {}, customer, profile = nu
     ...baseSettings,
     ...selectedTemplate,
     ...(profileZoneMatch || {}),
+    templateInvoicePrefix: selectedTemplate.invoicePrefix || baseSettings.invoicePrefix || "JF",
     templateKey: activeTemplateKey || selectedTemplate.key || "justfiber_standard",
     templateName: selectedTemplate.templateName || baseSettings.templateName || "JustFiber Standard",
     billingZoneCode: zoneCode || undefined,
@@ -640,6 +641,7 @@ async function createInvoiceLedgerEntry(invoice) {
 
 async function buildInvoiceNumber({ billingProfile, zoneMapping, customer, billCycle, selectedTemplate, existingInvoiceId = "" }) {
   const prefix = normalizeSeriesCode(
+    selectedTemplate?.templateInvoicePrefix ||
     selectedTemplate?.invoicePrefix ||
     zoneMapping?.invoicePrefix ||
     billingProfile?.invoicePrefix ||

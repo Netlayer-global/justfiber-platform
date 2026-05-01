@@ -362,6 +362,7 @@ function selectInvoiceTemplateSettings(baseSettings = {}, invoice, customer, pro
     ...baseSettings,
     ...selectedTemplate,
     ...(profileZoneMatch || {}),
+    templateInvoicePrefix: selectedTemplate.invoicePrefix || baseSettings.invoicePrefix || "JF",
     templateKey: activeTemplateKey || selectedTemplate.key || baseSettings.activeTemplate || "justfiber_standard",
     templateName: selectedTemplate.templateName || baseSettings.templateName || "JustFiber Standard",
     billingZoneCode: zoneCode || undefined,
