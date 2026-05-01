@@ -21,6 +21,26 @@ type ZonePermissionDraft = {
   allowJobs: boolean
   allowNetwork: boolean
   allowSettings: boolean
+  operatingMode: 'shared' | 'hybrid' | 'isolated'
+  cityScope: 'shared_parent' | 'city_business_unit' | 'independent_city'
+  billingAutonomy: 'parent_controlled' | 'zone_controlled'
+  dedicatedPlans: boolean
+  dedicatedInvoiceTemplate: boolean
+  dedicatedCafTemplate: boolean
+  dedicatedNatLogs: boolean
+  dedicatedBillingProfile: boolean
+  dedicatedPaymentGateway: boolean
+  dedicatedRouterInventory: boolean
+  dedicatedCustomerIdSeries: boolean
+  strictDataIsolation: boolean
+  allowPlanManagement: boolean
+  allowInvoiceTemplateManagement: boolean
+  allowCafTemplateManagement: boolean
+  allowNatLogAccess: boolean
+  allowProvisioningControl: boolean
+  allowPaymentGatewayConfig: boolean
+  allowRouterInventory: boolean
+  allowCollectionsDesk: boolean
 }
 
 type ZoneRow = {
@@ -61,6 +81,29 @@ const INHERITANCE_GROUPS = [
   { key: 'canCreateSubZone', label: 'Can create child sub-zones' },
 ] as const
 
+const ISOLATION_GROUPS = [
+  { key: 'dedicatedPlans', label: 'Dedicated plans' },
+  { key: 'dedicatedInvoiceTemplate', label: 'Dedicated invoice template' },
+  { key: 'dedicatedCafTemplate', label: 'Dedicated CAF template' },
+  { key: 'dedicatedNatLogs', label: 'Dedicated NAT log view' },
+  { key: 'dedicatedBillingProfile', label: 'Dedicated billing profile' },
+  { key: 'dedicatedPaymentGateway', label: 'Dedicated payment gateway' },
+  { key: 'dedicatedRouterInventory', label: 'Dedicated router inventory' },
+  { key: 'dedicatedCustomerIdSeries', label: 'Dedicated customer/invoice series' },
+  { key: 'strictDataIsolation', label: 'Strict zone data isolation' },
+] as const
+
+const CAPABILITY_GROUPS = [
+  { key: 'allowPlanManagement', label: 'Can manage zone plans' },
+  { key: 'allowInvoiceTemplateManagement', label: 'Can manage invoice template' },
+  { key: 'allowCafTemplateManagement', label: 'Can manage CAF template' },
+  { key: 'allowNatLogAccess', label: 'Can access NAT logs' },
+  { key: 'allowProvisioningControl', label: 'Can control provisioning' },
+  { key: 'allowPaymentGatewayConfig', label: 'Can manage payment gateway' },
+  { key: 'allowRouterInventory', label: 'Can manage routers and stock' },
+  { key: 'allowCollectionsDesk', label: 'Can use collections desk' },
+] as const
+
 function buildPermissionDraft(item?: FranchiseProfile | null): ZonePermissionDraft {
   return {
     inheritBillingProfile: Boolean(item?.inheritanceProfile?.inheritBillingProfile),
@@ -76,7 +119,39 @@ function buildPermissionDraft(item?: FranchiseProfile | null): ZonePermissionDra
     allowJobs: Boolean(item?.permissionProfile?.allowJobs),
     allowNetwork: Boolean(item?.permissionProfile?.allowNetwork),
     allowSettings: Boolean(item?.permissionProfile?.allowSettings),
+    operatingMode: item?.operatingProfile?.mode || 'shared',
+    cityScope: item?.operatingProfile?.cityScope || 'shared_parent',
+    billingAutonomy: item?.operatingProfile?.billingAutonomy || 'parent_controlled',
+    dedicatedPlans: Boolean(item?.isolationProfile?.dedicatedPlans),
+    dedicatedInvoiceTemplate: Boolean(item?.isolationProfile?.dedicatedInvoiceTemplate),
+    dedicatedCafTemplate: Boolean(item?.isolationProfile?.dedicatedCafTemplate),
+    dedicatedNatLogs: item?.isolationProfile?.dedicatedNatLogs !== false,
+    dedicatedBillingProfile: Boolean(item?.isolationProfile?.dedicatedBillingProfile),
+    dedicatedPaymentGateway: Boolean(item?.isolationProfile?.dedicatedPaymentGateway),
+    dedicatedRouterInventory: Boolean(item?.isolationProfile?.dedicatedRouterInventory),
+    dedicatedCustomerIdSeries: Boolean(item?.isolationProfile?.dedicatedCustomerIdSeries),
+    strictDataIsolation: Boolean(item?.isolationProfile?.strictDataIsolation),
+    allowPlanManagement: Boolean(item?.capabilityProfile?.allowPlanManagement),
+    allowInvoiceTemplateManagement: Boolean(item?.capabilityProfile?.allowInvoiceTemplateManagement),
+    allowCafTemplateManagement: Boolean(item?.capabilityProfile?.allowCafTemplateManagement),
+    allowNatLogAccess: Boolean(item?.capabilityProfile?.allowNatLogAccess),
+    allowProvisioningControl: Boolean(item?.capabilityProfile?.allowProvisioningControl),
+    allowPaymentGatewayConfig: Boolean(item?.capabilityProfile?.allowPaymentGatewayConfig),
+    allowRouterInventory: Boolean(item?.capabilityProfile?.allowRouterInventory),
+    allowCollectionsDesk: Boolean(item?.capabilityProfile?.allowCollectionsDesk),
   }
+}
+
+function describeIsolationLabels(profile?: FranchiseProfile['isolationProfile']) {
+  return ISOLATION_GROUPS
+    .filter((item) => Boolean(profile?.[item.key as keyof NonNullable<FranchiseProfile['isolationProfile']>]))
+    .map((item) => item.label)
+}
+
+function describeCapabilityLabels(profile?: FranchiseProfile['capabilityProfile']) {
+  return CAPABILITY_GROUPS
+    .filter((item) => Boolean(profile?.[item.key as keyof NonNullable<FranchiseProfile['capabilityProfile']>]))
+    .map((item) => item.label)
 }
 
 export default function MyZoneDetailsPage() {
@@ -273,6 +348,32 @@ export default function MyZoneDetailsPage() {
           allowJobs: permissionDraft.allowJobs,
           allowNetwork: permissionDraft.allowNetwork,
           allowSettings: permissionDraft.allowSettings,
+        },
+        operatingProfile: {
+          mode: permissionDraft.operatingMode,
+          cityScope: permissionDraft.cityScope,
+          billingAutonomy: permissionDraft.billingAutonomy,
+        },
+        isolationProfile: {
+          dedicatedPlans: permissionDraft.dedicatedPlans,
+          dedicatedInvoiceTemplate: permissionDraft.dedicatedInvoiceTemplate,
+          dedicatedCafTemplate: permissionDraft.dedicatedCafTemplate,
+          dedicatedNatLogs: permissionDraft.dedicatedNatLogs,
+          dedicatedBillingProfile: permissionDraft.dedicatedBillingProfile,
+          dedicatedPaymentGateway: permissionDraft.dedicatedPaymentGateway,
+          dedicatedRouterInventory: permissionDraft.dedicatedRouterInventory,
+          dedicatedCustomerIdSeries: permissionDraft.dedicatedCustomerIdSeries,
+          strictDataIsolation: permissionDraft.strictDataIsolation,
+        },
+        capabilityProfile: {
+          allowPlanManagement: permissionDraft.allowPlanManagement,
+          allowInvoiceTemplateManagement: permissionDraft.allowInvoiceTemplateManagement,
+          allowCafTemplateManagement: permissionDraft.allowCafTemplateManagement,
+          allowNatLogAccess: permissionDraft.allowNatLogAccess,
+          allowProvisioningControl: permissionDraft.allowProvisioningControl,
+          allowPaymentGatewayConfig: permissionDraft.allowPaymentGatewayConfig,
+          allowRouterInventory: permissionDraft.allowRouterInventory,
+          allowCollectionsDesk: permissionDraft.allowCollectionsDesk,
         },
       }
       const res = await adminAPI.saveFranchise({
@@ -472,6 +573,84 @@ export default function MyZoneDetailsPage() {
                   </label>
                 ))}
               </div>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-6 xl:grid-cols-2">
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-sm font-semibold text-slate-900">Zone Operating Model</div>
+              <div className="mt-1 text-xs text-slate-500">Set how independent this city zone should behave.</div>
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <label className="text-sm text-slate-700">
+                  <div className="mb-2 font-medium">Mode</div>
+                  <select
+                    className="input"
+                    value={permissionDraft.operatingMode}
+                    onChange={(event) => setPermissionDraft((current) => ({ ...current, operatingMode: event.target.value as ZonePermissionDraft['operatingMode'] }))}
+                  >
+                    <option value="shared">Shared</option>
+                    <option value="hybrid">Hybrid</option>
+                    <option value="isolated">Isolated</option>
+                  </select>
+                </label>
+                <label className="text-sm text-slate-700">
+                  <div className="mb-2 font-medium">City Scope</div>
+                  <select
+                    className="input"
+                    value={permissionDraft.cityScope}
+                    onChange={(event) => setPermissionDraft((current) => ({ ...current, cityScope: event.target.value as ZonePermissionDraft['cityScope'] }))}
+                  >
+                    <option value="shared_parent">Shared Parent</option>
+                    <option value="city_business_unit">City Business Unit</option>
+                    <option value="independent_city">Independent City</option>
+                  </select>
+                </label>
+                <label className="text-sm text-slate-700">
+                  <div className="mb-2 font-medium">Billing Control</div>
+                  <select
+                    className="input"
+                    value={permissionDraft.billingAutonomy}
+                    onChange={(event) => setPermissionDraft((current) => ({ ...current, billingAutonomy: event.target.value as ZonePermissionDraft['billingAutonomy'] }))}
+                  >
+                    <option value="parent_controlled">Parent Controlled</option>
+                    <option value="zone_controlled">Zone Controlled</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-sm font-semibold text-slate-900">Isolation Rules</div>
+              <div className="mt-1 text-xs text-slate-500">Decide what this zone owns independently from the parent zone.</div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {ISOLATION_GROUPS.map((item) => (
+                  <label key={item.key} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(permissionDraft[item.key])}
+                      onChange={(event) => setPermissionDraft((current) => ({ ...current, [item.key]: event.target.checked }))}
+                    />
+                    <span>{item.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+            <div className="text-sm font-semibold text-slate-900">Zone Business Controls</div>
+            <div className="mt-1 text-xs text-slate-500">Choose which business tools this city zone admin can control directly.</div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {CAPABILITY_GROUPS.map((item) => (
+                <label key={item.key} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(permissionDraft[item.key])}
+                    onChange={(event) => setPermissionDraft((current) => ({ ...current, [item.key]: event.target.checked }))}
+                  />
+                  <span>{item.label}</span>
+                </label>
+              ))}
             </div>
           </div>
         </section>

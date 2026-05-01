@@ -994,6 +994,32 @@ export interface FranchiseProfile {
     allowNetwork?: boolean
     allowSettings?: boolean
   }
+  operatingProfile?: {
+    mode?: 'shared' | 'hybrid' | 'isolated'
+    cityScope?: 'shared_parent' | 'city_business_unit' | 'independent_city'
+    billingAutonomy?: 'parent_controlled' | 'zone_controlled'
+  }
+  isolationProfile?: {
+    dedicatedPlans?: boolean
+    dedicatedInvoiceTemplate?: boolean
+    dedicatedCafTemplate?: boolean
+    dedicatedNatLogs?: boolean
+    dedicatedBillingProfile?: boolean
+    dedicatedPaymentGateway?: boolean
+    dedicatedRouterInventory?: boolean
+    dedicatedCustomerIdSeries?: boolean
+    strictDataIsolation?: boolean
+  }
+  capabilityProfile?: {
+    allowPlanManagement?: boolean
+    allowInvoiceTemplateManagement?: boolean
+    allowCafTemplateManagement?: boolean
+    allowNatLogAccess?: boolean
+    allowProvisioningControl?: boolean
+    allowPaymentGatewayConfig?: boolean
+    allowRouterInventory?: boolean
+    allowCollectionsDesk?: boolean
+  }
   adminAccounts?: Array<{
     fullName?: string
     email?: string

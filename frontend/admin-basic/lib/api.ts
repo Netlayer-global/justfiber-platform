@@ -1321,6 +1321,29 @@ function mapAdminRole(item: any): AdminRoleSummary {
 
 function mapFranchiseProfile(item: any): FranchiseProfile {
   const metadata = item.metadata && typeof item.metadata === 'object' ? item.metadata : {}
+  const inheritanceProfile =
+    metadata.inheritanceProfile && typeof metadata.inheritanceProfile === 'object'
+      ? metadata.inheritanceProfile
+      : {
+          inheritBillingProfile: Boolean(metadata.inheritBillingProfile),
+          inheritInvoiceTemplate: Boolean(metadata.inheritInvoiceTemplate),
+          inheritPlans: Boolean(metadata.inheritPlans),
+          inheritPaymentGateway: Boolean(metadata.inheritPaymentGateway),
+          inheritRouterVisibility: Boolean(metadata.inheritRouterVisibility),
+          useParentRouters: Boolean(metadata.useParentRouters),
+          canCreateSubZone: Boolean(metadata.canCreateSubZone),
+        }
+  const permissionProfile =
+    metadata.permissionProfile && typeof metadata.permissionProfile === 'object'
+      ? metadata.permissionProfile
+      : {
+          allowCustomerManagement: true,
+          allowBilling: true,
+          allowTickets: true,
+          allowJobs: true,
+          allowNetwork: false,
+          allowSettings: false,
+        }
   return {
     id: item._id || item.franchiseCode || '',
     franchiseCode: item.franchiseCode || '',
@@ -1347,25 +1370,43 @@ function mapFranchiseProfile(item: any): FranchiseProfile {
       sequencePadding: Number(metadata.sequencePadding || 4),
       templateKey: metadata.templateKey || '',
     },
-    inheritanceProfile: metadata.inheritanceProfile && typeof metadata.inheritanceProfile === 'object' ? metadata.inheritanceProfile : {
-      inheritBillingProfile: Boolean(metadata.inheritBillingProfile),
-      inheritInvoiceTemplate: Boolean(metadata.inheritInvoiceTemplate),
-      inheritPlans: Boolean(metadata.inheritPlans),
-      inheritPaymentGateway: Boolean(metadata.inheritPaymentGateway),
-      inheritRouterVisibility: Boolean(metadata.inheritRouterVisibility),
-      useParentRouters: Boolean(metadata.useParentRouters),
-      canCreateSubZone: Boolean(metadata.canCreateSubZone),
-    },
-    permissionProfile: metadata.permissionProfile && typeof metadata.permissionProfile === 'object'
-      ? metadata.permissionProfile
-      : {
-          allowCustomerManagement: true,
-          allowBilling: true,
-          allowTickets: true,
-          allowJobs: true,
-          allowNetwork: false,
-          allowSettings: false,
-        },
+    inheritanceProfile,
+    permissionProfile,
+    operatingProfile:
+      metadata.operatingProfile && typeof metadata.operatingProfile === 'object'
+        ? metadata.operatingProfile
+        : {
+            mode: 'shared',
+            cityScope: 'shared_parent',
+            billingAutonomy: inheritanceProfile.inheritBillingProfile ? 'parent_controlled' : 'zone_controlled',
+          },
+    isolationProfile:
+      metadata.isolationProfile && typeof metadata.isolationProfile === 'object'
+        ? metadata.isolationProfile
+        : {
+            dedicatedPlans: !inheritanceProfile.inheritPlans,
+            dedicatedInvoiceTemplate: !inheritanceProfile.inheritInvoiceTemplate,
+            dedicatedCafTemplate: Boolean(metadata.cafTemplateKey),
+            dedicatedNatLogs: true,
+            dedicatedBillingProfile: !inheritanceProfile.inheritBillingProfile,
+            dedicatedPaymentGateway: !inheritanceProfile.inheritPaymentGateway,
+            dedicatedRouterInventory: !inheritanceProfile.inheritRouterVisibility && !inheritanceProfile.useParentRouters,
+            dedicatedCustomerIdSeries: false,
+            strictDataIsolation: false,
+          },
+    capabilityProfile:
+      metadata.capabilityProfile && typeof metadata.capabilityProfile === 'object'
+        ? metadata.capabilityProfile
+        : {
+            allowPlanManagement: Boolean(permissionProfile.allowSettings),
+            allowInvoiceTemplateManagement: Boolean(permissionProfile.allowSettings),
+            allowCafTemplateManagement: Boolean(permissionProfile.allowSettings),
+            allowNatLogAccess: Boolean(permissionProfile.allowNetwork),
+            allowProvisioningControl: Boolean(permissionProfile.allowNetwork),
+            allowPaymentGatewayConfig: Boolean(permissionProfile.allowSettings),
+            allowRouterInventory: Boolean(permissionProfile.allowNetwork),
+            allowCollectionsDesk: Boolean(permissionProfile.allowBilling),
+          },
     adminAccounts: Array.isArray(metadata.adminAccounts) ? metadata.adminAccounts : [],
     copiedSettings: metadata.copiedSettings && typeof metadata.copiedSettings === 'object'
       ? {

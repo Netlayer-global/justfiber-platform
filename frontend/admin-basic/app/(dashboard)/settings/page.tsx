@@ -105,6 +105,26 @@ type SubZoneDraft = {
   allowJobs: boolean
   allowNetwork: boolean
   allowSettings: boolean
+  operatingMode: 'shared' | 'hybrid' | 'isolated'
+  cityScope: 'shared_parent' | 'city_business_unit' | 'independent_city'
+  billingAutonomy: 'parent_controlled' | 'zone_controlled'
+  dedicatedPlans: boolean
+  dedicatedInvoiceTemplate: boolean
+  dedicatedCafTemplate: boolean
+  dedicatedNatLogs: boolean
+  dedicatedBillingProfile: boolean
+  dedicatedPaymentGateway: boolean
+  dedicatedRouterInventory: boolean
+  dedicatedCustomerIdSeries: boolean
+  strictDataIsolation: boolean
+  allowPlanManagement: boolean
+  allowInvoiceTemplateManagement: boolean
+  allowCafTemplateManagement: boolean
+  allowNatLogAccess: boolean
+  allowProvisioningControl: boolean
+  allowPaymentGatewayConfig: boolean
+  allowRouterInventory: boolean
+  allowCollectionsDesk: boolean
 }
 
 const SUB_ZONE_PERMISSION_GROUPS = [
@@ -138,6 +158,29 @@ const SUB_ZONE_PERMISSION_GROUPS = [
     label: 'Settings access',
     permissions: ['config.read', 'config.update', 'admin.user.manage'],
   },
+] as const
+
+const SUB_ZONE_ISOLATION_GROUPS = [
+  { key: 'dedicatedPlans', label: 'Dedicated plans' },
+  { key: 'dedicatedInvoiceTemplate', label: 'Dedicated invoice template' },
+  { key: 'dedicatedCafTemplate', label: 'Dedicated CAF template' },
+  { key: 'dedicatedNatLogs', label: 'Dedicated NAT log view' },
+  { key: 'dedicatedBillingProfile', label: 'Dedicated billing profile' },
+  { key: 'dedicatedPaymentGateway', label: 'Dedicated payment gateway' },
+  { key: 'dedicatedRouterInventory', label: 'Dedicated router inventory' },
+  { key: 'dedicatedCustomerIdSeries', label: 'Dedicated customer/invoice series' },
+  { key: 'strictDataIsolation', label: 'Strict zone data isolation' },
+] as const
+
+const SUB_ZONE_CAPABILITY_GROUPS = [
+  { key: 'allowPlanManagement', label: 'Can manage zone plans' },
+  { key: 'allowInvoiceTemplateManagement', label: 'Can manage invoice template' },
+  { key: 'allowCafTemplateManagement', label: 'Can manage CAF template' },
+  { key: 'allowNatLogAccess', label: 'Can access NAT logs' },
+  { key: 'allowProvisioningControl', label: 'Can control provisioning' },
+  { key: 'allowPaymentGatewayConfig', label: 'Can manage payment gateway' },
+  { key: 'allowRouterInventory', label: 'Can manage routers and stock' },
+  { key: 'allowCollectionsDesk', label: 'Can use collections desk' },
 ] as const
 
 function buildSubZonePermissionOverrides(draft: SubZoneDraft) {
@@ -366,6 +409,26 @@ const initialSubZoneDraft: SubZoneDraft = {
   allowJobs: true,
   allowNetwork: false,
   allowSettings: false,
+  operatingMode: 'hybrid',
+  cityScope: 'city_business_unit',
+  billingAutonomy: 'zone_controlled',
+  dedicatedPlans: true,
+  dedicatedInvoiceTemplate: true,
+  dedicatedCafTemplate: true,
+  dedicatedNatLogs: true,
+  dedicatedBillingProfile: true,
+  dedicatedPaymentGateway: false,
+  dedicatedRouterInventory: false,
+  dedicatedCustomerIdSeries: true,
+  strictDataIsolation: true,
+  allowPlanManagement: true,
+  allowInvoiceTemplateManagement: true,
+  allowCafTemplateManagement: true,
+  allowNatLogAccess: true,
+  allowProvisioningControl: false,
+  allowPaymentGatewayConfig: false,
+  allowRouterInventory: false,
+  allowCollectionsDesk: true,
 }
 
 function normalizeRootZoneLabel(label?: string | null) {
@@ -450,6 +513,18 @@ function describeInheritanceLabels(profile?: FranchiseProfile['inheritanceProfil
 function describePermissionLabels(profile?: FranchiseProfile['permissionProfile']) {
   return SUB_ZONE_PERMISSION_GROUPS
     .filter((group) => Boolean(profile?.[group.key as keyof NonNullable<FranchiseProfile['permissionProfile']>]))
+    .map((group) => group.label)
+}
+
+function describeIsolationLabels(profile?: FranchiseProfile['isolationProfile']) {
+  return SUB_ZONE_ISOLATION_GROUPS
+    .filter((group) => Boolean(profile?.[group.key as keyof NonNullable<FranchiseProfile['isolationProfile']>]))
+    .map((group) => group.label)
+}
+
+function describeCapabilityLabels(profile?: FranchiseProfile['capabilityProfile']) {
+  return SUB_ZONE_CAPABILITY_GROUPS
+    .filter((group) => Boolean(profile?.[group.key as keyof NonNullable<FranchiseProfile['capabilityProfile']>]))
     .map((group) => group.label)
 }
 
@@ -1220,6 +1295,17 @@ export default function SettingsPage() {
         },
         permissionProfile: Object.fromEntries(
           SUB_ZONE_PERMISSION_GROUPS.map((group) => [group.key, Boolean(subZoneDraft[group.key as keyof SubZoneDraft])])
+        ),
+        operatingProfile: {
+          mode: subZoneDraft.operatingMode,
+          cityScope: subZoneDraft.cityScope,
+          billingAutonomy: subZoneDraft.billingAutonomy,
+        },
+        isolationProfile: Object.fromEntries(
+          SUB_ZONE_ISOLATION_GROUPS.map((group) => [group.key, Boolean(subZoneDraft[group.key as keyof SubZoneDraft])])
+        ),
+        capabilityProfile: Object.fromEntries(
+          SUB_ZONE_CAPABILITY_GROUPS.map((group) => [group.key, Boolean(subZoneDraft[group.key as keyof SubZoneDraft])])
         ),
         adminAccounts: (subZoneDraft.adminEmail.trim() || subZoneDraft.adminUsername.trim())
           ? [{
@@ -2124,6 +2210,79 @@ export default function SettingsPage() {
                   </label>
                 ))}
               </div>
+              <div className="mt-5 grid gap-4 xl:grid-cols-3">
+                <label className="rounded-[18px] border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                  <div className="mb-2 font-semibold text-slate-900">Operating Mode</div>
+                  <select
+                    className="input"
+                    value={subZoneDraft.operatingMode}
+                    onChange={(event) => setSubZoneDraft((current) => ({ ...current, operatingMode: event.target.value as SubZoneDraft['operatingMode'] }))}
+                  >
+                    <option value="shared">Shared</option>
+                    <option value="hybrid">Hybrid</option>
+                    <option value="isolated">Isolated</option>
+                  </select>
+                </label>
+                <label className="rounded-[18px] border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                  <div className="mb-2 font-semibold text-slate-900">City Scope</div>
+                  <select
+                    className="input"
+                    value={subZoneDraft.cityScope}
+                    onChange={(event) => setSubZoneDraft((current) => ({ ...current, cityScope: event.target.value as SubZoneDraft['cityScope'] }))}
+                  >
+                    <option value="shared_parent">Shared Parent</option>
+                    <option value="city_business_unit">City Business Unit</option>
+                    <option value="independent_city">Independent City</option>
+                  </select>
+                </label>
+                <label className="rounded-[18px] border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                  <div className="mb-2 font-semibold text-slate-900">Billing Control</div>
+                  <select
+                    className="input"
+                    value={subZoneDraft.billingAutonomy}
+                    onChange={(event) => setSubZoneDraft((current) => ({ ...current, billingAutonomy: event.target.value as SubZoneDraft['billingAutonomy'] }))}
+                  >
+                    <option value="parent_controlled">Parent Controlled</option>
+                    <option value="zone_controlled">Zone Controlled</option>
+                  </select>
+                </label>
+              </div>
+              <div className="mt-5 rounded-[22px] border border-slate-200 bg-white p-4">
+                <div className="text-sm font-semibold text-slate-900">Dedicated Zone Resources</div>
+                <div className="mt-1 text-xs text-slate-500">
+                  Decide which resources this city zone should own separately from the parent zone.
+                </div>
+                <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3 text-sm text-slate-600">
+                  {SUB_ZONE_ISOLATION_GROUPS.map((group) => (
+                    <label key={group.key} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(subZoneDraft[group.key as keyof SubZoneDraft])}
+                        onChange={(event) => setSubZoneDraft((current) => ({ ...current, [group.key]: event.target.checked }))}
+                      />
+                      <span>{group.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-5 rounded-[22px] border border-slate-200 bg-white p-4">
+                <div className="text-sm font-semibold text-slate-900">Zone Business Controls</div>
+                <div className="mt-1 text-xs text-slate-500">
+                  Decide what the zone admin can manage directly after this city zone is created.
+                </div>
+                <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3 text-sm text-slate-600">
+                  {SUB_ZONE_CAPABILITY_GROUPS.map((group) => (
+                    <label key={group.key} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(subZoneDraft[group.key as keyof SubZoneDraft])}
+                        onChange={(event) => setSubZoneDraft((current) => ({ ...current, [group.key]: event.target.checked }))}
+                      />
+                      <span>{group.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
               <div className="mt-5 rounded-[22px] border border-slate-200 bg-white p-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
@@ -2206,6 +2365,8 @@ export default function SettingsPage() {
                     const deleting = busyDeleteFranchiseCode === item.franchiseCode
                     const allowedWork = describePermissionLabels(item.permissionProfile)
                     const inheritedRules = describeInheritanceLabels(item.inheritanceProfile)
+                    const isolationRules = describeIsolationLabels(item.isolationProfile)
+                    const capabilityRules = describeCapabilityLabels(item.capabilityProfile)
                     const primaryAdmin = item.adminAccounts?.[0]
                     return (
                       <div key={item.id || item.franchiseCode} className="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm">
@@ -2279,6 +2440,57 @@ export default function SettingsPage() {
                                   {label}
                                 </span>
                               ))}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-4 grid gap-4 xl:grid-cols-3">
+                          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+                            <div className="text-sm font-semibold text-slate-900">Operating Model</div>
+                            <div className="mt-1 text-xs text-slate-500">How this city zone runs inside the platform.</div>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <span className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
+                                {item.operatingProfile?.mode || 'shared'}
+                              </span>
+                              <span className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
+                                {item.operatingProfile?.cityScope || 'shared_parent'}
+                              </span>
+                              <span className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
+                                {item.operatingProfile?.billingAutonomy || 'parent_controlled'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+                            <div className="text-sm font-semibold text-slate-900">Dedicated Resources</div>
+                            <div className="mt-1 text-xs text-slate-500">Zone-owned plans, template, CAF, NAT, billing and IDs.</div>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {isolationRules.length ? (
+                                isolationRules.map((label) => (
+                                  <span key={label} className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                                    {label}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-500">
+                                  Shared with parent defaults
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+                            <div className="text-sm font-semibold text-slate-900">Direct Business Controls</div>
+                            <div className="mt-1 text-xs text-slate-500">What the zone admin can change without main admin help.</div>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {capabilityRules.length ? (
+                                capabilityRules.map((label) => (
+                                  <span key={label} className="rounded-full border border-fuchsia-200 bg-fuchsia-50 px-3 py-1 text-xs font-semibold text-fuchsia-700">
+                                    {label}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-500">
+                                  No direct business controls
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
