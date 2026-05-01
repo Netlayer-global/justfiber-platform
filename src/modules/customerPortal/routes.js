@@ -33,7 +33,7 @@ import { SubscriberService } from "../../models/SubscriberService.js";
 import { buildPagination } from "../../common/pagination.js";
 import { razorpayClient } from "../../integrations/razorpayClient.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
-import { internalBillingEngine } from "../../integrations/internalBillingEngine.js";
+import { internalBillingEngine, repriceOpenInvoicesForCustomer } from "../../integrations/internalBillingEngine.js";
 import { buildBillingNotificationContent, notificationDispatcher } from "../../integrations/notificationDispatcher.js";
 import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
 import { syncDeviceFromGenie } from "../../common/deviceOperationalSync.js";
@@ -1882,6 +1882,15 @@ async function finalizePendingPlanChange(customer, customerUserId) {
   };
   await customer.save();
   await syncPortalCustomerServicePlan(customer, plan, pending.billingTerm || customer.billingSnapshot?.nextPlanTerm || "monthly");
+  await repriceOpenInvoicesForCustomer({
+    customer: {
+      ...customer.toObject(),
+      planCode: plan.planCode,
+      planName: plan.name
+    },
+    plan,
+    billingTerm: pending.billingTerm || customer.billingSnapshot?.nextPlanTerm || "monthly"
+  });
   const request = await ServiceRequest.create({
     requestNumber: `SR${Date.now().toString().slice(-6)}`,
     customerUserId: customerUserId || undefined,
@@ -4548,6 +4557,15 @@ customerPortalRouter.post(
     };
     await customer.save();
     await syncPortalCustomerServicePlan(customer, plan, payload.billingTerm);
+    await repriceOpenInvoicesForCustomer({
+      customer: {
+        ...customer.toObject(),
+        planCode: plan.planCode,
+        planName: plan.name
+      },
+      plan,
+      billingTerm: payload.billingTerm
+    });
     const request = await ServiceRequest.create({
       requestNumber: `SR${Date.now().toString().slice(-6)}`,
       customerUserId: req.customerUser._id,

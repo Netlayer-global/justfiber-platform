@@ -926,6 +926,59 @@ export async function regenerateExistingInvoice(invoice, {
   return invoice;
 }
 
+export async function repriceOpenInvoicesForCustomer({
+  customer,
+  subscriberService = null,
+  plan = null,
+  billingTerm = "monthly",
+  adminId = null
+} = {}) {
+  if (!customer?.customerId) return [];
+  const safeSubscriberService = subscriberService
+    || (customer.serviceId
+      ? await SubscriberService.findOne({ serviceId: customer.serviceId }).lean()
+      : await SubscriberService.findOne({ customerId: customer.customerId }).lean())
+    || null;
+  const safePlan =
+    plan ||
+    (customer.planCode ? await PlanCatalog.findOne({ planCode: customer.planCode }).lean() : null) ||
+    null;
+  if (!safePlan) return [];
+  const durationMonths = Math.max(
+    1,
+    Number(
+      safeSubscriberService?.billingPeriodMonths ||
+      safeSubscriberService?.metadata?.durationMonths ||
+      customer.billingSnapshot?.durationMonths ||
+      (billingTerm === "yearly" ? 12 : billingTerm === "halfYearly" ? 6 : billingTerm === "quarterly" ? 3 : 1)
+    ) || 1
+  );
+  const invoices = await BillingInvoice.find({
+    customerId: customer.customerId,
+    paymentStatus: { $nin: ["paid", "captured"] }
+  }).sort({ generatedAt: -1, createdAt: -1 });
+  const repriced = [];
+  for (const invoice of invoices) {
+    await regenerateExistingInvoice(invoice, {
+      customer,
+      subscriberService: safeSubscriberService,
+      plan: safePlan,
+      invoiceMetadata: {
+        durationMonths,
+        planCode: safePlan.planCode || customer.planCode || "",
+        planName: safePlan.name || customer.planName || ""
+      },
+      adminId
+    });
+    await invoice.save();
+    await syncInvoiceLifecycle(invoice, {
+      lifecycleStatus: deriveInvoiceLifecycle(invoice)
+    });
+    repriced.push(invoice.invoiceId);
+  }
+  return repriced;
+}
+
 function resolveServiceDurationMonths(service) {
   return Math.max(1, Number(service?.billingPeriodMonths || service?.metadata?.durationMonths || 1));
 }

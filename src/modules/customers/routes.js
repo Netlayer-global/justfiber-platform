@@ -50,7 +50,7 @@ import { LeadKycDocument } from "../../models/LeadKycDocument.js";
 import { NetworkNodeStatus } from "../../models/NetworkNodeStatus.js";
 import { SalesAgent } from "../../models/SalesAgent.js";
 import { applyBillingNoteAdjustment } from "../../common/billingAccounting.js";
-import { internalBillingEngine } from "../../integrations/internalBillingEngine.js";
+import { internalBillingEngine, repriceOpenInvoicesForCustomer } from "../../integrations/internalBillingEngine.js";
 export const customersRouter = Router();
 
 customersRouter.use(requireAuth);
@@ -2521,6 +2521,16 @@ customersRouter.post(
     };
     await customer.save();
     await syncCustomerServicePlan(customer, plan, payload.billingTerm);
+    await repriceOpenInvoicesForCustomer({
+      customer: {
+        ...customer.toObject(),
+        planCode: plan.planCode,
+        planName: plan.name
+      },
+      plan,
+      billingTerm: payload.billingTerm,
+      adminId: req.admin?._id || null
+    });
     const request = await ServiceRequest.create({
       requestNumber: `SR${Date.now().toString().slice(-6)}`,
       customerId: customer.customerId,
@@ -2691,6 +2701,16 @@ customersRouter.post(
     };
     await customer.save();
     await syncCustomerServicePlan(customer, plan, pending.billingTerm || "monthly");
+    await repriceOpenInvoicesForCustomer({
+      customer: {
+        ...customer.toObject(),
+        planCode: plan.planCode,
+        planName: plan.name
+      },
+      plan,
+      billingTerm: pending.billingTerm || "monthly",
+      adminId: req.admin?._id || null
+    });
 
     await ServiceRequest.updateMany(
       {
