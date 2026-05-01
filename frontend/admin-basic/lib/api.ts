@@ -3394,6 +3394,16 @@ export const adminAPI = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  cancelCustomerPlanChange: (customerId: string) =>
+    request(`/api/v1/admin/customers/${customerId}/plan-change/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    }),
+  forceApplyCustomerPlanChange: (customerId: string) =>
+    request(`/api/v1/admin/customers/${customerId}/plan-change/force-apply`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    }),
   getApprovalRequests: async (page = 1, limit = 20) =>
     request<any[]>(`/api/v1/admin/approvals/requests?page=${page}&limit=${limit}`),
   approveApprovalRequest: async (id: string, note?: string) =>

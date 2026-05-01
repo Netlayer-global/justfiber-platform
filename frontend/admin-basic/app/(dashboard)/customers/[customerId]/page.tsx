@@ -239,6 +239,7 @@ function OverviewTab({ customer, onRefresh }: { customer: Customer; onRefresh: (
   const primaryDevice = customer.devices?.[0]
   const pendingPlanChange = customer.billingSnapshot?.pendingPlanChange as Record<string, any> | null | undefined
   const hasPendingPlanChange = Boolean(pendingPlanChange?.planCode || pendingPlanChange?.planName)
+  const pendingPlanNoteNumber = customerDeviceText(pendingPlanChange?.noteNumber)
   const pppoeUsername = customerDeviceText(
     customer.pppoeUsername,
     customer.radiusService?.radiusUsername,
@@ -278,6 +279,7 @@ function OverviewTab({ customer, onRefresh }: { customer: Customer; onRefresh: (
   const [pppoePasswordInput, setPppoePasswordInput] = useState('')
   const [savingWifi, setSavingWifi] = useState(false)
   const [savingPppoe, setSavingPppoe] = useState(false)
+  const [processingPlanAction, setProcessingPlanAction] = useState<'cancel' | 'force' | null>(null)
 
   useEffect(() => {
     setWifi24(ssid24)
@@ -337,6 +339,42 @@ function OverviewTab({ customer, onRefresh }: { customer: Customer; onRefresh: (
       toast.error(error instanceof Error ? error.message : 'Failed to update PPPoE')
     } finally {
       setSavingPppoe(false)
+    }
+  }
+
+  async function handleCancelPendingPlanChange() {
+    if (!customer.customerId || !confirm('Cancel the pending plan change?')) return
+    try {
+      setProcessingPlanAction('cancel')
+      const res = await adminAPI.cancelCustomerPlanChange(customer.customerId)
+      if (!res.success) {
+        toast.error(typeof res.error === 'string' ? res.error : 'Failed to cancel pending plan change')
+        return
+      }
+      toast.success('Pending plan change cancelled')
+      await onRefresh()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to cancel pending plan change')
+    } finally {
+      setProcessingPlanAction(null)
+    }
+  }
+
+  async function handleForceApplyPendingPlanChange() {
+    if (!customer.customerId || !confirm('Force apply the pending plan change now?')) return
+    try {
+      setProcessingPlanAction('force')
+      const res = await adminAPI.forceApplyCustomerPlanChange(customer.customerId)
+      if (!res.success) {
+        toast.error(typeof res.error === 'string' ? res.error : 'Failed to force apply pending plan change')
+        return
+      }
+      toast.success('Pending plan change applied')
+      await onRefresh()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to force apply pending plan change')
+    } finally {
+      setProcessingPlanAction(null)
     }
   }
 
@@ -430,6 +468,35 @@ function OverviewTab({ customer, onRefresh }: { customer: Customer; onRefresh: (
                 : String(pendingPlanChange?.effectiveMode || '') === 'next_cycle'
                   ? 'This change is scheduled and will auto-apply on the next billing date before the next invoice is generated.'
                   : 'Pending plan change is ready and should auto-apply on the next successful settlement trigger.'}
+            </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void handleCancelPendingPlanChange()}
+                disabled={processingPlanAction !== null}
+              >
+                {processingPlanAction === 'cancel' ? 'Cancelling...' : 'Cancel Pending Change'}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void handleForceApplyPendingPlanChange()}
+                disabled={processingPlanAction !== null}
+              >
+                {processingPlanAction === 'force' ? 'Applying...' : 'Force Apply Now'}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={!pendingPlanNoteNumber}
+                onClick={() => {
+                  if (!pendingPlanNoteNumber) return
+                  window.location.href = `/billing?customerId=${encodeURIComponent(customer.id)}&note=${encodeURIComponent(pendingPlanNoteNumber)}`
+                }}
+              >
+                Open Payment Note
+              </Button>
             </div>
           </div>
         ) : null}
