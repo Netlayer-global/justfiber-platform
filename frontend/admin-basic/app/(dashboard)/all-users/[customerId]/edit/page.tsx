@@ -13,6 +13,7 @@ type FormState = {
   phone: string
   email: string
   planCode: string
+  billingTerm: 'monthly' | 'quarterly' | 'halfYearly' | 'yearly'
   customerType: 'home' | 'business'
   line1: string
   line2: string
@@ -36,6 +37,7 @@ const emptyForm: FormState = {
   phone: '',
   email: '',
   planCode: '',
+  billingTerm: 'monthly',
   customerType: 'home',
   line1: '',
   line2: '',
@@ -74,6 +76,22 @@ function isLikelyIpv4(value: string) {
   return /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/.test(value.trim())
 }
 
+function getPlanBillingTermOptions(plan?: Plan | null) {
+  if (!plan) return [{ value: 'monthly', label: 'Monthly' }]
+  const validity = {
+    monthly: plan.validityOptions?.monthly !== false,
+    quarterly: Boolean(plan.validityOptions?.quarterly),
+    halfYearly: Boolean(plan.validityOptions?.halfYearly),
+    yearly: Boolean(plan.validityOptions?.yearly),
+  }
+  const options: Array<{ value: 'monthly' | 'quarterly' | 'halfYearly' | 'yearly'; label: string }> = []
+  if (validity.monthly) options.push({ value: 'monthly', label: 'Monthly' })
+  if (validity.quarterly) options.push({ value: 'quarterly', label: 'Quarterly' })
+  if (validity.halfYearly) options.push({ value: 'halfYearly', label: 'Half-Yearly' })
+  if (validity.yearly) options.push({ value: 'yearly', label: 'Yearly' })
+  return options.length ? options : [{ value: 'monthly', label: 'Monthly' }]
+}
+
 export default function EditUserPage() {
   const params = useParams<{ customerId: string }>()
   const customerId = params.customerId
@@ -106,6 +124,11 @@ export default function EditUserPage() {
   }, [form])
   const canSave = Object.keys(formErrors).length === 0
   const formErrorList = Object.values(formErrors)
+  const selectedPlan = useMemo(
+    () => plans.find((item) => item.id === form.planCode || item.planCode === form.planCode) || null,
+    [plans, form.planCode]
+  )
+  const planBillingTermOptions = useMemo(() => getPlanBillingTermOptions(selectedPlan), [selectedPlan])
 
   useEffect(() => {
     if (!customerId) return
@@ -132,6 +155,7 @@ export default function EditUserPage() {
         phone: customerRes.data.phone || '',
         email: customerRes.data.email === '-' ? '' : customerRes.data.email || '',
         planCode: customerRes.data.plan?.id || '',
+        billingTerm: (customerRes.data.billingSnapshot?.billingTerm || customerRes.data.invoiceSummary?.billCycle || 'monthly') as FormState['billingTerm'],
         customerType: customerRes.data.billingSnapshot?.customerType === 'business' ? 'business' : 'home',
         line1: customerRes.data.rawAddress?.line1 || '',
         line2: customerRes.data.rawAddress?.line2 || '',
@@ -167,24 +191,27 @@ export default function EditUserPage() {
       toast.error('Please fix the highlighted fields before saving')
       return
     }
-    const selectedPlan = plans.find((item) => item.id === form.planCode || item.planCode === form.planCode)
     try {
       setIsSaving(true)
       setSaveMessage(null)
       const res = await adminAPI.updateCustomer(customer.id, {
-        name: form.fullName.trim(),
+        fullName: form.fullName.trim(),
         phone: form.phone,
-        email: form.email || '-',
-        status: form.operationalStatus,
-        plan: selectedPlan
-          ? {
-              id: selectedPlan.planCode || selectedPlan.id,
-              name: selectedPlan.name,
-            }
-          : customer.plan,
+        email: form.email || undefined,
+        operationalStatus: form.operationalStatus,
+        ...(selectedPlan ? { planCode: selectedPlan.planCode || selectedPlan.id, planName: selectedPlan.name } : {}),
         billingSnapshot: {
           ...(customer.billingSnapshot || {}),
           customerType: form.customerType,
+          billingTerm: form.billingTerm,
+          durationMonths:
+            form.billingTerm === 'yearly'
+              ? 12
+              : form.billingTerm === 'halfYearly'
+                ? 6
+                : form.billingTerm === 'quarterly'
+                  ? 3
+                  : 1,
           serviceFlags: {
             ...(customer.billingSnapshot?.serviceFlags || {}),
             iptv: form.createIptvBilling,
@@ -192,7 +219,11 @@ export default function EditUserPage() {
             voice: form.createVoiceBilling,
           },
         },
-        rawAddress: {
+        invoiceSummary: {
+          ...(customer.invoiceSummary || {}),
+          billCycle: form.billingTerm,
+        },
+        address: {
           line1: form.line1,
           line2: form.line2,
           area: form.area,
@@ -226,12 +257,25 @@ export default function EditUserPage() {
         billingSnapshot: {
           ...(current.billingSnapshot || {}),
           customerType: form.customerType,
+          billingTerm: form.billingTerm,
+          durationMonths:
+            form.billingTerm === 'yearly'
+              ? 12
+              : form.billingTerm === 'halfYearly'
+                ? 6
+                : form.billingTerm === 'quarterly'
+                  ? 3
+                  : 1,
           serviceFlags: {
             ...(current.billingSnapshot?.serviceFlags || {}),
             iptv: form.createIptvBilling,
             ott: form.createOttBilling,
             voice: form.createVoiceBilling,
           },
+        },
+        invoiceSummary: {
+          ...(current.invoiceSummary || {}),
+          billCycle: form.billingTerm,
         },
         rawAddress: {
           ...(current.rawAddress || {}),
@@ -308,6 +352,7 @@ export default function EditUserPage() {
             <div>User: {username || '-'}</div>
             <div>Customer: {form.fullName.trim() || '-'}</div>
             <div>Package: {plans.find((plan) => (plan.planCode || plan.id) === form.planCode)?.name || '-'}</div>
+            <div>Duration: {form.billingTerm}</div>
             <div>Status: {form.operationalStatus}</div>
             <div>Zone: {form.zoneName || form.zoneCode || '-'}</div>
           </div>
@@ -413,7 +458,10 @@ export default function EditUserPage() {
               <div className="text-sm font-medium text-slate-600">Package</div>
               <select className={`input ${formErrors.planCode ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : ''}`} value={form.planCode} onChange={(e) => {
                 setSaveMessage(null)
-                setForm((prev) => ({ ...prev, planCode: e.target.value }))
+                const nextPlanCode = e.target.value
+                const nextPlan = plans.find((plan) => (plan.planCode || plan.id) === nextPlanCode) || null
+                const nextTerms = getPlanBillingTermOptions(nextPlan)
+                setForm((prev) => ({ ...prev, planCode: nextPlanCode, billingTerm: (nextTerms[0]?.value || 'monthly') as FormState['billingTerm'] }))
               }}>
                 {plans.map((plan) => (
                   <option key={plan.id} value={plan.planCode || plan.id}>
@@ -422,6 +470,23 @@ export default function EditUserPage() {
                 ))}
               </select>
               {formErrors.planCode ? <p className="text-xs text-rose-600">{formErrors.planCode}</p> : null}
+            </label>
+            <label className="space-y-2">
+              <div className="text-sm font-medium text-slate-600">Plan Duration</div>
+              <select
+                className="input"
+                value={form.billingTerm}
+                onChange={(e) => {
+                  setSaveMessage(null)
+                  setForm((prev) => ({ ...prev, billingTerm: e.target.value as FormState['billingTerm'] }))
+                }}
+              >
+                {planBillingTermOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">Zone code</div>

@@ -1763,6 +1763,13 @@ customersRouter.patch(
             ...(payload.zoneStateName !== undefined ? { zoneStateName: payload.zoneStateName, billingStateName: payload.zoneStateName } : {})
           }
         : undefined;
+    const nextBillingTerm = String(
+      payload.billingSnapshot?.billingTerm ||
+      payload.invoiceSummary?.billCycle ||
+      billingSnapshotPatch?.billingTerm ||
+      existingCustomer.billingSnapshot?.billingTerm ||
+      "monthly"
+    ).trim() || "monthly";
     const customer = await Customer.findOneAndUpdate(
       { customerId: req.params.customerId },
       {
@@ -1774,6 +1781,21 @@ customersRouter.patch(
       },
       { new: true }
     );
+    if (payload.planCode) {
+      const selectedPlan = await PlanCatalog.findOne({ planCode: payload.planCode, archivedAt: { $exists: false } }).lean();
+      if (!selectedPlan) {
+        throw new ApiError(404, "Plan not found");
+      }
+      await syncCustomerServicePlan(customer.toObject(), selectedPlan, nextBillingTerm);
+    } else if (payload.billingSnapshot?.billingTerm || payload.invoiceSummary?.billCycle) {
+      const activePlanCode = customer.planCode || existingCustomer.planCode;
+      if (activePlanCode) {
+        const selectedPlan = await PlanCatalog.findOne({ planCode: activePlanCode, archivedAt: { $exists: false } }).lean();
+        if (selectedPlan) {
+          await syncCustomerServicePlan(customer.toObject(), selectedPlan, nextBillingTerm);
+        }
+      }
+    }
     let radiusSyncApplied = false;
     let bngAutoSelected = false;
     if (radiusServicePayload) {

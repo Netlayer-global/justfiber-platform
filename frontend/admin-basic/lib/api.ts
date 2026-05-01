@@ -2154,26 +2154,26 @@ export const adminAPI = {
     }>('/api/v1/admin/customers/demo-data/cleanup', {
       method: 'POST',
     }),
-  updateCustomer: (id: string, data: Partial<Customer>) =>
+  updateCustomer: (id: string, data: Record<string, any>) =>
     request<Customer>(`/api/v1/admin/customers/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({
-        fullName: data.name,
+        fullName: data.fullName ?? data.name,
         phone: data.phone,
         email: data.email === '-' ? null : data.email,
-        planCode: data.plan?.id,
-        planName: data.plan?.name,
+        planCode: data.planCode ?? data.plan?.id,
+        planName: data.planName ?? data.plan?.name,
         zoneCode: data.zoneCode,
         zoneName: data.zoneName,
         zoneStateCode: data.zoneStateCode,
         zoneStateName: data.zoneStateName,
         operationalStatus:
-          data.status === 'suspended'
+          (data.operationalStatus || data.status) === 'suspended'
             ? 'suspended'
-            : data.status === 'inactive'
+            : (data.operationalStatus || data.status) === 'inactive'
               ? 'inactive'
               : 'active',
-        address: data.rawAddress,
+        address: data.address ?? data.rawAddress,
         billingSnapshot: data.billingSnapshot,
         invoiceSummary: data.invoiceSummary,
         radiusService: data.radiusService
