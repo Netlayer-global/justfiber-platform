@@ -287,6 +287,13 @@ function resolvePlanChargeForDuration(plan = {}, durationMonths = 1) {
   return Number(plan?.monthlyPrice || plan?.amount || 0) || 0;
 }
 
+function resolveBillingTermMonths(billingTerm = "monthly") {
+  if (billingTerm === "yearly") return 12;
+  if (billingTerm === "halfYearly") return 6;
+  if (billingTerm === "quarterly") return 3;
+  return 1;
+}
+
 async function syncCustomerServicePlan(customer, plan, billingTerm = "monthly") {
   if (!customer?.serviceId || !plan) return;
   const existingService = await SubscriberService.findOne({ serviceId: customer.serviceId }).lean();
@@ -1045,7 +1052,8 @@ customersRouter.post(
     const resolvedZoneStateName = String(payload.zoneStateName || payload.address.state || "").trim() || undefined;
     const cafSettings = await getCustomerCafSettings();
     const startDate = payload.startDate ? new Date(`${payload.startDate}T00:00:00`) : new Date();
-    const durationMonths = Math.max(1, Number(plan?.provisioning?.durationMonths || 1));
+    const durationMonths = Math.max(1, resolveBillingTermMonths(payload.billingTerm || "monthly"));
+    const recurringPlanAmount = resolvePlanChargeForDuration(plan, durationMonths);
     const nextBillingDate = addMonths(startDate, durationMonths);
     const remainingDays = Math.max(1, Math.ceil((nextBillingDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
     const cafDocument = buildCustomerCafDocument({
@@ -1087,10 +1095,12 @@ customersRouter.post(
             pinCode: payload.address.pinCode
           },
           billingSnapshot: {
-            lastInvoiceAmount: Number(plan.monthlyPrice || 0),
+            lastInvoiceAmount: recurringPlanAmount,
             currency: billingProfile?.currency || "INR",
             dueAmount: 0,
             remainingDays,
+            durationMonths,
+            billingTerm: payload.billingTerm || "monthly",
             speedMbps: networkProfile.speedMbps,
             uploadSpeedMbps: networkProfile.uploadSpeedMbps,
             dataPolicy: networkProfile.dataPolicy,
@@ -1109,7 +1119,7 @@ customersRouter.post(
             billingStateName: resolvedZoneStateName
           },
           invoiceSummary: {
-            billCycle: billingProfile?.cycle || "monthly",
+            billCycle: payload.billingTerm || billingProfile?.cycle || "monthly",
             billMode: billMode === "postpaid" ? "Postpaid" : "Prepaid"
           },
           cafDocument,
@@ -1150,14 +1160,8 @@ customersRouter.post(
             halfYearlyPrice: Number(plan?.halfYearlyPrice || 0),
             yearlyPrice: Number(plan?.yearlyPrice || 0),
             durationMonths,
-            recurringAmount:
-              durationMonths >= 12
-                ? Number(plan?.yearlyPrice || plan?.monthlyPrice || 0)
-                : durationMonths >= 6
-                  ? Number(plan?.halfYearlyPrice || plan?.monthlyPrice || 0)
-                  : durationMonths >= 3
-                    ? Number(plan?.quarterlyPrice || plan?.monthlyPrice || 0)
-                    : Number(plan?.monthlyPrice || 0),
+            billingTerm: payload.billingTerm || "monthly",
+            recurringAmount: recurringPlanAmount,
             billingBreakup: plan?.billingBreakup || {},
             routerModel: plan?.routerModel || "",
             routerRental: Number(plan?.routerRental || 0) || 0

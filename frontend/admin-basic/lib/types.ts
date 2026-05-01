@@ -309,6 +309,7 @@ export interface ManualCustomerCreatePayload {
   phone: string
   email?: string | null
   planCode: string
+  billingTerm?: 'monthly' | 'quarterly' | 'halfYearly' | 'yearly'
   operationalStatus?: 'active' | 'inactive' | 'suspended'
   customerType?: 'home' | 'business'
   zoneCode?: string

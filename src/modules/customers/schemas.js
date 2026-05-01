@@ -69,6 +69,7 @@ export const manualCreateCustomerSchema = z.object({
   phone: z.string().min(8).max(20),
   email: z.string().email().nullable().optional(),
   planCode: z.string().min(2),
+  billingTerm: z.enum(["monthly", "quarterly", "halfYearly", "yearly"]).default("monthly"),
   operationalStatus: z.enum(["active", "inactive", "suspended"]).default("active"),
   customerType: z.enum(["home", "business"]).default("home"),
   zoneCode: z.string().min(1).max(80).optional(),

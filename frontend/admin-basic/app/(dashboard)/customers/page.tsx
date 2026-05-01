@@ -28,6 +28,22 @@ function suggestPppoeUsername(fullName: string, phone: string) {
   return suggested || ''
 }
 
+function getPlanBillingTermOptions(plan?: Plan | null) {
+  if (!plan) return [{ value: 'monthly', label: 'Monthly' }]
+  const validity = {
+    monthly: plan.validityOptions?.monthly !== false,
+    quarterly: Boolean(plan.validityOptions?.quarterly),
+    halfYearly: Boolean(plan.validityOptions?.halfYearly),
+    yearly: Boolean(plan.validityOptions?.yearly),
+  }
+  const options: Array<{ value: 'monthly' | 'quarterly' | 'halfYearly' | 'yearly'; label: string }> = []
+  if (validity.monthly !== false) options.push({ value: 'monthly', label: 'Monthly' })
+  if (validity.quarterly) options.push({ value: 'quarterly', label: 'Quarterly' })
+  if (validity.halfYearly) options.push({ value: 'halfYearly', label: 'Half-Yearly' })
+  if (validity.yearly) options.push({ value: 'yearly', label: 'Yearly' })
+  return options.length ? options : [{ value: 'monthly', label: 'Monthly' }]
+}
+
 function CustomersContent() {
   const router = useRouter()
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -46,6 +62,7 @@ function CustomersContent() {
     phone: '',
     email: '',
     planCode: '',
+    billingTerm: 'monthly',
     line1: '',
     line2: '',
     area: '',
@@ -77,6 +94,11 @@ function CustomersContent() {
 
   const canCreateCustomer = Object.keys(createErrors).length === 0
   const suggestedUsername = useMemo(() => suggestPppoeUsername(createForm.fullName, createForm.phone), [createForm.fullName, createForm.phone])
+  const selectedPlan = useMemo(
+    () => plans.find((plan) => (plan.planCode || plan.id) === createForm.planCode) || null,
+    [plans, createForm.planCode]
+  )
+  const planBillingTermOptions = useMemo(() => getPlanBillingTermOptions(selectedPlan), [selectedPlan])
 
   function resetCreateForm() {
     setCreateForm((current) => ({
@@ -85,6 +107,7 @@ function CustomersContent() {
       fullName: '',
       phone: '',
       email: '',
+      billingTerm: 'monthly',
       line1: '',
       line2: '',
       area: '',
@@ -131,9 +154,11 @@ function CustomersContent() {
       const activeNodes = (bngRes.data || []).filter((node) => node.status === 'active')
       setPlans(activePlans)
       setBngNodes(activeNodes)
+      const fallbackBillingTerm = getPlanBillingTermOptions(activePlans[0] || null)[0]?.value || 'monthly'
       setCreateForm((current) => ({
         ...current,
         planCode: current.planCode || activePlans[0]?.planCode || activePlans[0]?.id || '',
+        billingTerm: current.billingTerm || fallbackBillingTerm,
         bngNodeCode: current.bngNodeCode || activeNodes[0]?.nodeCode || '',
       }))
     } catch (error) {
@@ -162,6 +187,7 @@ function CustomersContent() {
         phone: normalizePhone(createForm.phone),
         email: createForm.email.trim() || undefined,
         planCode: createForm.planCode,
+        billingTerm: createForm.billingTerm as 'monthly' | 'quarterly' | 'halfYearly' | 'yearly',
         operationalStatus: createForm.operationalStatus as 'active' | 'inactive' | 'suspended',
         customerType: 'home',
         zoneCode: activeZone.key !== 'default' ? activeZone.key : undefined,
@@ -414,7 +440,21 @@ function CustomersContent() {
                 </div>
                 <div>
                   <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">Plan</label>
-                  <select className={`input w-full ${createErrors.planCode ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : ''}`} required value={createForm.planCode} onChange={(e) => setCreateForm((current) => ({ ...current, planCode: e.target.value }))}>
+                  <select
+                    className={`input w-full ${createErrors.planCode ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : ''}`}
+                    required
+                    value={createForm.planCode}
+                    onChange={(e) => {
+                      const nextPlanCode = e.target.value
+                      const nextPlan = plans.find((plan) => (plan.planCode || plan.id) === nextPlanCode) || null
+                      const nextTerms = getPlanBillingTermOptions(nextPlan)
+                      setCreateForm((current) => ({
+                        ...current,
+                        planCode: nextPlanCode,
+                        billingTerm: nextTerms[0]?.value || 'monthly',
+                      }))
+                    }}
+                  >
                     <option value="">Select plan</option>
                     {plans.map((plan) => (
                       <option key={plan.id} value={plan.planCode || plan.id}>
@@ -423,6 +463,20 @@ function CustomersContent() {
                     ))}
                   </select>
                   {createErrors.planCode ? <p className="mt-2 text-xs text-rose-600">{createErrors.planCode}</p> : null}
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">Plan duration</label>
+                  <select
+                    className="input w-full"
+                    value={createForm.billingTerm}
+                    onChange={(e) => setCreateForm((current) => ({ ...current, billingTerm: e.target.value }))}
+                  >
+                    {planBillingTermOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">BNG</label>
