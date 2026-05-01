@@ -508,9 +508,9 @@ function resolveInvoiceDurationMonths(invoice = {}, subscriberService = null) {
   return Math.max(
     1,
     Number(
-      metadata.durationMonths ||
       subscriberService?.billingPeriodMonths ||
       subscriberService?.metadata?.durationMonths ||
+      metadata.durationMonths ||
       1
     )
   );
@@ -4394,9 +4394,9 @@ adminOpsRouter.post(
     const durationMonths = Math.max(
       1,
       Number(
-        invoice.metadata?.durationMonths ||
         serviceContext.metadata?.durationMonths ||
         subscriberService?.billingPeriodMonths ||
+        invoice.metadata?.durationMonths ||
         1
       ) || 1
     );

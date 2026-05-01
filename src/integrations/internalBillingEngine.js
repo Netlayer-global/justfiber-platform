@@ -781,10 +781,10 @@ export async function regenerateExistingInvoice(invoice, {
 
   const durationMonths = resolveDurationMonths({
     durationMonths:
-      invoice.metadata?.durationMonths ||
       invoiceMetadata?.durationMonths ||
       safeSubscriberService?.billingPeriodMonths ||
       safeSubscriberService?.metadata?.durationMonths ||
+      invoice.metadata?.durationMonths ||
       1
   });
   const billCycleLabel =
