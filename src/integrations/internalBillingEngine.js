@@ -433,6 +433,8 @@ function parseExpandedInvoicePrefix(value = "") {
 }
 
 function resolveExistingInvoiceNumbering(invoice = {}) {
+  const currentNumber = String(invoice?.invoiceNumber || "").trim();
+  if (!currentNumber) return null;
   const currentSequence = Number(
     invoice?.invoiceSequenceNumber ||
     invoice?.metadata?.invoiceSequenceNumber ||
@@ -441,18 +443,17 @@ function resolveExistingInvoiceNumbering(invoice = {}) {
   const currentPrefix = String(
     invoice?.invoicePrefix ||
     invoice?.metadata?.invoicePrefix ||
+    currentNumber
+  ).trim();
+  const currentSeriesCode = String(
+    invoice?.invoiceSeriesCode ||
+    invoice?.metadata?.invoiceSeriesCode ||
     ""
   ).trim();
-  const currentNumber = String(invoice?.invoiceNumber || "").trim();
-  const parsedFromPrefix = parseExpandedInvoicePrefix(currentPrefix);
-  const parsedFromNumber = parseExpandedInvoicePrefix(currentNumber);
-  const parsed = parsedFromPrefix || parsedFromNumber;
-  if (!parsed || currentSequence <= 0) return null;
-  const stableInvoiceNumber = parsedFromNumber?.fullPrefix || parsedFromPrefix?.fullPrefix || currentNumber;
   return {
-    invoiceNumber: stableInvoiceNumber,
-    invoicePrefix: parsed.fullPrefix,
-    invoiceSeriesCode: parsed.basePrefix,
+    invoiceNumber: currentNumber,
+    invoicePrefix: currentPrefix || currentNumber,
+    invoiceSeriesCode: currentSeriesCode,
     invoiceSequenceNumber: currentSequence
   };
 }
