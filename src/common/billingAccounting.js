@@ -233,10 +233,17 @@ function buildBillingSnapshot({ customer, latestInvoice, openInvoices, latestPay
   const paymentStatus = dueAmount > 0
     ? (latestOpenInvoice?.paymentStatus || latestInvoice?.paymentStatus || currentSnapshot.lastPaymentStatus || "pending")
     : "paid";
-  const dueDate = latestOpenInvoice?.dueDate || latestInvoice?.dueDate || null;
-  const remainingDays = dueDate
-    ? Math.max(0, Math.ceil((new Date(dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+
+  // Remaining days must reflect service period remaining, not invoice payment due date.
+  // Priority: customer.expiryAt (set on invoice generation) → open invoice dueDate → settled invoice dueDate → snapshot fallback.
+  const serviceExpiry =
+    (customer.expiryAt ? new Date(customer.expiryAt) : null) ||
+    (latestOpenInvoice?.dueDate ? new Date(latestOpenInvoice.dueDate) : null) ||
+    (latestInvoice?.dueDate ? new Date(latestInvoice.dueDate) : null);
+  const remainingDays = serviceExpiry && serviceExpiry.getTime() > Date.now()
+    ? Math.max(0, Math.ceil((serviceExpiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : Number(currentSnapshot.remainingDays || 0);
+  const nextBillingDate = serviceExpiry?.toISOString() || currentSnapshot.nextBillingDate || null;
 
   return {
     ...currentSnapshot,
@@ -252,6 +259,7 @@ function buildBillingSnapshot({ customer, latestInvoice, openInvoices, latestPay
     ledgerBalance: roundCurrency(latestLedgerEntry?.balanceAfter || 0),
     openInvoiceDueAmount,
     remainingDays,
+    nextBillingDate,
     collections: {
       ...(currentSnapshot.collections || {}),
       lastSettledAt:

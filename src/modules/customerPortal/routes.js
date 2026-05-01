@@ -1671,11 +1671,18 @@ function resolvePlanChangeCycleMetrics(customer = {}, billingTerm = "monthly") {
     customer?.billingSnapshot?.durationMonths ||
     (billingTerm === "yearly" ? 12 : billingTerm === "halfYearly" ? 6 : billingTerm === "quarterly" ? 3 : 1)
   ) || 1;
-  const cycleDays = Math.max(30, configuredDurationMonths * 30);
-  const remainingDays = Math.max(0, Number(customer?.billingSnapshot?.remainingDays || 0));
+
+  // Use actual calendar-day distance between billing dates when available; fall back to 30-day months.
   const nextBillingDate = customer?.billingSnapshot?.nextBillingDate || customer?.expiryAt || null;
-  const inferredRemainingDays = nextBillingDate
-    ? Math.max(0, Math.ceil((new Date(nextBillingDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+  const nextBillingMs = nextBillingDate ? new Date(nextBillingDate).getTime() : null;
+  const cycleDaysFromDates = nextBillingMs
+    ? Math.max(28, Math.ceil((nextBillingMs - (Date.now() - (configuredDurationMonths * 30 * 24 * 60 * 60 * 1000))) / (1000 * 60 * 60 * 24)))
+    : 0;
+  const cycleDays = Math.max(28, cycleDaysFromDates || configuredDurationMonths * 30);
+
+  const remainingDays = Math.max(0, Number(customer?.billingSnapshot?.remainingDays || 0));
+  const inferredRemainingDays = nextBillingMs && nextBillingMs > Date.now()
+    ? Math.max(0, Math.ceil((nextBillingMs - Date.now()) / (1000 * 60 * 60 * 24)))
     : remainingDays;
   const normalizedRemainingDays = Math.min(cycleDays, inferredRemainingDays || remainingDays || 0);
   return {
@@ -1972,6 +1979,17 @@ async function finalizeSuccessfulBillingPayment({
     customer.operationalStatus = "active";
   }
   await customer.save();
+
+  // Finalize any pending plan change BEFORE syncCustomerBillingState, while dueAmount is
+  // still 0 in-memory. syncCustomerBillingState recalculates dueAmount from the ledger
+  // (which may include unrelated open invoices), causing finalizePendingPlanChange to
+  // incorrectly reject the plan change due to non-zero dueAmount.
+  const resolvedCustomerUserId =
+    customerUserId ||
+    (await CustomerUser.findOne({ linkedCustomerIds: customer.customerId }).select({ _id: 1 }).lean())?._id ||
+    null;
+  const planChangeRequest = await finalizePendingPlanChange(customer, resolvedCustomerUserId);
+
   await syncCustomerBillingState(customer.customerId, customer);
 
   if (customerUserId) {
@@ -2019,12 +2037,6 @@ async function finalizeSuccessfulBillingPayment({
       ...(paymentMessage?.branding || {})
     }
   }).catch(() => null);
-
-  const resolvedCustomerUserId =
-    customerUserId ||
-    (await CustomerUser.findOne({ linkedCustomerIds: customer.customerId }).select({ _id: 1 }).lean())?._id ||
-    null;
-  const planChangeRequest = await finalizePendingPlanChange(customer, resolvedCustomerUserId);
 
   return {
     amount,
@@ -4598,6 +4610,40 @@ customerPortalRouter.post(
       planCode: pending.planCode,
       reversedAmount,
       dueAmount: Number(customer.billingSnapshot?.dueAmount || 0)
+    });
+  })
+);
+
+// Called by the app after a plan-change payment completes to explicitly apply the pending plan change.
+// This handles cases where the Razorpay webhook fires after the app has already returned to the foreground.
+customerPortalRouter.post(
+  "/plan/change/complete",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const customer = await getOwnedLinkedCustomer({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    });
+    const pending = customer.billingSnapshot?.pendingPlanChange;
+    if (!pending?.planCode) {
+      return ok(res, { applied: false, reason: "no_pending_change", customerId: customer.customerId });
+    }
+    // Only apply if payment has cleared the adjustment amount
+    const dueAmount = Number(customer.billingSnapshot?.dueAmount || 0);
+    if (dueAmount > 0) {
+      return ok(res, {
+        applied: false,
+        reason: "payment_not_cleared",
+        dueAmount,
+        customerId: customer.customerId
+      });
+    }
+    const planChangeRequest = await finalizePendingPlanChange(customer, req.customerUser._id);
+    return ok(res, {
+      applied: Boolean(planChangeRequest),
+      requestNumber: planChangeRequest?.requestNumber || null,
+      planCode: planChangeRequest ? pending.planCode : null,
+      customerId: customer.customerId
     });
   })
 );

@@ -5,6 +5,25 @@ import { ApiError } from "./ApiError.js";
 import { Installer } from "../models/Installer.js";
 import { InstallerSession } from "../models/InstallerSession.js";
 
+// Short-lived in-process cache for installer documents.
+// Avoids a DB query on every API request when the same installer makes rapid calls.
+const _installerCache = new Map(); // key: installerId → { doc, expiresAt }
+const INSTALLER_CACHE_TTL_MS = 20_000; // 20 seconds
+
+function _getCachedInstaller(id) {
+  const entry = _installerCache.get(id);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    _installerCache.delete(id);
+    return null;
+  }
+  return entry.doc;
+}
+
+function _setCachedInstaller(id, doc) {
+  _installerCache.set(id, { doc, expiresAt: Date.now() + INSTALLER_CACHE_TTL_MS });
+}
+
 export function signInstallerAccessToken(installer) {
   return jwt.sign(
     {
@@ -39,7 +58,14 @@ export async function requireInstallerAuth(req, _res, next) {
     if (payload.scope !== "installer") {
       throw new ApiError(401, "Invalid installer scope");
     }
-    const installer = await Installer.findById(payload.sub);
+    const installerId = payload.sub;
+    let installer = _getCachedInstaller(installerId);
+    if (!installer) {
+      installer = await Installer.findById(installerId);
+      if (installer?.status === "active") {
+        _setCachedInstaller(installerId, installer);
+      }
+    }
     if (!installer || installer.status !== "active") {
       throw new ApiError(401, "Installer session is invalid");
     }

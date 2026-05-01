@@ -42,7 +42,7 @@ class InstallerApiClient {
     Map<String, dynamic>? body,
     bool allowRetry = true,
     bool allowTransientRetry = true,
-    Duration timeout = const Duration(seconds: 18),
+    Duration timeout = const Duration(seconds: 30),
   }) async {
     final headers = <String, String>{
       'Accept': 'application/json',
@@ -70,11 +70,22 @@ class InstallerApiClient {
       if (method == 'GET' &&
           allowTransientRetry &&
           {502, 503, 504}.contains(response.statusCode)) {
-        await Future<void>.delayed(const Duration(milliseconds: 650));
+        await Future<void>.delayed(const Duration(milliseconds: 800));
         response = await send();
       }
     } on TimeoutException {
-      throw 'Server took too long to respond. Please retry.';
+      // Retry GET requests once on timeout (handles cold server starts)
+      if (method == 'GET' && allowTransientRetry) {
+        try {
+          response = await send();
+        } on TimeoutException {
+          throw 'Server took too long to respond. Please retry.';
+        } catch (_) {
+          throw 'Unable to reach server right now. Check internet and retry.';
+        }
+      } else {
+        throw 'Server took too long to respond. Please retry.';
+      }
     } catch (_) {
       throw 'Unable to reach server right now. Check internet and retry.';
     }
@@ -729,6 +740,10 @@ class InstallerApiClient {
       paymentMode: (data['paymentMode'] ?? 'online').toString(),
       paymentStatus: (data['paymentStatus'] ?? 'pending').toString(),
       createdAt: (data['createdAt'] ?? '').toString(),
+      customerType: (data['customerType'] ?? 'home').toString(),
+      businessName: data['businessName']?.toString(),
+      gstNumber: data['gstNumber']?.toString(),
+      billingAddress: data['businessAddress']?.toString(),
     );
   }
 
@@ -767,6 +782,10 @@ class InstallerApiClient {
     required double totalAmount,
     required int durationMonths,
     required String paymentMode,
+    String customerType = 'home',
+    String? businessName,
+    String? businessAddress,
+    String? gstNumber,
   }) async {
     final data = _asMap(await _request(
       '/api/v1/customer/bookings/public',
@@ -783,6 +802,10 @@ class InstallerApiClient {
         'paymentMode': paymentMode,
         'durationMonths': durationMonths,
         'source': 'installer_app',
+        'customerType': customerType,
+        if ((businessName ?? '').isNotEmpty) 'businessName': businessName,
+        if ((businessAddress ?? '').isNotEmpty) 'businessAddress': businessAddress,
+        if ((gstNumber ?? '').isNotEmpty) 'gstNumber': gstNumber,
       },
     ));
     final selectedPlan = _asMap(data['selectedPlan']);
@@ -801,6 +824,24 @@ class InstallerApiClient {
       paymentMode: paymentMode,
       paymentStatus: paymentMode == 'cash' ? 'paid' : 'pending',
       createdAt: DateTime.now().toIso8601String(),
+      customerType: customerType,
+      businessName: businessName,
+      gstNumber: gstNumber,
+      billingAddress: businessAddress,
+    );
+  }
+
+  Future<void> uploadBookingGstCert(
+    InstallerSession session,
+    String bookingNumber, {
+    required String gstCertBase64,
+  }) async {
+    await _request(
+      '/api/v1/installer/bookings/by-number/$bookingNumber/gst-cert',
+      method: 'POST',
+      token: session.accessToken,
+      body: {'gstCertificate': gstCertBase64},
+      timeout: const Duration(seconds: 45),
     );
   }
 }

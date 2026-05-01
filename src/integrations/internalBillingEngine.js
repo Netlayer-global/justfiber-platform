@@ -634,7 +634,8 @@ async function syncCustomerBillingSnapshot({
     billingStateName: billingStateName || customer.billingSnapshot?.billingStateName,
     billingZoneCode: billingZoneCode || customer.billingSnapshot?.billingZoneCode,
     billingZoneName: billingZoneName || customer.billingSnapshot?.billingZoneName,
-    remainingDays: Math.max(0, Math.ceil((new Date(dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    remainingDays: Math.max(0, Math.ceil((new Date(dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))),
+    nextBillingDate: dueDate ? new Date(dueDate).toISOString() : customer.billingSnapshot?.nextBillingDate || null
   };
   customer.invoiceSummary = {
     ...(customer.invoiceSummary || {}),
@@ -773,9 +774,23 @@ export async function regenerateExistingInvoice(invoice, {
       1
   });
   const billCycleLabel = invoice.metadata?.billCycleLabel || invoiceMetadata?.billCycleLabel || resolveBillCycleLabel(durationMonths);
+
+  // Derive totalAmount from the live plan catalog first — avoids using stale invoice metadata
+  // when an admin has changed the plan and regenerates the invoice.
+  const planDerivedAmount = safePlan ? (() => {
+    const recurring =
+      durationMonths >= 12 ? Number(safePlan.yearlyPrice || safePlan.monthlyPrice * 12 || 0)
+      : durationMonths >= 6 ? Number(safePlan.halfYearlyPrice || safePlan.monthlyPrice * 6 || 0)
+      : durationMonths >= 3 ? Number(safePlan.quarterlyPrice || safePlan.monthlyPrice * 3 || 0)
+      : Number(safePlan.monthlyPrice || safePlan.amount || 0);
+    const rental = Number(safePlan.routerRental || 0) * durationMonths;
+    return recurring > 0 ? Number((recurring + rental).toFixed(2)) : 0;
+  })() : 0;
+
   const totalAmount = Number(
-    invoiceMetadata?.totalAmount ||
+    invoiceMetadata?.totalAmount ||          // explicit admin override
     invoiceMetadata?.billingTotalAmount ||
+    planDerivedAmount ||                     // live plan catalog price
     invoiceMetadata?.baseRecurringAmount ||
     safeSubscriberService?.metadata?.billingTotalAmount ||
     safeSubscriberService?.metadata?.totalAmount ||

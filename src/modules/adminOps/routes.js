@@ -4370,9 +4370,10 @@ adminOpsRouter.post(
       : await SubscriberService.findOne({ customerId: invoice.customerId }).lean();
     const planCode = String(customer.planCode || subscriberService?.metadata?.planCode || invoice.metadata?.planCode || "").trim();
     const planName = String(customer.planName || subscriberService?.metadata?.planName || invoice.metadata?.planName || "").trim();
+    // Include archived plans — regeneration must work even if the plan was later archived.
     const plan =
-      (planCode && await PlanCatalog.findOne({ planCode, archivedAt: { $exists: false } }).lean()) ||
-      (planName && await PlanCatalog.findOne({ name: planName, archivedAt: { $exists: false } }).lean()) ||
+      (planCode && await PlanCatalog.findOne({ planCode }).lean()) ||
+      (planName && await PlanCatalog.findOne({ name: planName }).lean()) ||
       null;
 
     const serviceContext = {
@@ -4399,41 +4400,39 @@ adminOpsRouter.post(
         1
       ) || 1
     );
-    const recurringAmount = Number(
-      resolvePlanRecurringAmountForDuration(plan, durationMonths) ||
-      serviceContext.metadata?.recurringAmount ||
-      serviceContext.metadata?.baseRecurringAmount ||
-      serviceContext.metadata?.monthlyPrice ||
-      0
-    ) || 0;
-    const totalAmount = Number(
-      resolvePlanTotalAmountForDuration(plan, durationMonths) ||
-      serviceContext.metadata?.billingTotalAmount ||
-      serviceContext.metadata?.totalAmount ||
-      serviceContext.metadata?.planAmount ||
-      recurringAmount ||
-      0
-    ) || 0;
+    // When plan is available, always derive amounts from it (authoritative source).
+    // Avoids stale serviceContext/invoice metadata overriding the current plan price.
+    const planRecurring = plan ? resolvePlanRecurringAmountForDuration(plan, durationMonths) : 0;
+    const planRouterRental = Number(plan?.routerRental || 0);
+    const planTotal = planRecurring > 0
+      ? Number((planRecurring + planRouterRental * durationMonths).toFixed(2))
+      : 0;
+    const recurringAmount = planRecurring ||
+      Number(
+        serviceContext.metadata?.recurringAmount ||
+        serviceContext.metadata?.baseRecurringAmount ||
+        serviceContext.metadata?.monthlyPrice ||
+        0
+      ) || 0;
+    const totalAmount = planTotal ||
+      Number(
+        serviceContext.metadata?.billingTotalAmount ||
+        serviceContext.metadata?.totalAmount ||
+        serviceContext.metadata?.planAmount ||
+        recurringAmount ||
+        0
+      ) || 0;
 
     await regenerateExistingInvoice(invoice, {
       customer,
       subscriberService,
       plan,
       invoiceMetadata: {
-        ...(serviceContext.metadata || {}),
-        billingBreakup: serviceContext.billingBreakup,
-        baseRecurringAmount:
-          recurringAmount ||
-          undefined,
-        recurringAmount:
-          recurringAmount ||
-          undefined,
-        totalAmount:
-          totalAmount ||
-          undefined,
-        billingTotalAmount:
-          totalAmount ||
-          undefined,
+        billingBreakup: serviceContext.billingBreakup || plan?.billingBreakup || {},
+        baseRecurringAmount: recurringAmount || undefined,
+        recurringAmount: recurringAmount || undefined,
+        totalAmount: totalAmount || undefined,
+        billingTotalAmount: totalAmount || undefined,
         durationMonths,
         planCode: plan?.planCode || customer.planCode || subscriberService?.metadata?.planCode || "",
         planName: plan?.name || customer.planName || subscriberService?.metadata?.planName || ""

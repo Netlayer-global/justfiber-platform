@@ -254,6 +254,10 @@ class SalesLead {
     required this.paymentMode,
     required this.paymentStatus,
     required this.createdAt,
+    this.customerType = 'home',
+    this.businessName,
+    this.gstNumber,
+    this.billingAddress,
   });
 
   final String bookingNumber;
@@ -268,4 +272,8 @@ class SalesLead {
   final String paymentMode;
   final String paymentStatus;
   final String createdAt;
+  final String customerType;
+  final String? businessName;
+  final String? gstNumber;
+  final String? billingAddress;
 }

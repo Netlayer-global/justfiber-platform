@@ -1453,6 +1453,19 @@ class ApiClient {
     return data['cancelled'] == true || data.isNotEmpty;
   }
 
+  Future<bool> completePlanChange(CustomerSession session,
+      {String? customerId}) async {
+    final data = _asMap(
+      await _request(
+        _withCustomerId('/api/v1/customer/plan/change/complete', customerId),
+        method: 'POST',
+        token: session.accessToken,
+        body: const {},
+      ),
+    );
+    return data['applied'] == true;
+  }
+
   Future<SpeedTestData> fetchSpeedTest(CustomerSession session,
       {String? customerId}) async {
     final data = _asMap(await _request(

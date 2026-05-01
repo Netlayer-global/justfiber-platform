@@ -893,6 +893,10 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
       if (!mounted || paymentOrder == null) return;
       await navigator.push(MaterialPageRoute(
           builder: (_) => BillingPaymentScreen(paymentOrder: paymentOrder)));
+      if (!mounted) return;
+      // Explicitly complete the pending plan change in case the Razorpay webhook
+      // hasn't fired yet when the user returns to the app.
+      await appState.completePlanChange();
     }
     if (mounted) {
       await appState.refresh();

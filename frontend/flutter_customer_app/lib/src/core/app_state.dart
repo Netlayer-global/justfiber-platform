@@ -1193,6 +1193,16 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<bool> completePlanChange() async {
+    final current = session;
+    if (current == null) return false;
+    try {
+      return await api.completePlanChange(current, customerId: selectedCustomerId);
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> checkFeasibility({
     required String address,
     required String pinCode,
