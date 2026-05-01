@@ -1659,10 +1659,34 @@ function getPlanTermPrice(plan, billingTerm) {
   }
 }
 
+function resolvePlanChangeCycleMetrics(customer = {}, billingTerm = "monthly") {
+  const configuredDurationMonths = Number(
+    customer?.billingSnapshot?.durationMonths ||
+    (billingTerm === "yearly" ? 12 : billingTerm === "halfYearly" ? 6 : billingTerm === "quarterly" ? 3 : 1)
+  ) || 1;
+  const cycleDays = Math.max(30, configuredDurationMonths * 30);
+  const remainingDays = Math.max(0, Number(customer?.billingSnapshot?.remainingDays || 0));
+  const nextBillingDate = customer?.billingSnapshot?.nextBillingDate || customer?.expiryAt || null;
+  const inferredRemainingDays = nextBillingDate
+    ? Math.max(0, Math.ceil((new Date(nextBillingDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : remainingDays;
+  const normalizedRemainingDays = Math.min(cycleDays, inferredRemainingDays || remainingDays || 0);
+  return {
+    durationMonths: configuredDurationMonths,
+    cycleDays,
+    remainingDays: normalizedRemainingDays
+  };
+}
+
 function computePlanChangePreview({ customer, currentPlan, nextPlan, effectiveMode, billingTerm = "monthly" }) {
-  const currentPrice = Number(currentPlan?.monthlyPrice || customer.billingSnapshot?.lastInvoiceAmount || 0);
+  const { durationMonths, cycleDays, remainingDays } = resolvePlanChangeCycleMetrics(customer, billingTerm);
+  const currentPrice = Number(
+    getPlanTermPrice(currentPlan, billingTerm) ||
+    customer.billingSnapshot?.lastInvoiceAmount ||
+    customer.billingSnapshot?.lastPlanPrice ||
+    0
+  );
   const nextPrice = getPlanTermPrice(nextPlan, billingTerm);
-  const remainingDays = Math.max(0, Number(customer.billingSnapshot?.remainingDays || 0));
   const billMode =
     customer.billingSnapshot?.billMode ||
     (customer.customerType === "business" ? "postpaid" : "prepaid");
@@ -1671,8 +1695,11 @@ function computePlanChangePreview({ customer, currentPlan, nextPlan, effectiveMo
     return {
       billMode,
       billingTerm,
+      durationMonths,
+      cycleDays,
       currentPrice,
       nextPrice,
+      remainingDays,
       proratedCurrentCredit: 0,
       proratedNextCharge: 0,
       adjustmentAmount: 0,
@@ -1682,35 +1709,20 @@ function computePlanChangePreview({ customer, currentPlan, nextPlan, effectiveMo
     };
   }
 
-  if (billMode === "prepaid") {
-    const ratio = Math.min(1, Math.max(0, remainingDays / 30));
-    const proratedCurrentCredit = Number((currentPrice * ratio).toFixed(2));
-    const proratedNextCharge = Number((nextPrice * ratio).toFixed(2));
-    const adjustmentAmount = Number((proratedNextCharge - proratedCurrentCredit).toFixed(2));
-    return {
-      billMode,
-      billingTerm,
-      currentPrice,
-      nextPrice,
-      remainingDays,
-      proratedCurrentCredit,
-      proratedNextCharge,
-      adjustmentAmount,
-      payableNow: adjustmentAmount > 0 ? adjustmentAmount : 0,
-      creditAmount: adjustmentAmount < 0 ? Math.abs(adjustmentAmount) : 0,
-      mode: "immediate"
-    };
-  }
-
-  const adjustmentAmount = Number((nextPrice - currentPrice).toFixed(2));
+  const ratio = Math.min(1, Math.max(0, remainingDays / cycleDays));
+  const proratedCurrentCredit = Number((currentPrice * ratio).toFixed(2));
+  const proratedNextCharge = Number((nextPrice * ratio).toFixed(2));
+  const adjustmentAmount = Number((proratedNextCharge - proratedCurrentCredit).toFixed(2));
   return {
     billMode,
     billingTerm,
+    durationMonths,
+    cycleDays,
     currentPrice,
     nextPrice,
     remainingDays,
-    proratedCurrentCredit: 0,
-    proratedNextCharge: nextPrice,
+    proratedCurrentCredit,
+    proratedNextCharge,
     adjustmentAmount,
     payableNow: adjustmentAmount > 0 ? adjustmentAmount : 0,
     creditAmount: adjustmentAmount < 0 ? Math.abs(adjustmentAmount) : 0,

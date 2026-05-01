@@ -11,6 +11,7 @@ export const retryProvisioningSchema = z.object({
 export const adminPlanChangeSchema = z.object({
   planCode: z.string().min(2),
   effectiveMode: z.enum(["immediate", "next_cycle"]).default("immediate"),
+  billingTerm: z.enum(["monthly", "quarterly", "halfYearly", "yearly"]).default("monthly"),
   forceApply: z.boolean().optional(),
   note: z.string().max(300).optional()
 });
