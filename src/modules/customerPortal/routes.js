@@ -1649,13 +1649,13 @@ function getPlanTermPrice(plan, billingTerm) {
   const safePlan = plan || {};
   switch (billingTerm) {
     case "quarterly":
-      return Number(safePlan.quarterlyPrice || safePlan.monthlyPrice || 0);
+      return Number(safePlan.quarterlyPrice || (Number(safePlan.monthlyPrice || safePlan.amount || 0) * 3) || 0);
     case "halfYearly":
-      return Number(safePlan.halfYearlyPrice || safePlan.monthlyPrice || 0);
+      return Number(safePlan.halfYearlyPrice || (Number(safePlan.monthlyPrice || safePlan.amount || 0) * 6) || 0);
     case "yearly":
-      return Number(safePlan.yearlyPrice || safePlan.monthlyPrice || 0);
+      return Number(safePlan.yearlyPrice || (Number(safePlan.monthlyPrice || safePlan.amount || 0) * 12) || 0);
     default:
-      return Number(safePlan.monthlyPrice || 0);
+      return Number(safePlan.monthlyPrice || safePlan.amount || 0);
   }
 }
 
@@ -1700,14 +1700,7 @@ function resolvePlanChangeCycleMetrics(customer = {}, billingTerm = "monthly") {
 async function syncPortalCustomerServicePlan(customer, plan, billingTerm = "monthly") {
   if (!customer?.customerId || !plan) return;
   const durationMonths = getDurationMonthsFromBillingTerm(billingTerm);
-  const recurringAmount =
-    durationMonths >= 12
-      ? Number(plan.yearlyPrice || (Number(plan.monthlyPrice || 0) * 12) || 0) || 0
-      : durationMonths >= 6
-        ? Number(plan.halfYearlyPrice || (Number(plan.monthlyPrice || 0) * 6) || 0) || 0
-        : durationMonths >= 3
-          ? Number(plan.quarterlyPrice || (Number(plan.monthlyPrice || 0) * 3) || 0) || 0
-          : Number(plan.monthlyPrice || 0) || 0;
+  const recurringAmount = getPlanTermPrice(plan, billingTerm);
   const routerRental = Number(plan.routerRental || 0) || 0;
   const totalPlanAmount = Number((recurringAmount + routerRental * durationMonths).toFixed(2));
   await Customer.updateOne(
