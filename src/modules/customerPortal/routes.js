@@ -1659,6 +1659,13 @@ function getPlanTermPrice(plan, billingTerm) {
   }
 }
 
+function getDurationMonthsFromBillingTerm(billingTerm = "monthly") {
+  if (billingTerm === "yearly") return 12;
+  if (billingTerm === "halfYearly") return 6;
+  if (billingTerm === "quarterly") return 3;
+  return 1;
+}
+
 function resolvePlanChangeCycleMetrics(customer = {}, billingTerm = "monthly") {
   const configuredDurationMonths = Number(
     customer?.billingSnapshot?.durationMonths ||
@@ -1752,6 +1759,17 @@ async function finalizePendingPlanChange(customer, customerUserId) {
   }
   const plan = await PlanCatalog.findOne({ planCode: pending.planCode, active: true }).lean();
   if (!plan) return null;
+  const durationMonths = getDurationMonthsFromBillingTerm(pending.billingTerm || customer.billingSnapshot?.nextPlanTerm || "monthly");
+  const recurringAmount =
+    durationMonths >= 12
+      ? Number(plan.yearlyPrice || (Number(plan.monthlyPrice || 0) * 12) || 0) || 0
+      : durationMonths >= 6
+        ? Number(plan.halfYearlyPrice || (Number(plan.monthlyPrice || 0) * 6) || 0) || 0
+        : durationMonths >= 3
+          ? Number(plan.quarterlyPrice || (Number(plan.monthlyPrice || 0) * 3) || 0) || 0
+          : Number(plan.monthlyPrice || 0) || 0;
+  const routerRental = Number(plan.routerRental || 0) || 0;
+  const totalPlanAmount = Number((recurringAmount + routerRental * durationMonths).toFixed(2));
   customer.planCode = plan.planCode;
   customer.planName = plan.name;
   customer.customerType = pending.billMode === "postpaid" ? "business" : "home";
@@ -1770,12 +1788,48 @@ async function finalizePendingPlanChange(customer, customerUserId) {
     adjustmentPreview: 0,
     lastPlanPrice: Number(pending.currentPrice || customer.billingSnapshot?.lastPlanPrice || 0),
     nextPlanPrice: Number(plan.monthlyPrice || 0),
+    nextPlanTerm: pending.billingTerm || customer.billingSnapshot?.nextPlanTerm || "monthly",
     nextPlanChangeMode: pending.effectiveMode || "immediate"
   };
   await customer.save();
+  if (customer.serviceId) {
+    await SubscriberService.updateOne(
+      { serviceId: customer.serviceId },
+      {
+        $set: {
+          planCode: plan.planCode,
+          planName: plan.name,
+          routerRental,
+          billingBreakup: plan.billingBreakup || {},
+          billingPeriodMonths: durationMonths,
+          "metadata.planCode": plan.planCode,
+          "metadata.planName": plan.name,
+          "metadata.planAmount": recurringAmount,
+          "metadata.monthlyPrice": Number(plan.monthlyPrice || 0) || 0,
+          "metadata.quarterlyPrice": Number(plan.quarterlyPrice || 0) || 0,
+          "metadata.halfYearlyPrice": Number(plan.halfYearlyPrice || 0) || 0,
+          "metadata.yearlyPrice": Number(plan.yearlyPrice || 0) || 0,
+          "metadata.durationMonths": durationMonths,
+          "metadata.totalAmount": totalPlanAmount,
+          "metadata.billingTotalAmount": totalPlanAmount,
+          "metadata.recurringAmount": recurringAmount,
+          "metadata.baseRecurringAmount": recurringAmount,
+          "metadata.routerRental": routerRental,
+          "metadata.speedMbps": plan.speedMbps || customer.billingSnapshot?.speedMbps || 100,
+          "metadata.uploadSpeedMbps":
+            plan.uploadSpeedMbps ||
+            customer.billingSnapshot?.uploadSpeedMbps ||
+            Math.max(2, Math.round((plan.speedMbps || customer.billingSnapshot?.speedMbps || 100) * 0.35)),
+          "metadata.dataPolicy": plan.dataPolicy || customer.billingSnapshot?.dataPolicy || "unlimited",
+          "metadata.dataLimitGb": Number(plan.dataLimitGb || customer.billingSnapshot?.dataLimitGb || 0) || null,
+          "metadata.fupSpeedMbps": Number(plan.fupSpeedMbps || customer.billingSnapshot?.fupSpeedMbps || 0) || null
+        }
+      }
+    );
+  }
   const request = await ServiceRequest.create({
     requestNumber: `SR${Date.now().toString().slice(-6)}`,
-    customerUserId,
+    customerUserId: customerUserId || undefined,
     customerId: customer.customerId,
     serviceId: customer.serviceId,
     type: "plan_change",
@@ -1784,6 +1838,7 @@ async function finalizePendingPlanChange(customer, customerUserId) {
       planCode: plan.planCode,
       planName: plan.name,
       effectiveMode: pending.effectiveMode || "immediate",
+      billingTerm: pending.billingTerm || "monthly",
       appliedDirectly: false,
       settledByPayment: true
     },
@@ -1792,13 +1847,15 @@ async function finalizePendingPlanChange(customer, customerUserId) {
       { event: "request.completed", actorType: "system", actorId: "billing-engine", at: new Date() }
     ]
   });
-  await notifyCustomerAction(
-    customerUserId,
-    "plan_changed",
-    "Plan updated",
-    `Plan changed to ${plan.name} after payment settlement.`,
-    { planCode: plan.planCode, effectiveMode: pending.effectiveMode || "immediate" }
-  );
+  if (customerUserId) {
+    await notifyCustomerAction(
+      customerUserId,
+      "plan_changed",
+      "Plan updated",
+      `Plan changed to ${plan.name} after payment settlement.`,
+      { planCode: plan.planCode, effectiveMode: pending.effectiveMode || "immediate" }
+    );
+  }
   return request;
 }
 
@@ -1963,7 +2020,11 @@ async function finalizeSuccessfulBillingPayment({
     }
   }).catch(() => null);
 
-  const planChangeRequest = customerUserId ? await finalizePendingPlanChange(customer, customerUserId) : null;
+  const resolvedCustomerUserId =
+    customerUserId ||
+    (await CustomerUser.findOne({ linkedCustomerIds: customer.customerId }).select({ _id: 1 }).lean())?._id ||
+    null;
+  const planChangeRequest = await finalizePendingPlanChange(customer, resolvedCustomerUserId);
 
   return {
     amount,

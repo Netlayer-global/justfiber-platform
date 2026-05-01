@@ -139,6 +139,13 @@ function normalizeDate(value) {
   return date && !Number.isNaN(date.getTime()) ? date : null;
 }
 
+function getDurationMonthsFromBillingTerm(billingTerm = "monthly") {
+  if (billingTerm === "yearly") return 12;
+  if (billingTerm === "halfYearly") return 6;
+  if (billingTerm === "quarterly") return 3;
+  return 1;
+}
+
 function isSameUtcDay(left, right) {
   return (
     left.getUTCFullYear() === right.getUTCFullYear() &&
@@ -1326,6 +1333,99 @@ async function runRecurringBillingTasks() {
     }).lean();
 
     if (!existingRun) {
+      const customersWithScheduledPlanChanges = await Customer.find({
+        "billingSnapshot.pendingPlanChange.effectiveMode": "next_cycle"
+      });
+      for (const customer of customersWithScheduledPlanChanges) {
+        const pending = customer.billingSnapshot?.pendingPlanChange;
+        if (!pending?.planCode) continue;
+        const nextBillingDate = normalizeDate(customer.billingSnapshot?.nextBillingDate || customer.expiryAt);
+        if (!nextBillingDate || nextBillingDate.getTime() > now.getTime()) continue;
+        const plan = await PlanCatalog.findOne({ planCode: pending.planCode, active: true }).lean();
+        if (!plan) continue;
+        const durationMonths = getDurationMonthsFromBillingTerm(pending.billingTerm || customer.billingSnapshot?.nextPlanTerm || "monthly");
+        const recurringAmount =
+          durationMonths >= 12
+            ? Number(plan.yearlyPrice || (Number(plan.monthlyPrice || 0) * 12) || 0) || 0
+            : durationMonths >= 6
+              ? Number(plan.halfYearlyPrice || (Number(plan.monthlyPrice || 0) * 6) || 0) || 0
+              : durationMonths >= 3
+                ? Number(plan.quarterlyPrice || (Number(plan.monthlyPrice || 0) * 3) || 0) || 0
+                : Number(plan.monthlyPrice || 0) || 0;
+        const routerRental = Number(plan.routerRental || 0) || 0;
+        const totalPlanAmount = Number((recurringAmount + routerRental * durationMonths).toFixed(2));
+        customer.planCode = plan.planCode;
+        customer.planName = plan.name;
+        customer.customerType = pending.billMode === "postpaid" ? "business" : "home";
+        customer.billingSnapshot = {
+          ...(customer.billingSnapshot || {}),
+          speedMbps: plan.speedMbps || customer.billingSnapshot?.speedMbps || 100,
+          uploadSpeedMbps:
+            plan.uploadSpeedMbps ||
+            customer.billingSnapshot?.uploadSpeedMbps ||
+            Math.max(2, Math.round((plan.speedMbps || customer.billingSnapshot?.speedMbps || 100) * 0.35)),
+          dataPolicy: plan.dataPolicy || customer.billingSnapshot?.dataPolicy || "unlimited",
+          dataLimitGb: Number(plan.dataLimitGb || customer.billingSnapshot?.dataLimitGb || 0) || null,
+          fupSpeedMbps: Number(plan.fupSpeedMbps || customer.billingSnapshot?.fupSpeedMbps || 0) || null,
+          billMode: pending.billMode || customer.billingSnapshot?.billMode,
+          pendingPlanChange: null,
+          adjustmentPreview: 0,
+          lastPlanPrice: Number(pending.currentPrice || customer.billingSnapshot?.lastPlanPrice || 0),
+          nextPlanPrice: Number(plan.monthlyPrice || 0),
+          nextPlanTerm: pending.billingTerm || customer.billingSnapshot?.nextPlanTerm || "monthly",
+          nextPlanChangeMode: pending.effectiveMode || "next_cycle"
+        };
+        await customer.save();
+        if (customer.serviceId) {
+          await SubscriberService.updateOne(
+            { serviceId: customer.serviceId },
+            {
+              $set: {
+                planCode: plan.planCode,
+                planName: plan.name,
+                routerRental,
+                billingBreakup: plan.billingBreakup || {},
+                billingPeriodMonths: durationMonths,
+                "metadata.planCode": plan.planCode,
+                "metadata.planName": plan.name,
+                "metadata.planAmount": recurringAmount,
+                "metadata.monthlyPrice": Number(plan.monthlyPrice || 0) || 0,
+                "metadata.quarterlyPrice": Number(plan.quarterlyPrice || 0) || 0,
+                "metadata.halfYearlyPrice": Number(plan.halfYearlyPrice || 0) || 0,
+                "metadata.yearlyPrice": Number(plan.yearlyPrice || 0) || 0,
+                "metadata.durationMonths": durationMonths,
+                "metadata.totalAmount": totalPlanAmount,
+                "metadata.billingTotalAmount": totalPlanAmount,
+                "metadata.recurringAmount": recurringAmount,
+                "metadata.baseRecurringAmount": recurringAmount,
+                "metadata.routerRental": routerRental,
+                "metadata.speedMbps": plan.speedMbps || customer.billingSnapshot?.speedMbps || 100,
+                "metadata.uploadSpeedMbps":
+                  plan.uploadSpeedMbps ||
+                  customer.billingSnapshot?.uploadSpeedMbps ||
+                  Math.max(2, Math.round((plan.speedMbps || customer.billingSnapshot?.speedMbps || 100) * 0.35)),
+                "metadata.dataPolicy": plan.dataPolicy || customer.billingSnapshot?.dataPolicy || "unlimited",
+                "metadata.dataLimitGb": Number(plan.dataLimitGb || customer.billingSnapshot?.dataLimitGb || 0) || null,
+                "metadata.fupSpeedMbps": Number(plan.fupSpeedMbps || customer.billingSnapshot?.fupSpeedMbps || 0) || null
+              }
+            }
+          );
+        }
+        await writeAuditLog({
+          actorType: "system",
+          actorId: "worker",
+          actorName: "billing-scheduler",
+          action: "customer.plan_change.scheduled_applied",
+          entityType: "customer",
+          entityId: customer.customerId,
+          metadata: {
+            nextPlanCode: plan.planCode,
+            effectiveMode: pending.effectiveMode || "next_cycle",
+            billingTerm: pending.billingTerm || "monthly"
+          }
+        });
+      }
+
       const run = await BillingRun.create({
         runId: `BR-AUTO-${Date.now()}`,
         triggerMode: "scheduled",
