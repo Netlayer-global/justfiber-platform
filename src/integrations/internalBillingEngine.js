@@ -420,6 +420,18 @@ function normalizeSeriesCode(value, fallback = "MAIN") {
   return normalized || fallback;
 }
 
+function parseExpandedInvoicePrefix(value = "") {
+  const normalized = normalizeSeriesCode(value, "");
+  const match = normalized.match(/^(.*)-(\d{3,})$/);
+  if (!match) return null;
+  return {
+    fullPrefix: normalized,
+    basePrefix: match[1],
+    seed: Number(match[2] || 0),
+    padding: String(match[2] || "").length
+  };
+}
+
 async function getInvoiceTemplateSettings() {
   const config = await SystemConfig.findOne({ key: "settings.invoice_template" }).lean();
   return config?.value || {};
@@ -648,6 +660,30 @@ async function buildInvoiceNumber({ billingProfile, zoneMapping, customer, billC
     "JF",
     "JF"
   );
+  const expandedPrefix = parseExpandedInvoicePrefix(prefix);
+  if (expandedPrefix?.basePrefix && expandedPrefix?.padding) {
+    const expandedRegex = new RegExp(`^${escapeRegex(expandedPrefix.basePrefix)}-(\\d{${expandedPrefix.padding},})(?:-|$)`);
+    const existingInvoices = await BillingInvoice.find({
+      invoiceNumber: new RegExp(`^${escapeRegex(expandedPrefix.basePrefix)}-`),
+      ...(existingInvoiceId ? { invoiceId: { $ne: existingInvoiceId } } : {})
+    })
+      .select({ invoiceNumber: 1, invoiceSequenceNumber: 1 })
+      .lean();
+    const maxExistingSequence = existingInvoices.reduce((max, item) => {
+      const matched = String(item?.invoiceNumber || "").match(expandedRegex);
+      const explicitSequence = Number(item?.invoiceSequenceNumber || 0) || 0;
+      const parsedSequence = Number(matched?.[1] || 0) || 0;
+      return Math.max(max, explicitSequence, parsedSequence);
+    }, Math.max(0, expandedPrefix.seed - 1));
+    const nextSequence = maxExistingSequence + 1;
+    const expandedInvoiceNumber = `${expandedPrefix.basePrefix}-${String(nextSequence).padStart(expandedPrefix.padding, "0")}`;
+    return {
+      invoiceNumber: expandedInvoiceNumber,
+      invoicePrefix: expandedInvoiceNumber,
+      invoiceSeriesCode: expandedPrefix.basePrefix,
+      invoiceSequenceNumber: nextSequence,
+    };
+  }
   const periodCode = String(billCycle || buildBillCycle()).replace(/[^0-9]+/g, "");
   const padding = Math.max(3, Math.min(8, Number(billingProfile?.invoiceSequencePadding || 4)));
   const invoiceRegex = new RegExp(`^${prefix}-${periodCode}-`);
@@ -712,8 +748,14 @@ export async function regenerateExistingInvoice(invoice, {
   });
   const billCycleLabel = invoice.metadata?.billCycleLabel || invoiceMetadata?.billCycleLabel || resolveBillCycleLabel(durationMonths);
   const totalAmount = Number(
+    invoiceMetadata?.totalAmount ||
+    invoiceMetadata?.billingTotalAmount ||
     invoiceMetadata?.baseRecurringAmount ||
+    safeSubscriberService?.metadata?.billingTotalAmount ||
+    safeSubscriberService?.metadata?.totalAmount ||
     safeSubscriberService?.metadata?.baseRecurringAmount ||
+    invoice.metadata?.billingTotalAmount ||
+    invoice.metadata?.totalAmount ||
     invoice.metadata?.baseRecurringAmount ||
     deriveAmount({
       ...(safeSubscriberService || {}),
