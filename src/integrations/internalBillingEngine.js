@@ -179,6 +179,19 @@ async function resolveCustomerFromBillingInput(rawValue = "", serviceId = "") {
 
 function deriveAmount(service, plan = null) {
   const durationMonths = resolveDurationMonths(service?.metadata);
+  const planRecurring =
+    durationMonths >= 12
+      ? Number(plan?.yearlyPrice || (Number(plan?.monthlyPrice || 0) * 12) || 0)
+      : durationMonths >= 6
+        ? Number(plan?.halfYearlyPrice || (Number(plan?.monthlyPrice || 0) * 6) || 0)
+        : durationMonths >= 3
+          ? Number(plan?.quarterlyPrice || (Number(plan?.monthlyPrice || 0) * 3) || 0)
+          : Number(plan?.monthlyPrice || plan?.amount || 0);
+  const planRouterFee = resolveRouterFeeForDuration(service, durationMonths, plan);
+  const authoritativePlanAmount =
+    Number.isFinite(planRecurring) && planRecurring > 0
+      ? Number((Number(planRecurring) + Number(planRouterFee || 0)).toFixed(2))
+      : 0;
   const explicitTotalAmount = Number(
     service?.metadata?.totalAmount ||
     service?.metadata?.planTotalAmount ||
@@ -198,6 +211,9 @@ function deriveAmount(service, plan = null) {
         : durationMonths >= 3
           ? quarterlyPrice || recurringAmount || monthlyPrice * 3
           : monthlyPrice || recurringAmount;
+  if (Number.isFinite(authoritativePlanAmount) && authoritativePlanAmount > 0) {
+    return authoritativePlanAmount;
+  }
   if (Number.isFinite(explicitTotalAmount) && explicitTotalAmount > 0) {
     return explicitTotalAmount;
   }

@@ -330,10 +330,11 @@ async function syncCustomerServicePlan(customer, plan, billingTerm = "monthly") 
   const durationMonths = Math.max(
     1,
     Number(
+      resolveBillingTermMonths(billingTerm) ||
+      customer.billingSnapshot?.durationMonths ||
       existingService?.billingPeriodMonths ||
       existingService?.metadata?.durationMonths ||
-      customer.billingSnapshot?.durationMonths ||
-      (billingTerm === "yearly" ? 12 : billingTerm === "halfYearly" ? 6 : billingTerm === "quarterly" ? 3 : 1)
+      1
     ) || 1
   );
   const recurringAmount = resolvePlanChargeForDuration(plan, durationMonths);
@@ -369,6 +370,28 @@ async function syncCustomerServicePlan(customer, plan, billingTerm = "monthly") 
         "metadata.dataPolicy": plan.dataPolicy || customer.billingSnapshot?.dataPolicy || "unlimited",
         "metadata.dataLimitGb": Number(plan.dataLimitGb || customer.billingSnapshot?.dataLimitGb || 0) || null,
         "metadata.fupSpeedMbps": Number(plan.fupSpeedMbps || customer.billingSnapshot?.fupSpeedMbps || 0) || null
+      }
+    }
+  );
+  await Customer.updateOne(
+    { customerId: customer.customerId },
+    {
+      $set: {
+        planCode: plan.planCode,
+        planName: plan.name,
+        "billingSnapshot.lastInvoiceAmount": recurringAmount,
+        "billingSnapshot.lastPlanPrice": Number(plan.monthlyPrice || 0) || 0,
+        "billingSnapshot.billingBreakup": plan.billingBreakup || {},
+        "billingSnapshot.durationMonths": durationMonths,
+        "billingSnapshot.billingTerm": billingTerm || "monthly",
+        "billingSnapshot.speedMbps": plan.speedMbps || customer.billingSnapshot?.speedMbps || 100,
+        "billingSnapshot.uploadSpeedMbps":
+          plan.uploadSpeedMbps ||
+          customer.billingSnapshot?.uploadSpeedMbps ||
+          Math.max(2, Math.round((plan.speedMbps || customer.billingSnapshot?.speedMbps || 100) * 0.35)),
+        "billingSnapshot.dataPolicy": plan.dataPolicy || customer.billingSnapshot?.dataPolicy || "unlimited",
+        "billingSnapshot.dataLimitGb": Number(plan.dataLimitGb || customer.billingSnapshot?.dataLimitGb || 0) || null,
+        "billingSnapshot.fupSpeedMbps": Number(plan.fupSpeedMbps || customer.billingSnapshot?.fupSpeedMbps || 0) || null
       }
     }
   );
