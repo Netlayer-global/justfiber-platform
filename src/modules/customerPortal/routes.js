@@ -106,6 +106,9 @@ function buildDisplayInvoiceNumber(invoice = {}) {
   const sequenceNumber = Number(invoice?.invoiceSequenceNumber || invoice?.metadata?.invoiceSequenceNumber || 0);
   const sequenceText = sequenceNumber > 0 ? String(sequenceNumber).padStart(4, "0") : "";
   const periodCode = String(invoice?.billCycle || "").replace(/[^0-9]+/g, "");
+  if (prefix && /^.+-\d{2,}(?:-\d{2,})+(?:-\d{3,})?$/.test(prefix)) {
+    return prefix;
+  }
   if (prefix && periodCode && sequenceText) {
     return `${prefix}-${periodCode}-${sequenceText}`;
   }
