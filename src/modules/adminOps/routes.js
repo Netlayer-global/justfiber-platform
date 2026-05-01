@@ -453,7 +453,8 @@ function buildInvoiceSummaryRows(invoice = {}) {
   );
   const taxRows = (invoice.taxBreakdown || []).map((part) => ({
     label: `${part.label} (${part.rate || 0}%)`,
-    amount: Number(part.amount || 0)
+    amount: Number(part.amount || 0),
+    rate: Number(part.rate || 0)
   }));
   const taxTotal = Number(taxRows.reduce((sum, row) => sum + Number(row.amount || 0), 0).toFixed(2));
   const categoryTotals = rawChargeRows.reduce((acc, row) => {

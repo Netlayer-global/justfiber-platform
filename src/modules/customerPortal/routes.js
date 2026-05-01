@@ -172,7 +172,8 @@ function buildInvoiceSummaryRows(invoice = {}) {
   );
   const taxRows = (invoice.taxBreakdown || []).map((part) => ({
     label: `${part.label} (${part.rate || 0}%)`,
-    amount: Number(part.amount || 0)
+    amount: Number(part.amount || 0),
+    rate: Number(part.rate || 0)
   }));
   const taxTotal = Number(taxRows.reduce((sum, row) => sum + Number(row.amount || 0), 0).toFixed(2));
   const categoryTotals = rawChargeRows.reduce((acc, row) => {
@@ -203,6 +204,41 @@ function buildInvoiceSummaryRows(invoice = {}) {
     taxRows,
     taxTotal
   };
+}
+
+function resolveRecurringAmountForDuration(plan = null, durationMonths = 1) {
+  if (!plan) return 0;
+  if (durationMonths >= 12) return Number(plan.yearlyPrice || (Number(plan.monthlyPrice || 0) * 12) || 0) || 0;
+  if (durationMonths >= 6) return Number(plan.halfYearlyPrice || (Number(plan.monthlyPrice || 0) * 6) || 0) || 0;
+  if (durationMonths >= 3) return Number(plan.quarterlyPrice || (Number(plan.monthlyPrice || 0) * 3) || 0) || 0;
+  return Number(plan.monthlyPrice || 0) || 0;
+}
+
+async function resolveCurrentCustomerRecurringAmount(customer = {}, service = null, latestInvoice = null) {
+  const durationMonths = Math.max(
+    1,
+    Number(
+      service?.billingPeriodMonths ||
+      service?.metadata?.durationMonths ||
+      customer?.billingSnapshot?.durationMonths ||
+      1
+    ) || 1
+  );
+  const currentPlan =
+    (customer?.planCode ? await PlanCatalog.findOne({ planCode: customer.planCode, active: true }).lean() : null) ||
+    (customer?.planName ? await PlanCatalog.findOne({ name: customer.planName, active: true }).lean() : null) ||
+    null;
+  return Number(
+    resolveRecurringAmountForDuration(currentPlan, durationMonths) ||
+    service?.metadata?.recurringAmount ||
+    service?.metadata?.yearlyPrice ||
+    service?.metadata?.halfYearlyPrice ||
+    service?.metadata?.quarterlyPrice ||
+    service?.metadata?.monthlyPrice ||
+    latestInvoice?.totalAmount ||
+    customer?.billingSnapshot?.lastInvoiceAmount ||
+    0
+  ) || 0;
 }
 
 function dataUrlToBuffer(dataUrl) {
@@ -3049,16 +3085,7 @@ customerPortalRouter.get(
           customer.billingSnapshot?.billCycle ||
           latestInvoice?.metadata?.billCycleLabel ||
           "Monthly";
-    const recurringAmount = Number(
-      service?.metadata?.recurringAmount ||
-        service?.metadata?.yearlyPrice ||
-        service?.metadata?.halfYearlyPrice ||
-        service?.metadata?.quarterlyPrice ||
-        service?.metadata?.monthlyPrice ||
-        latestInvoice?.totalAmount ||
-        customer.billingSnapshot?.lastInvoiceAmount ||
-        0
-    );
+    const recurringAmount = await resolveCurrentCustomerRecurringAmount(customer, service, latestInvoice);
     const openInvoices = invoices.filter((invoice) => String(invoice.paymentStatus || "").toLowerCase() !== "paid");
     const billingView = {
       dueAmount: openInvoices.length
@@ -3235,17 +3262,7 @@ customerPortalRouter.get(
       billMode: formatBillingMode(service?.metadata?.billMode || customer.billingSnapshot?.billMode),
       generatedDate: latestInvoice?.generatedAt || customer.updatedAt,
       amount: latestInvoice?.totalAmount || customer.billingSnapshot?.lastInvoiceAmount || 0,
-      recurringAmount:
-        Number(
-          service?.metadata?.recurringAmount ||
-            service?.metadata?.yearlyPrice ||
-            service?.metadata?.halfYearlyPrice ||
-            service?.metadata?.quarterlyPrice ||
-            service?.metadata?.monthlyPrice ||
-            latestInvoice?.totalAmount ||
-            customer.billingSnapshot?.lastInvoiceAmount ||
-            0
-        ) || 0,
+      recurringAmount: await resolveCurrentCustomerRecurringAmount(customer, service, latestInvoice),
       paymentStatus: effectivePaymentStatus,
       invoiceLifecycle: latestInvoice ? deriveInvoiceLifecycle(latestInvoice) : "unknown",
       dueAmount,
