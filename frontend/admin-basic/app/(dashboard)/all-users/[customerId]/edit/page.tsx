@@ -80,9 +80,9 @@ function getPlanBillingTermOptions(plan?: Plan | null) {
   if (!plan) return [{ value: 'monthly', label: 'Monthly' }]
   const validity = {
     monthly: plan.validityOptions?.monthly !== false,
-    quarterly: Boolean(plan.validityOptions?.quarterly),
-    halfYearly: Boolean(plan.validityOptions?.halfYearly),
-    yearly: Boolean(plan.validityOptions?.yearly),
+    quarterly: Boolean(plan.validityOptions?.quarterly) || Number(plan.quarterlyPrice || 0) > 0,
+    halfYearly: Boolean(plan.validityOptions?.halfYearly) || Number(plan.halfYearlyPrice || 0) > 0,
+    yearly: Boolean(plan.validityOptions?.yearly) || Number(plan.yearlyPrice || 0) > 0,
   }
   const options: Array<{ value: 'monthly' | 'quarterly' | 'halfYearly' | 'yearly'; label: string }> = []
   if (validity.monthly) options.push({ value: 'monthly', label: 'Monthly' })
