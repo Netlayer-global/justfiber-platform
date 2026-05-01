@@ -101,6 +101,17 @@ function normalizeDisplayInvoiceNumber(value = "") {
   return raw;
 }
 
+function buildDisplayInvoiceNumber(invoice = {}) {
+  const prefix = String(invoice?.invoicePrefix || invoice?.metadata?.invoicePrefix || "").trim();
+  const sequenceNumber = Number(invoice?.invoiceSequenceNumber || invoice?.metadata?.invoiceSequenceNumber || 0);
+  const sequenceText = sequenceNumber > 0 ? String(sequenceNumber).padStart(4, "0") : "";
+  const periodCode = String(invoice?.billCycle || "").replace(/[^0-9]+/g, "");
+  if (prefix && periodCode && sequenceText) {
+    return `${prefix}-${periodCode}-${sequenceText}`;
+  }
+  return normalizeDisplayInvoiceNumber(invoice?.invoiceNumber || invoice?.invoiceId || "");
+}
+
 function normalizeAuthIdentifier(value = "") {
   return String(value || "").trim();
 }
@@ -313,7 +324,7 @@ async function resolvePaymentGatewayForCustomer(customer) {
 }
 
 function buildInvoiceHtml(invoice, customer, profile) {
-  const displayInvoiceNumber = normalizeDisplayInvoiceNumber(invoice.invoiceNumber || invoice.invoiceId);
+  const displayInvoiceNumber = buildDisplayInvoiceNumber(invoice);
   const summaryRows = buildInvoiceSummaryRows(invoice);
   const formatMoney = (amount) => `Rs ${Number(amount || 0).toFixed(2)}`;
   const branding = pickBillingBranding(profile, invoice);
@@ -608,7 +619,7 @@ function drawPdfFooter(doc, branding, generatedText, startY = 720) {
 }
 
 function renderInvoicePdf(invoice, profile, customer) {
-  const displayInvoiceNumber = normalizeDisplayInvoiceNumber(invoice.invoiceNumber || invoice.invoiceId);
+  const displayInvoiceNumber = buildDisplayInvoiceNumber(invoice);
   const branding = pickBillingBranding(profile, invoice);
   const summaryRows = buildInvoiceSummaryRows(invoice);
   const doc = new PDFDocument({ margin: 40, size: "A4" });
@@ -3085,7 +3096,11 @@ customerPortalRouter.get(
           customer.billingSnapshot?.billCycle ||
           latestInvoice?.metadata?.billCycleLabel ||
           "Monthly";
-    const recurringAmount = await resolveCurrentCustomerRecurringAmount(customer, service, latestInvoice);
+    const recurringAmount = Number(
+      latestInvoice?.totalAmount ||
+      (await resolveCurrentCustomerRecurringAmount(customer, service, latestInvoice)) ||
+      0
+    );
     const openInvoices = invoices.filter((invoice) => String(invoice.paymentStatus || "").toLowerCase() !== "paid");
     const billingView = {
       dueAmount: openInvoices.length
@@ -3262,7 +3277,11 @@ customerPortalRouter.get(
       billMode: formatBillingMode(service?.metadata?.billMode || customer.billingSnapshot?.billMode),
       generatedDate: latestInvoice?.generatedAt || customer.updatedAt,
       amount: latestInvoice?.totalAmount || customer.billingSnapshot?.lastInvoiceAmount || 0,
-      recurringAmount: await resolveCurrentCustomerRecurringAmount(customer, service, latestInvoice),
+      recurringAmount: Number(
+        latestInvoice?.totalAmount ||
+        (await resolveCurrentCustomerRecurringAmount(customer, service, latestInvoice)) ||
+        0
+      ),
       paymentStatus: effectivePaymentStatus,
       invoiceLifecycle: latestInvoice ? deriveInvoiceLifecycle(latestInvoice) : "unknown",
       dueAmount,
