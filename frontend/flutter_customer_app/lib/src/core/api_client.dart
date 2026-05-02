@@ -1466,6 +1466,17 @@ class ApiClient {
     return data['applied'] == true;
   }
 
+  Future<void> registerFcmToken(CustomerSession session, String fcmToken) async {
+    try {
+      await _request(
+        '/api/v1/customer/device/token',
+        method: 'POST',
+        token: session.accessToken,
+        body: {'fcmToken': fcmToken},
+      );
+    } catch (_) {}
+  }
+
   Future<SpeedTestData> fetchSpeedTest(CustomerSession session,
       {String? customerId}) async {
     final data = _asMap(await _request(

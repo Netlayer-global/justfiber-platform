@@ -5,6 +5,12 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Apply google-services only when google-services.json is present.
+// Place google-services.json here after running: flutterfire configure
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.example.justfiber_installer_app"
     compileSdk = flutter.compileSdkVersion

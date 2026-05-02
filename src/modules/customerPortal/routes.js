@@ -4733,6 +4733,19 @@ customerPortalRouter.post(
 );
 
 customerPortalRouter.post(
+  "/device/token",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const { fcmToken } = req.body || {};
+    if (!fcmToken || typeof fcmToken !== "string") {
+      return ok(res, { updated: false });
+    }
+    await CustomerUser.findByIdAndUpdate(req.customerUser._id, { fcmToken: fcmToken.trim() });
+    return ok(res, { updated: true });
+  })
+);
+
+customerPortalRouter.post(
   "/tickets",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {

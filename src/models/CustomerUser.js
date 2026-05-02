@@ -7,7 +7,8 @@ const customerUserSchema = new mongoose.Schema(
     fullName: String,
     authMode: { type: String, enum: ["mobile_otp", "email_otp"], default: "mobile_otp" },
     linkedCustomerIds: { type: [String], default: [] },
-    state: { type: String, enum: ["new_lead", "booking_in_progress", "active_customer", "suspended_customer"], default: "new_lead" }
+    state: { type: String, enum: ["new_lead", "booking_in_progress", "active_customer", "suspended_customer"], default: "new_lead" },
+    fcmToken: { type: String, default: null }
   },
   { timestamps: true }
 );

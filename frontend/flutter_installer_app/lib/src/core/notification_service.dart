@@ -1,4 +1,15 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+// Top-level background handler — MUST be a top-level function.
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await InstallerNotificationService.instance.showAlert(
+    id: message.messageId.hashCode & 0x7fffffff,
+    title: message.notification?.title ?? 'JustFiber Field',
+    body: message.notification?.body ?? '',
+  );
+}
 
 class InstallerNotificationService {
   InstallerNotificationService._();
@@ -15,7 +26,8 @@ class InstallerNotificationService {
     const settings = InitializationSettings(android: androidSettings);
     await _plugin.initialize(settings);
 
-    final androidPlugin = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    final androidPlugin =
+        _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     await androidPlugin?.requestNotificationsPermission();
     await androidPlugin?.createNotificationChannel(
       const AndroidNotificationChannel(
@@ -26,7 +38,35 @@ class InstallerNotificationService {
       ),
     );
 
+    // FCM: request permission and handle foreground messages.
+    // Guarded — no-ops silently if Firebase was not initialised.
+    try {
+      await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        final n = message.notification;
+        if (n == null) return;
+        showAlert(
+          id: message.messageId.hashCode & 0x7fffffff,
+          title: n.title ?? 'JustFiber Field',
+          body: n.body ?? '',
+        );
+      });
+    } catch (_) {}
+
     _initialized = true;
+  }
+
+  /// Returns the FCM registration token, or null if unavailable.
+  Future<String?> getFcmToken() async {
+    try {
+      return await FirebaseMessaging.instance.getToken();
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> showAlert({
@@ -34,9 +74,7 @@ class InstallerNotificationService {
     required String title,
     required String body,
   }) async {
-    if (!_initialized) {
-      await initialize();
-    }
+    if (!_initialized) await initialize();
 
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
@@ -50,15 +88,8 @@ class InstallerNotificationService {
       ),
     );
 
-    await _plugin.show(
-      id,
-      title,
-      body,
-      details,
-    );
+    await _plugin.show(id, title, body, details);
   }
 
-  int stableIdFor(String input) {
-    return input.hashCode & 0x7fffffff;
-  }
+  int stableIdFor(String input) => input.hashCode & 0x7fffffff;
 }

@@ -67,6 +67,7 @@ class InstallerAppState extends ChangeNotifier {
       await prefs.setString(_installerRefreshTokenKey, session!.refreshToken);
       await Future.wait([refresh(), loadSalesLeads()]);
       _startNotificationsPolling();
+      unawaited(_registerFcmToken());
       return true;
     } catch (e) {
       error = e.toString();
@@ -436,8 +437,20 @@ class InstallerAppState extends ChangeNotifier {
     notifyListeners();
     await Future.wait([refresh(), loadSalesLeads()]);
     _startNotificationsPolling();
+    unawaited(_registerFcmToken());
     restoringSession = false;
     notifyListeners();
+  }
+
+  Future<void> _registerFcmToken() async {
+    final s = session;
+    if (s == null) return;
+    try {
+      final token = await InstallerNotificationService.instance.getFcmToken();
+      if (token != null && token.isNotEmpty) {
+        await api.registerFcmToken(s, token);
+      }
+    } catch (_) {}
   }
 
   Future<void> refreshNotificationsSilently() async {

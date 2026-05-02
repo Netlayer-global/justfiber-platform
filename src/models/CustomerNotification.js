@@ -14,4 +14,14 @@ const customerNotificationSchema = new mongoose.Schema(
 
 customerNotificationSchema.index({ customerUserId: 1, createdAt: -1 });
 
+// Fire FCM push every time a notification is created — fire-and-forget so it
+// never blocks the save or throws up the call stack.
+customerNotificationSchema.post("save", function (doc) {
+  import("../integrations/fcmPush.js")
+    .then(({ sendCustomerPush }) =>
+      sendCustomerPush(doc.customerUserId, doc.title, doc.body)
+    )
+    .catch(() => null);
+});
+
 export const CustomerNotification = mongoose.model("CustomerNotification", customerNotificationSchema);

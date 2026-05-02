@@ -36,7 +36,8 @@ const installerSchema = new mongoose.Schema(
     currentLeave: { type: currentLeaveSchema, default: () => ({}) },
     lastLoginAt: Date,
     lastSeenAt: Date,
-    createdByAdminId: mongoose.Schema.Types.ObjectId
+    createdByAdminId: mongoose.Schema.Types.ObjectId,
+    fcmToken: { type: String, default: null }
   },
   { timestamps: true }
 );

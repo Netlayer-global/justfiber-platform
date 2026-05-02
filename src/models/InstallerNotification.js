@@ -12,4 +12,14 @@ const installerNotificationSchema = new mongoose.Schema(
   { timestamps: { createdAt: true, updatedAt: false } }
 );
 
+// Fire FCM push every time a notification is created — fire-and-forget so it
+// never blocks the save or throws up the call stack.
+installerNotificationSchema.post("save", function (doc) {
+  import("../integrations/fcmPush.js")
+    .then(({ sendInstallerPush }) =>
+      sendInstallerPush(doc.installerId, doc.title, doc.body)
+    )
+    .catch(() => null);
+});
+
 export const InstallerNotification = mongoose.model("InstallerNotification", installerNotificationSchema);

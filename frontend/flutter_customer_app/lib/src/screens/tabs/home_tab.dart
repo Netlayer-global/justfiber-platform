@@ -5,6 +5,7 @@ import '../../core/app_state.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../billing_payment_screen.dart';
+import '../booking_enquiry_screen.dart';
 import '../booking_payment_screen.dart';
 import '../lead_booking_flow_screen.dart';
 import '../notifications_screen.dart';
@@ -47,26 +48,44 @@ class HomeTab extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // ── Premium Service Hero ───────────────────────────────────
+          // ── Hero — new user gets booking card, existing gets plan hero ──
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: _PremiumHeroCard(
-              planName: billing.currentPlan,
-              wifiName: dashboard.wifiName,
-              usedGb: dashboard.usedGb,
-              totalGb: dashboard.totalGb,
-              usagePct: usagePct,
-              isOnline: isOnline,
-              activeDays: dashboard.activeDays,
-              onBookNow: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                    builder: (_) => appState.connections.isEmpty
-                        ? LeadBookingFlowScreen(
-                            initialMobile: appState.session?.mobile,
-                          )
-                        : const PlanCatalogScreen()),
-              ),
-            ),
+            child: appState.connections.isEmpty
+                ? _NewUserConnectCard(
+                    onBookNow: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => LeadBookingFlowScreen(
+                              initialMobile: appState.session?.mobile)),
+                    ),
+                    onEnquiry: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => BookingEnquiryScreen(
+                                initialMobile: appState.session?.mobile,
+                                initialName: appState.dashboard.customerName,
+                              )),
+                    ),
+                  )
+                : _PremiumHeroCard(
+                    planName: billing.currentPlan,
+                    wifiName: dashboard.wifiName,
+                    usedGb: dashboard.usedGb,
+                    totalGb: dashboard.totalGb,
+                    usagePct: usagePct,
+                    isOnline: isOnline,
+                    activeDays: dashboard.activeDays,
+                    onBookNow: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const PlanCatalogScreen()),
+                    ),
+                    onBookEnquiry: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => BookingEnquiryScreen(
+                                initialMobile: appState.session?.mobile,
+                                initialName: appState.dashboard.customerName,
+                              )),
+                    ),
+                  ),
           ),
 
           const SizedBox(height: 16),
@@ -356,6 +375,7 @@ class _PremiumHeroCard extends StatelessWidget {
     required this.isOnline,
     required this.activeDays,
     required this.onBookNow,
+    required this.onBookEnquiry,
   });
 
   final String planName, wifiName;
@@ -363,6 +383,7 @@ class _PremiumHeroCard extends StatelessWidget {
   final bool isOnline;
   final int activeDays;
   final VoidCallback onBookNow;
+  final VoidCallback onBookEnquiry;
 
   @override
   Widget build(BuildContext context) {
@@ -573,24 +594,47 @@ class _PremiumHeroCard extends StatelessWidget {
 
                 const SizedBox(height: 18),
 
-                // Book Now pill button
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: onBookNow,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: BorderSide(color: Colors.white.withValues(alpha: 0.45)),
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(999)),
+                // Action buttons row: Book (left) + Upgrade Plan (right)
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: onBookEnquiry,
+                        icon: const Icon(Icons.call_rounded, size: 16),
+                        label: Text(
+                          'Book',
+                          style: GoogleFonts.inter(
+                              fontSize: 13, fontWeight: FontWeight.w800),
+                        ),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF6D28D9),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(999)),
+                        ),
+                      ),
                     ),
-                    child: Text(
-                      planName.isEmpty ? 'Book Now' : 'Upgrade Plan',
-                      style: GoogleFonts.inter(
-                          fontSize: 13, fontWeight: FontWeight.w700),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: onBookNow,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: BorderSide(
+                              color: Colors.white.withValues(alpha: 0.45)),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(999)),
+                        ),
+                        child: Text(
+                          planName.isEmpty ? 'Book Now' : 'Upgrade Plan',
+                          style: GoogleFonts.inter(
+                              fontSize: 13, fontWeight: FontWeight.w700),
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -1110,6 +1154,163 @@ class _ViewAllCard extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── New User Connect Card ────────────────────────────────────────────────────
+
+class _NewUserConnectCard extends StatelessWidget {
+  const _NewUserConnectCard({required this.onBookNow, required this.onEnquiry});
+  final VoidCallback onBookNow;
+  final VoidCallback onEnquiry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Intro info row
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: kSurface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: kBorder),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: kPrimary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.wifi_rounded, color: kPrimary, size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Get connected to JustFiber',
+                      style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'High-speed fiber broadband at your doorstep.',
+                      style: GoogleFonts.inter(
+                          color: kMuted, fontSize: 12, height: 1.4),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Option tiles
+        Container(
+          decoration: BoxDecoration(
+            color: kSurface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: kBorder),
+          ),
+          child: Column(
+            children: [
+              _optionTile(
+                icon: Icons.add_circle_outline_rounded,
+                title: 'Book new connection',
+                subtitle: 'Start a new fiber broadband connection',
+                onTap: onBookNow,
+                topRadius: true,
+              ),
+              const Divider(height: 1, color: kBorder),
+              _optionTile(
+                icon: Icons.call_rounded,
+                title: 'Quick enquiry',
+                subtitle: 'Have questions? Get a callback from us',
+                onTap: onEnquiry,
+                bottomRadius: true,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        FilledButton.icon(
+          onPressed: onBookNow,
+          icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+          label: Text(
+            'Book Your Connection',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15),
+          ),
+          style: FilledButton.styleFrom(
+            backgroundColor: kPrimary,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _optionTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    bool topRadius = false,
+    bool bottomRadius = false,
+  }) {
+    final radius = BorderRadius.only(
+      topLeft: topRadius ? const Radius.circular(18) : Radius.zero,
+      topRight: topRadius ? const Radius.circular(18) : Radius.zero,
+      bottomLeft: bottomRadius ? const Radius.circular(18) : Radius.zero,
+      bottomRight: bottomRadius ? const Radius.circular(18) : Radius.zero,
+    );
+    return InkWell(
+      onTap: onTap,
+      borderRadius: radius,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: kPrimary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: kPrimary, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 2),
+                  Text(subtitle,
+                      style: GoogleFonts.inter(color: kMuted, fontSize: 12)),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, color: kMuted, size: 14),
           ],
         ),
       ),

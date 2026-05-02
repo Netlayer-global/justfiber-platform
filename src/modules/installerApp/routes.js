@@ -55,6 +55,18 @@ export const installerAppRouter = Router();
 
 installerAppRouter.use(requireInstallerAuth);
 
+installerAppRouter.post(
+  "/device/token",
+  asyncHandler(async (req, res) => {
+    const { fcmToken } = req.body || {};
+    if (!fcmToken || typeof fcmToken !== "string") {
+      return ok(res, { updated: false });
+    }
+    await Installer.findByIdAndUpdate(req.installer._id, { fcmToken: fcmToken.trim() });
+    return ok(res, { updated: true });
+  })
+);
+
 installerAppRouter.get(
   "/sales/plans",
   asyncHandler(async (_req, res) => {

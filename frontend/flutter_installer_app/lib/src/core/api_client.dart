@@ -166,6 +166,17 @@ class InstallerApiClient {
     );
   }
 
+  Future<void> registerFcmToken(InstallerSession session, String fcmToken) async {
+    try {
+      await _request(
+        '/api/v1/installer/device/token',
+        method: 'POST',
+        token: session.accessToken,
+        body: {'fcmToken': fcmToken},
+      );
+    } catch (_) {}
+  }
+
   Future<String> refreshInstallerSession(String refreshToken) async {
     final data = _asMap(
       await _request(

@@ -15,6 +15,7 @@ import {
   Phone,
   Power,
   RefreshCw,
+  RotateCcw,
   Ticket,
   Trash2,
   Wifi,
@@ -280,6 +281,8 @@ function OverviewTab({ customer, onRefresh }: { customer: Customer; onRefresh: (
   const [savingWifi, setSavingWifi] = useState(false)
   const [savingPppoe, setSavingPppoe] = useState(false)
   const [processingPlanAction, setProcessingPlanAction] = useState<'cancel' | 'force' | null>(null)
+  const [reprovisPreset, setReprovisPreset] = useState<'SERVICE_ACTIVATE' | 'SERVICE_RESUME' | 'SERVICE_PREPARE' | 'SERVICE_SUSPEND'>('SERVICE_ACTIVATE')
+  const [reprovisioning, setReprovisioning] = useState(false)
 
   useEffect(() => {
     setWifi24(ssid24)
@@ -339,6 +342,33 @@ function OverviewTab({ customer, onRefresh }: { customer: Customer; onRefresh: (
       toast.error(error instanceof Error ? error.message : 'Failed to update PPPoE')
     } finally {
       setSavingPppoe(false)
+    }
+  }
+
+  async function handleReprovision() {
+    if (!customer.customerId) {
+      toast.error('Customer ID missing')
+      return
+    }
+    const labels: Record<string, string> = {
+      SERVICE_ACTIVATE: 'SERVICE_ACTIVATE (full config push)',
+      SERVICE_RESUME: 'SERVICE_RESUME (re-enable internet)',
+      SERVICE_PREPARE: 'SERVICE_PREPARE (initial setup)',
+      SERVICE_SUSPEND: 'SERVICE_SUSPEND (cut internet)',
+    }
+    if (!confirm(`Push preset "${labels[reprovisPreset]}" to device?\n\nThis will re-apply the TR-069 config to the customer's router.`)) return
+    try {
+      setReprovisioning(true)
+      const res = await adminAPI.retryCustomerProvisioning(customer.customerId, reprovisPreset)
+      if (!res.success) {
+        toast.error(typeof res.error === 'string' ? res.error : 'Re-provision failed')
+        return
+      }
+      toast.success(`Re-provision queued: ${reprovisPreset}`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Re-provision failed')
+    } finally {
+      setReprovisioning(false)
     }
   }
 
@@ -572,6 +602,36 @@ function OverviewTab({ customer, onRefresh }: { customer: Customer; onRefresh: (
             </label>
             <Button variant="secondary" onClick={() => void handlePppoeSave()} disabled={savingPppoe || !pppoeUserInput.trim()}>
               {savingPppoe ? 'Saving...' : 'Save WAN Settings'}
+            </Button>
+          </div>
+        </div>
+        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+          <div className="flex items-center gap-2">
+            <RotateCcw className="h-4 w-4 text-slate-500" />
+            <div className="text-sm font-semibold text-slate-900">Re-Provision Device</div>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">Re-push TR-069 config to the customer's router via GenieACS.</p>
+          <div className="mt-3 space-y-3">
+            <label className="space-y-1">
+              <div className="text-xs font-medium text-slate-500">Preset</div>
+              <select
+                className="input"
+                value={reprovisPreset}
+                onChange={(e) => setReprovisPreset(e.target.value as typeof reprovisPreset)}
+              >
+                <option value="SERVICE_ACTIVATE">SERVICE_ACTIVATE — full config push</option>
+                <option value="SERVICE_RESUME">SERVICE_RESUME — re-enable internet</option>
+                <option value="SERVICE_PREPARE">SERVICE_PREPARE — initial setup</option>
+                <option value="SERVICE_SUSPEND">SERVICE_SUSPEND — suspend internet</option>
+              </select>
+            </label>
+            <Button
+              variant="secondary"
+              onClick={() => void handleReprovision()}
+              disabled={reprovisioning || !customer.customerId}
+              icon={<RotateCcw className="h-4 w-4" />}
+            >
+              {reprovisioning ? 'Queuing...' : 'Push Config'}
             </Button>
           </div>
         </div>

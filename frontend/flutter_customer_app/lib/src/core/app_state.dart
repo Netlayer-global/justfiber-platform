@@ -1611,6 +1611,18 @@ class AppState extends ChangeNotifier {
     restoringSession = false;
     notifyListeners();
     unawaited(refresh(silent: true));
+    unawaited(_registerFcmToken());
+  }
+
+  Future<void> _registerFcmToken() async {
+    final s = session;
+    if (s == null) return;
+    try {
+      final token = await CustomerNotificationService.instance.getFcmToken();
+      if (token != null && token.isNotEmpty) {
+        await api.registerFcmToken(s, token);
+      }
+    } catch (_) {}
   }
 }
 

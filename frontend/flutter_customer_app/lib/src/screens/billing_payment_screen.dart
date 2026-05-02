@@ -7,6 +7,7 @@ import '../core/app_state.dart';
 import '../core/models.dart';
 import '../core/theme.dart';
 import '../widgets/pressable_scale.dart';
+import 'payment_detail_screen.dart';
 import 'support_history_screen.dart';
 
 class BillingPaymentScreen extends StatefulWidget {
