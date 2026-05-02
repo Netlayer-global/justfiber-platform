@@ -1684,9 +1684,12 @@ function getDurationMonthsFromBillingTerm(billingTerm = "monthly") {
 }
 
 function resolvePlanChangeCycleMetrics(customer = {}, billingTerm = "monthly") {
+  const requestedDurationMonths =
+    billingTerm === "yearly" ? 12 : billingTerm === "halfYearly" ? 6 : billingTerm === "quarterly" ? 3 : 1;
   const configuredDurationMonths = Number(
+    requestedDurationMonths ||
     customer?.billingSnapshot?.durationMonths ||
-    (billingTerm === "yearly" ? 12 : billingTerm === "halfYearly" ? 6 : billingTerm === "quarterly" ? 3 : 1)
+    1
   ) || 1;
 
   const serviceStartDate = customer?.billingSnapshot?.serviceStartDate || customer?.createdAt || null;

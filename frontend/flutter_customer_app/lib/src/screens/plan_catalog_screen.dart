@@ -891,8 +891,14 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
       final paymentOrder =
           await appState.loadBillingPaymentOrder(amount: result.payableNow);
       if (!mounted || paymentOrder == null) return;
-      await navigator.push(MaterialPageRoute(
+      final paymentCompleted = await navigator.push<bool>(MaterialPageRoute(
           builder: (_) => BillingPaymentScreen(paymentOrder: paymentOrder)));
+      if (!mounted) return;
+      if (paymentCompleted != true) {
+        messenger.showSnackBar(const SnackBar(
+            content: Text('Payment not completed yet. Plan change is still pending.')));
+        return;
+      }
       if (!mounted) return;
       // Explicitly complete the pending plan change in case the Razorpay webhook
       // hasn't fired yet when the user returns to the app.

@@ -7,7 +7,6 @@ import '../core/app_state.dart';
 import '../core/models.dart';
 import '../core/theme.dart';
 import '../widgets/pressable_scale.dart';
-import 'payment_detail_screen.dart';
 import 'support_history_screen.dart';
 
 class BillingPaymentScreen extends StatefulWidget {
@@ -45,6 +44,15 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
 
   void _openCheckout() {
     if (launching || verifying) return;
+    if (widget.paymentOrder.keyId.trim().isEmpty ||
+        widget.paymentOrder.orderId.trim().isEmpty ||
+        widget.paymentOrder.amountPaise <= 0) {
+      setState(() {
+        paymentError =
+            'Payment order is incomplete. Please retry from billing or contact support.';
+      });
+      return;
+    }
     setState(() {
       launching = true;
       verifying = false;
@@ -52,18 +60,23 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
       walletHint = null;
     });
     try {
+      final prefill = <String, Object>{};
+      if (widget.paymentOrder.customerPhone.trim().isNotEmpty) {
+        prefill['contact'] = widget.paymentOrder.customerPhone.trim();
+      }
+      if (widget.paymentOrder.customerEmail.trim().isNotEmpty) {
+        prefill['email'] = widget.paymentOrder.customerEmail.trim();
+      }
       _razorpay.open({
         'key': widget.paymentOrder.keyId,
         'amount': widget.paymentOrder.amountPaise,
         'currency': widget.paymentOrder.currency,
-        'name': 'JustFiber',
+        'name': widget.paymentOrder.customerName.trim().isNotEmpty
+            ? widget.paymentOrder.customerName.trim()
+            : 'JustFiber',
         'description': 'Bill payment',
         'order_id': widget.paymentOrder.orderId,
-        'prefill': {
-          'contact': widget.paymentOrder.customerPhone,
-          'email': widget.paymentOrder.customerEmail,
-          'name': widget.paymentOrder.customerName,
-        },
+        'prefill': prefill,
         'theme': {'color': '#8224E3'},
       });
     } catch (e) {
@@ -127,13 +140,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
     if (ok) {
       await appState.refresh();
       if (!mounted) return;
-      final latestPayment = _findMatchingPayment(appState);
-      if (latestPayment != null) {
-        await Navigator.of(context).pushReplacement(MaterialPageRoute(
-            builder: (_) => PaymentDetailScreen(payment: latestPayment)));
-      } else {
-        Navigator.of(context).pop(true);
-      }
+      Navigator.of(context).pop(true);
     } else {
       setState(() {
         launching = false;
