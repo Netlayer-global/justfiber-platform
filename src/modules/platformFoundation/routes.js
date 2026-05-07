@@ -1786,6 +1786,30 @@ platformFoundationRouter.get(
         )
       );
       filter.routerIp = allowedRouterIps.length ? { $in: allowedRouterIps } : "__zone_scope_without_router__";
+    } else if (routerIp) {
+      const selectedRouter = await BngNode.findOne({
+        $or: [
+          { managementIp: routerIp },
+          { radiusClientIp: routerIp },
+          { additionalRadiusClientIps: routerIp }
+        ]
+      })
+        .select({ managementIp: 1, radiusClientIp: 1, additionalRadiusClientIps: 1 })
+        .lean();
+      if (selectedRouter) {
+        const routerIps = Array.from(
+          new Set(
+            [
+              String(selectedRouter.managementIp || "").trim(),
+              String(selectedRouter.radiusClientIp || "").trim(),
+              ...(Array.isArray(selectedRouter.additionalRadiusClientIps)
+                ? selectedRouter.additionalRadiusClientIps.map((value) => String(value || "").trim())
+                : [])
+            ].filter(Boolean)
+          )
+        );
+        if (routerIps.length) filter.routerIp = { $in: routerIps };
+      }
     }
     const [items, total] = await Promise.all([
       NatLogEntry.find(filter).sort({ loggedAt: -1 }).skip(skip).limit(limit).lean(),

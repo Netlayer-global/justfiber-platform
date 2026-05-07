@@ -178,7 +178,6 @@ function NatLogsPageContent() {
       }
       const routerItems = routersRes.data || []
       setRouters(routerItems)
-      const defaultRouter = routerItems[0]?.managementIp || routerItems[0]?.radiusClientIp || ''
       const nextFilters = {
         ...initialFilters,
         ...prefilledFilters,
@@ -186,7 +185,7 @@ function NatLogsPageContent() {
           prefilledFilters.routerIp ||
           (prefilledFilters.customerId || prefilledFilters.subscriberId || prefilledFilters.pppoeUsername || prefilledFilters.privateIp
             ? ''
-            : defaultRouter),
+            : ''),
       }
       setFilters(nextFilters)
       await loadLogs(nextFilters)

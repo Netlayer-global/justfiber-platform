@@ -1719,10 +1719,15 @@ function resolvePlanChangeCycleMetrics(customer = {}, billingTerm = "monthly") {
 
 async function syncPortalCustomerServicePlan(customer, plan, billingTerm = "monthly") {
   if (!customer?.customerId || !plan) return;
+  const existingService = customer.serviceId
+    ? await SubscriberService.findOne({ serviceId: customer.serviceId }).lean()
+    : null;
   const durationMonths = getDurationMonthsFromBillingTerm(billingTerm);
   const recurringAmount = getPlanTermPrice(plan, billingTerm);
   const routerRental = Number(plan.routerRental || 0) || 0;
   const totalPlanAmount = Number((recurringAmount + routerRental * durationMonths).toFixed(2));
+  const resolvedAccessProfileCode =
+    String(plan?.provisioning?.accessProfileCode || existingService?.accessProfileCode || "").trim() || undefined;
   await Customer.updateOne(
     { customerId: customer.customerId },
     {
@@ -1752,6 +1757,7 @@ async function syncPortalCustomerServicePlan(customer, plan, billingTerm = "mont
         $set: {
           planCode: plan.planCode,
           planName: plan.name,
+          ...(resolvedAccessProfileCode ? { accessProfileCode: resolvedAccessProfileCode } : {}),
           routerRental,
           billingBreakup: plan.billingBreakup || {},
           billingPeriodMonths: durationMonths,
@@ -1780,6 +1786,31 @@ async function syncPortalCustomerServicePlan(customer, plan, billingTerm = "mont
         }
       }
     );
+    if (existingService?.radiusUsername && existingService?.metadata?.radiusPassword) {
+      await radiusServiceManager.createSubscriberAccess({
+        serviceId: customer.serviceId,
+        customerId: customer.customerId,
+        radiusUsername: existingService.radiusUsername,
+        radiusPassword: existingService.metadata.radiusPassword,
+        accessProfileCode: resolvedAccessProfileCode || existingService.accessProfileCode,
+        billingProfileCode: existingService.billingProfileCode,
+        bngNodeCode: existingService.bngNodeCode,
+        metadata: {
+          ...(existingService.metadata || {}),
+          source: "customer_plan_change",
+          networkProfile: {
+            speedMbps: Number(plan.speedMbps || customer.billingSnapshot?.speedMbps || 0) || 0,
+            uploadSpeedMbps:
+              Number(plan.uploadSpeedMbps || customer.billingSnapshot?.uploadSpeedMbps || 0) || 0,
+            dataPolicy: plan.dataPolicy || customer.billingSnapshot?.dataPolicy || "unlimited",
+            dataLimitGb:
+              Number(plan.dataLimitGb || customer.billingSnapshot?.dataLimitGb || 0) || 0,
+            fupSpeedMbps:
+              Number(plan.fupSpeedMbps || customer.billingSnapshot?.fupSpeedMbps || 0) || 0,
+          }
+        }
+      });
+    }
   }
 }
 
