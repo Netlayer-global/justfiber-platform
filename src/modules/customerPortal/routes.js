@@ -1807,17 +1807,30 @@ async function syncPortalCustomerServicePlan(customer, plan, billingTerm = "mont
         }
       }
     );
-    if (existingService?.radiusUsername && existingService?.metadata?.radiusPassword) {
+    let resolvedRadiusPassword = String(existingService?.metadata?.radiusPassword || "").trim();
+    if (!resolvedRadiusPassword && existingService?.radiusUsername) {
+      const accessSnapshot = await radiusServiceManager
+        .getSubscriberAccessSnapshot({ serviceId: customer.serviceId, radiusUsername: existingService.radiusUsername })
+        .catch(() => null);
+      const cleartextEntry = Array.isArray(accessSnapshot?.radcheck)
+        ? accessSnapshot.radcheck.find(
+            (entry) => String(entry?.attribute || "").trim().toLowerCase() === "cleartext-password"
+          )
+        : null;
+      resolvedRadiusPassword = String(cleartextEntry?.value || "").trim();
+    }
+    if (existingService?.radiusUsername && resolvedRadiusPassword) {
       await radiusServiceManager.createSubscriberAccess({
         serviceId: customer.serviceId,
         customerId: customer.customerId,
         radiusUsername: existingService.radiusUsername,
-        radiusPassword: existingService.metadata.radiusPassword,
+        radiusPassword: resolvedRadiusPassword,
         accessProfileCode: resolvedAccessProfileCode || existingService.accessProfileCode,
         billingProfileCode: existingService.billingProfileCode,
         bngNodeCode: existingService.bngNodeCode,
         metadata: {
           ...(existingService.metadata || {}),
+          radiusPassword: resolvedRadiusPassword,
           source: "customer_plan_change",
           networkProfile: {
             speedMbps: Number(plan.speedMbps || customer.billingSnapshot?.speedMbps || 0) || 0,
