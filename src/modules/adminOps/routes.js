@@ -4018,14 +4018,14 @@ adminOpsRouter.patch(
           ...(existingService?.metadata || {}),
           source: "admin_device_management",
           networkProfile: {
-            speedMbps: Number(customer.billingSnapshot?.speedMbps || plan?.speedMbps || 0) || 0,
+            speedMbps: Number(plan?.speedMbps || customer.billingSnapshot?.speedMbps || 0) || 0,
             uploadSpeedMbps:
-              Number(customer.billingSnapshot?.uploadSpeedMbps || plan?.uploadSpeedMbps || 0) || 0,
-            dataPolicy: customer.billingSnapshot?.dataPolicy || plan?.dataPolicy || "unlimited",
+              Number(plan?.uploadSpeedMbps || customer.billingSnapshot?.uploadSpeedMbps || 0) || 0,
+            dataPolicy: plan?.dataPolicy || customer.billingSnapshot?.dataPolicy || "unlimited",
             dataLimitGb:
-              Number(customer.billingSnapshot?.dataLimitGb || plan?.dataLimitGb || 0) || 0,
+              Number(plan?.dataLimitGb || customer.billingSnapshot?.dataLimitGb || 0) || 0,
             fupSpeedMbps:
-              Number(customer.billingSnapshot?.fupSpeedMbps || plan?.fupSpeedMbps || 0) || 0,
+              Number(plan?.fupSpeedMbps || customer.billingSnapshot?.fupSpeedMbps || 0) || 0,
           }
         }
       });
@@ -4132,11 +4132,11 @@ adminOpsRouter.post(
         ...(subscriberService?.metadata || {}),
         source: "admin_manual_pppoe",
         networkProfile: {
-          speedMbps: Number(customer.billingSnapshot?.speedMbps || plan?.speedMbps || 0) || 0,
-          uploadSpeedMbps: Number(customer.billingSnapshot?.uploadSpeedMbps || plan?.uploadSpeedMbps || 0) || 0,
-          dataPolicy: customer.billingSnapshot?.dataPolicy || plan?.dataPolicy || "unlimited",
-          dataLimitGb: Number(customer.billingSnapshot?.dataLimitGb || plan?.dataLimitGb || 0) || 0,
-          fupSpeedMbps: Number(customer.billingSnapshot?.fupSpeedMbps || plan?.fupSpeedMbps || 0) || 0,
+          speedMbps: Number(plan?.speedMbps || customer.billingSnapshot?.speedMbps || 0) || 0,
+          uploadSpeedMbps: Number(plan?.uploadSpeedMbps || customer.billingSnapshot?.uploadSpeedMbps || 0) || 0,
+          dataPolicy: plan?.dataPolicy || customer.billingSnapshot?.dataPolicy || "unlimited",
+          dataLimitGb: Number(plan?.dataLimitGb || customer.billingSnapshot?.dataLimitGb || 0) || 0,
+          fupSpeedMbps: Number(plan?.fupSpeedMbps || customer.billingSnapshot?.fupSpeedMbps || 0) || 0,
         }
       }
     });

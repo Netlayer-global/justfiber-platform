@@ -99,13 +99,13 @@ function buildReplyAttributes(accessProfile, networkProfile = {}, serviceConfig 
   const attributes = { ...(accessProfile?.radiusAttributes || {}) };
   const downMbps = Number(networkProfile?.speedMbps || accessProfile?.downMbps || 0) || 0;
   const upMbps = Number(networkProfile?.uploadSpeedMbps || accessProfile?.upMbps || 0) || 0;
-  if (!attributes["Mikrotik-Rate-Limit"] && downMbps && upMbps) {
+  if ((networkProfile?.speedMbps || !attributes["Mikrotik-Rate-Limit"]) && downMbps && upMbps) {
     attributes["Mikrotik-Rate-Limit"] = `${downMbps}M/${upMbps}M`;
   }
-  if (!attributes["WISPr-Bandwidth-Max-Down"] && downMbps) {
+  if ((networkProfile?.speedMbps || !attributes["WISPr-Bandwidth-Max-Down"]) && downMbps) {
     attributes["WISPr-Bandwidth-Max-Down"] = String(Math.round(downMbps * 1000 * 1000));
   }
-  if (!attributes["WISPr-Bandwidth-Max-Up"] && upMbps) {
+  if ((networkProfile?.uploadSpeedMbps || !attributes["WISPr-Bandwidth-Max-Up"]) && upMbps) {
     attributes["WISPr-Bandwidth-Max-Up"] = String(Math.round(upMbps * 1000 * 1000));
   }
   const dataPolicy = String(networkProfile?.dataPolicy || "unlimited");

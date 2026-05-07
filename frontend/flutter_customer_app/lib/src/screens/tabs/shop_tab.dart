@@ -152,8 +152,7 @@ class ShopTab extends StatelessWidget {
                       onTap: () async {
                         await Navigator.of(context).push(MaterialPageRoute(
                             builder: (_) => const WifiSettingsScreen(
-                                initialAction:
-                                    WifiLaunchAction.parentalControls)));
+                                initialAction: WifiLaunchAction.guest)));
                         if (context.mounted) await appState.refresh();
                       },
                       child: Container(
@@ -168,10 +167,10 @@ class ShopTab extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.shield_rounded,
+                            const Icon(Icons.wifi_tethering_rounded,
                                 color: Colors.white, size: 14),
                             const SizedBox(width: 5),
-                            Text('Parental',
+                            Text('Guest Wi-Fi',
                                 style: GoogleFonts.inter(
                                     color: Colors.white,
                                     fontWeight: FontWeight.w700,

@@ -52,6 +52,11 @@ class ProfileTab extends StatelessWidget {
             ticketCount: appState.tickets.length,
             connStatus:
                 conn?.status.isNotEmpty == true ? conn!.status : 'Active',
+            connectionId: conn?.customerId ?? '',
+            connectionAddress: conn?.address ?? '',
+            totalConnections: appState.connections.length,
+            connectionIndex:
+                appState.connections.indexWhere((c) => c.customerId == appState.selectedCustomerId),
           ),
         ),
 
@@ -216,9 +221,15 @@ class _ProfileHeroCard extends StatelessWidget {
     required this.dueAmount,
     required this.ticketCount,
     required this.connStatus,
+    required this.connectionId,
+    required this.connectionAddress,
+    required this.totalConnections,
+    required this.connectionIndex,
   });
 
   final String name, initial, planName, statusLabel, connStatus;
+  final String connectionId, connectionAddress;
+  final int totalConnections, connectionIndex;
   final bool isActive;
   final double dueAmount;
   final int ticketCount;
@@ -256,40 +267,73 @@ class _ProfileHeroCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Status pill
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(999),
-                    border:
-                        Border.all(color: Colors.white.withValues(alpha: 0.2)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
+                // Status pills row
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.2)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              color: isActive
+                                  ? const Color(0xFF4ADE80)
+                                  : const Color(0xFFEF4444),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            statusLabel,
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (totalConnections > 1 && connectionIndex >= 0)
                       Container(
-                        width: 7,
-                        height: 7,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                          color: isActive
-                              ? const Color(0xFF4ADE80)
-                              : const Color(0xFFEF4444),
-                          shape: BoxShape.circle,
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.swap_horiz_rounded,
+                                color: Colors.white, size: 12),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Connection ${connectionIndex + 1} of $totalConnections',
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 5),
-                      Text(
-                        statusLabel,
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
+                  ],
                 ),
 
                 const SizedBox(height: 18),
@@ -360,6 +404,52 @@ class _ProfileHeroCard extends StatelessWidget {
                                       fontSize: 12,
                                     ),
                                     maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                          if (connectionId.isNotEmpty) ...[
+                            const SizedBox(height: 3),
+                            Row(
+                              children: [
+                                const Icon(Icons.badge_outlined,
+                                    color: Colors.white60, size: 11),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    connectionId,
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white60,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.2,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                          if (connectionAddress.isNotEmpty) ...[
+                            const SizedBox(height: 3),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.location_on_outlined,
+                                    color: Colors.white54, size: 11),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    connectionAddress,
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white54,
+                                      fontSize: 11,
+                                      height: 1.3,
+                                    ),
+                                    maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -621,20 +711,56 @@ class _ConnectionRow extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        connection.fullName.isNotEmpty
-                            ? connection.fullName
-                            : connection.customerId,
+                        connection.address.isNotEmpty
+                            ? connection.address
+                            : (connection.fullName.isNotEmpty
+                                ? connection.fullName
+                                : connection.customerId),
                         style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13),
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          height: 1.3,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      Text(
-                        connection.planName.isNotEmpty
-                            ? connection.planName
-                            : connection.serviceId,
-                        style: GoogleFonts.inter(
-                            color: kMuted, fontSize: 11),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          const Icon(Icons.badge_outlined,
+                              size: 10, color: kMuted),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              connection.customerId,
+                              style: GoogleFonts.inter(
+                                color: kMuted,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.3,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (connection.planName.isNotEmpty) ...[
+                            Text(' · ',
+                                style: GoogleFonts.inter(
+                                    color: kMuted, fontSize: 10)),
+                            Flexible(
+                              child: Text(
+                                connection.planName,
+                                style: GoogleFonts.inter(
+                                  color: kMuted,
+                                  fontSize: 10,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
                   ),

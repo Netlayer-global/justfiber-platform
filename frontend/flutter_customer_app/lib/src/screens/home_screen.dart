@@ -9,7 +9,7 @@ import 'billing_history_screen.dart';
 import 'plan_catalog_screen.dart';
 import 'service_hub_screen.dart';
 import 'service_tracking_screen.dart';
-import 'support_history_screen.dart';
+import 'support_screen.dart';
 import 'tabs/home_tab.dart';
 import 'tabs/profile_tab.dart';
 
@@ -63,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
       HomeTab(onNavigate: _goTo),
       const BillingHistoryScreen(),
       const ServiceHubScreen(),
-      const SupportHistoryScreen(),
+      const SupportScreen(),
       const ProfileTab(),
     ];
 

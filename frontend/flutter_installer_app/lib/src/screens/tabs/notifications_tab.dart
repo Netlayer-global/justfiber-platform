@@ -325,7 +325,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.done_all_rounded,
+                                  const Icon(Icons.done_all_rounded,
                                       size: 14, color: kPrimaryLight),
                                   const SizedBox(width: 5),
                                   Text('Mark all read',

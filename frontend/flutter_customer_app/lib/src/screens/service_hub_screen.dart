@@ -4,9 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../core/app_state.dart';
 import '../core/theme.dart';
 import '../widgets/pressable_scale.dart';
-import 'booking_flow_screen.dart';
-import 'lead_booking_flow_screen.dart';
 import 'plan_catalog_screen.dart';
+import 'shift_connection_screen.dart';
 import 'wifi_settings_screen.dart';
 
 class ServiceHubScreen extends StatelessWidget {
@@ -76,28 +75,13 @@ class ServiceHubScreen extends StatelessWidget {
                             const WifiSettingsScreen()),
                       ),
                       _ActionTile(
-                        icon: Icons.add_home_work_rounded,
-                        title: 'Book Connection',
-                        subtitle: 'New broadband booking with plan & checkout',
-                        accent: const Color(0xFF60A5FA),
-                        onTap: () => _push(
-                            context,
-                            appState,
-                            appState.connections.isEmpty
-                                ? LeadBookingFlowScreen(
-                                    initialMobile: appState.session?.mobile,
-                                  )
-                                : BookingFlowScreen(
-                                    initialMobile: appState.session?.mobile,
-                                  )),
-                      ),
-                      _ActionTile(
                         icon: Icons.home_work_rounded,
                         title: 'Shift Connection',
-                        subtitle: 'Relocate your current broadband setup',
+                        subtitle:
+                            'Move to a new address — pin location on map',
                         accent: const Color(0xFFFB923C),
-                        onTap: () =>
-                            _showShiftSheet(context, appState),
+                        onTap: () => _push(context, appState,
+                            const ShiftConnectionScreen()),
                       ),
                       _ActionTile(
                         icon: Icons.auto_awesome_motion_rounded,
@@ -161,22 +145,6 @@ class ServiceHubScreen extends StatelessWidget {
                       ],
                     ),
 
-                    // ── Add-ons ─────────────────────────────────────────
-                    if (appState.addons.isNotEmpty) ...[
-                      const SizedBox(height: 22),
-                      _sectionLabel('ADD-ONS'),
-                      const SizedBox(height: 10),
-                      ...appState.addons.take(3).map((addon) => Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: _AddonCard(
-                              name: addon.name,
-                              description: addon.description,
-                              onRequest: () => _requestAddon(
-                                  context, appState, addon.name),
-                            ),
-                          )),
-                    ],
-
                     const SizedBox(height: 100),
                   ],
                 ),
@@ -215,178 +183,8 @@ class ServiceHubScreen extends StatelessWidget {
         .push(MaterialPageRoute(builder: (_) => screen));
     if (context.mounted) await appState.refresh();
   }
-
-  Future<void> _requestAddon(
-      BuildContext context, AppState appState, String name) async {
-    final req = await appState.submitServiceRequest(
-        type: 'link_service', note: 'Interested in $name');
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(req == null
-            ? (appState.error ?? 'Unable to submit add-on request')
-            : '$name request created')));
-    if (req != null) await appState.refresh();
-  }
-
-  Future<void> _showShiftSheet(
-      BuildContext context, AppState appState) async {
-    String mode = 'new_address';
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setLocal) => Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
-          child: Container(
-            decoration: BoxDecoration(
-              color: kSurface,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: kBorder),
-            ),
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // drag handle
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: kBorder,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Text('Shift Wi-Fi',
-                    style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 22,
-                        color: Colors.white)),
-                const SizedBox(height: 4),
-                Text('Relocate your broadband connection.',
-                    style: GoogleFonts.inter(
-                        color: kMuted, fontSize: 13)),
-                const SizedBox(height: 18),
-                _shiftOption(
-                  title: 'New address',
-                  subtitle:
-                      'Move your connection to a new location',
-                  value: 'new_address',
-                  groupValue: mode,
-                  onChanged: (v) => setLocal(() => mode = v),
-                ),
-                const SizedBox(height: 10),
-                _shiftOption(
-                  title: 'Same address, different spot',
-                  subtitle: 'Reroute within your current home',
-                  value: 'same_address',
-                  groupValue: mode,
-                  onChanged: (v) => setLocal(() => mode = v),
-                ),
-                const SizedBox(height: 18),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: appState.busy
-                        ? null
-                        : () async {
-                            final req =
-                                await appState.submitServiceRequest(
-                              type: 'shift',
-                              note: mode == 'new_address'
-                                  ? 'Shift to new address'
-                                  : 'Shift within same address',
-                            );
-                            if (!ctx.mounted) return;
-                            Navigator.of(ctx).pop();
-                            ScaffoldMessenger.of(ctx).showSnackBar(
-                              SnackBar(
-                                  content: Text(req == null
-                                      ? (appState.error ??
-                                          'Unable to create request')
-                                      : 'Shift request submitted')),
-                            );
-                            if (req != null) await appState.refresh();
-                          },
-                    child: const Text('Submit Request'),
-                  ),
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _shiftOption({
-    required String title,
-    required String subtitle,
-    required String value,
-    required String groupValue,
-    required ValueChanged<String> onChanged,
-  }) {
-    final selected = value == groupValue;
-    return PressableScale(
-      onTap: () => onChanged(value),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: selected
-              ? kPrimary.withValues(alpha: 0.08)
-              : kSurface,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: selected
-                ? kPrimary.withValues(alpha: 0.5)
-                : kBorder,
-            width: selected ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: GoogleFonts.inter(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          color: Colors.white)),
-                  const SizedBox(height: 2),
-                  Text(subtitle,
-                      style: GoogleFonts.inter(
-                          color: kMuted, fontSize: 12)),
-                ],
-              ),
-            ),
-            Container(
-              width: 20,
-              height: 20,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: selected ? kPrimary : Colors.transparent,
-                border: Border.all(
-                  color: selected ? kPrimary : kMuted,
-                  width: 2,
-                ),
-              ),
-              child: selected
-                  ? const Icon(Icons.check_rounded,
-                      color: Colors.white, size: 12)
-                  : null,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
+
 
 // ── Hero Card ─────────────────────────────────────────────────────────────────
 
@@ -406,204 +204,339 @@ class _ServiceHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final statusColor =
+        isActive ? const Color(0xFF34D399) : const Color(0xFFFBBF24);
+
     return Container(
+      height: 290,
       decoration: BoxDecoration(
-        color: const Color(0xFF8224E3),
-        border: Border.all(color: const Color(0x55D8B4FE)),
-        borderRadius: BorderRadius.circular(26),
+        color: const Color(0xFF12121A),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: const Color(0xFFA855F7).withValues(alpha: 0.25),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFA855F7).withValues(alpha: 0.15),
+            blurRadius: 30,
+            spreadRadius: -5,
+            offset: const Offset(0, 12),
+          ),
+        ],
       ),
-      child: Stack(
-        children: [
-          // Decorative orb
-          Positioned(
-            top: -60,
-            right: -50,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    Colors.white.withValues(alpha: 0.07),
-                    Colors.transparent,
-                  ],
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // ── Large decorative router icon (image placeholder) ──
+            Positioned(
+              right: -40,
+              bottom: 40,
+              child: Opacity(
+                opacity: 0.08,
+                child: Icon(
+                  Icons.router_rounded,
+                  size: 220,
+                  color: Colors.white,
                 ),
               ),
             ),
-          ),
 
-          Padding(
-            padding: const EdgeInsets.all(22),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Status pill row
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.2)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 7,
-                            height: 7,
-                            decoration: BoxDecoration(
-                              color: isActive
-                                  ? const Color(0xFF4ADE80)
-                                  : const Color(0xFFFBBF24),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            isActive ? 'Active' : 'Paused',
-                            style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Spacer(),
-                    if (quality.isNotEmpty)
+            // ── Soft gradient orbs for depth ────────────────────────
+            Positioned(
+              top: -60,
+              right: -40,
+              child: Container(
+                width: 180,
+                height: 180,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFFA855F7).withValues(alpha: 0.18),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -40,
+              left: -30,
+              child: Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFF34D399).withValues(alpha: 0.10),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Gradient overlay (left readable) ────────────────────
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color(0xFF12121A),
+                    Color(0x0012121A),
+                  ],
+                  stops: [0.35, 1.0],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+              ),
+            ),
+
+            // ── Content ─────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top row: status pill + quality pill
+                  Row(
+                    children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.12),
+                          color: statusColor.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                              color: statusColor.withValues(alpha: 0.35)),
                         ),
-                        child: Text(
-                          quality,
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-
-                const SizedBox(height: 18),
-
-                // SSID + plan
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Icon(Icons.router_rounded,
-                          color: Colors.white, size: 26),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            ssid,
-                            style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.4,
-                              height: 1.1,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _PulseDot(
+                              color: statusColor,
+                              animate: isActive,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 3),
-                          Row(
-                            children: [
-                              const Icon(Icons.wifi_rounded,
-                                  color: Colors.white60, size: 12),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  planName,
-                                  style: GoogleFonts.inter(
-                                      color: Colors.white60,
-                                      fontSize: 12),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                            const SizedBox(width: 5),
+                            Text(
+                              isActive ? 'LIVE' : 'OFFLINE',
+                              style: GoogleFonts.inter(
+                                color: statusColor,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.8,
                               ),
-                            ],
-                          ),
-                        ],
+                            ),
+                          ],
+                        ),
                       ),
+                      const Spacer(),
+                      if (quality.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.10)),
+                          ),
+                          child: Text(
+                            quality,
+                            style: GoogleFonts.inter(
+                              color: Colors.white70,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+
+                  const Spacer(),
+
+                  // SSID + plan
+                  Text(
+                    ssid,
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.6,
+                      height: 1.1,
                     ),
-                  ],
-                ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.wifi_rounded,
+                          color: Colors.white54, size: 13),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          planName,
+                          style: GoogleFonts.inter(
+                              color: Colors.white54, fontSize: 13),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
 
-                const SizedBox(height: 20),
+                  const SizedBox(height: 18),
 
-                // Stats row
-                Row(
-                  children: [
-                    _stat('Devices', '$connectedDevices'),
-                    _statDiv(),
-                    _stat('Quality',
-                        quality.isEmpty ? '—' : quality),
-                    _statDiv(),
-                    _stat('Open', '$openItems'),
-                    _statDiv(),
-                    _stat(isActive ? 'Online' : 'Paused', ''),
-                  ],
-                ),
-              ],
+                  // Glass bottom stat bar
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 14, horizontal: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.08)),
+                    ),
+                    child: Row(
+                      children: [
+                        _glassStat('Devices', '$connectedDevices',
+                            Icons.devices_rounded),
+                        _glassDiv(),
+                        _glassStat(
+                            'Quality',
+                            quality.isEmpty ? '—' : quality,
+                            Icons.speed_rounded),
+                        _glassDiv(),
+                        _glassStat('Open', '$openItems',
+                            Icons.track_changes_rounded),
+                        _glassDiv(),
+                        _glassStat(
+                            isActive ? 'Online' : 'Paused',
+                            isActive ? 'Active' : '—',
+                            isActive
+                                ? Icons.check_circle_rounded
+                                : Icons.pause_circle_rounded),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _glassStat(String label, String value, IconData icon) => Expanded(
+        child: Column(
+          children: [
+            Icon(icon, color: Colors.white38, size: 16),
+            const SizedBox(height: 6),
+            Text(value,
+                style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800)),
+            const SizedBox(height: 2),
+            Text(label,
+                style: GoogleFonts.inter(
+                    color: Colors.white38,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5)),
+          ],
+        ),
+      );
+
+  Widget _glassDiv() => Container(
+        width: 1,
+        height: 36,
+        color: Colors.white.withValues(alpha: 0.10),
+      );
+}
+
+// ── Pulse Dot ─────────────────────────────────────────────────────────────────
+//
+// Tiny status indicator. When [animate] is true, a soft halo expands and fades
+// outward continuously to convey a "live" feel.
+class _PulseDot extends StatefulWidget {
+  const _PulseDot({required this.color, required this.animate});
+  final Color color;
+  final bool animate;
+
+  @override
+  State<_PulseDot> createState() => _PulseDotState();
+}
+
+class _PulseDotState extends State<_PulseDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.animate) _ctrl.repeat();
+  }
+
+  @override
+  void didUpdateWidget(covariant _PulseDot oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.animate && !_ctrl.isAnimating) {
+      _ctrl.repeat();
+    } else if (!widget.animate && _ctrl.isAnimating) {
+      _ctrl.stop();
+      _ctrl.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 14,
+      height: 14,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (widget.animate)
+            AnimatedBuilder(
+              animation: _ctrl,
+              builder: (_, __) {
+                final t = _ctrl.value;
+                return Container(
+                  width: 7 + 7 * t,
+                  height: 7 + 7 * t,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: widget.color.withValues(alpha: 0.5 * (1 - t)),
+                  ),
+                );
+              },
+            ),
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: widget.color,
             ),
           ),
         ],
       ),
     );
   }
-
-  Widget _stat(String label, String value) => Expanded(
-        child: Column(
-          children: [
-            if (value.isNotEmpty)
-              Text(value,
-                  style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.3)),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                  color: Colors.white54,
-                  fontSize: value.isEmpty ? 12 : 10,
-                  fontWeight: value.isEmpty
-                      ? FontWeight.w700
-                      : FontWeight.w500),
-            ),
-          ],
-        ),
-      );
-
-  Widget _statDiv() => Container(
-        width: 1,
-        height: 26,
-        color: Colors.white.withValues(alpha: 0.18),
-      );
 }
 
 // ── Action Tile ────────────────────────────────────────────────────────────────
@@ -740,80 +673,3 @@ class _HealthTile extends StatelessWidget {
   }
 }
 
-// ── Add-on Card ────────────────────────────────────────────────────────────────
-
-class _AddonCard extends StatelessWidget {
-  const _AddonCard({
-    required this.name,
-    required this.description,
-    required this.onRequest,
-  });
-
-  final String name, description;
-  final VoidCallback onRequest;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: kSurface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: kBorder),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: kPrimary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(13),
-              border: Border.all(color: kPrimary.withValues(alpha: 0.2)),
-            ),
-            child: const Icon(Icons.add_box_rounded,
-                color: kPrimaryLight, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name,
-                    style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        color: Colors.white)),
-                const SizedBox(height: 2),
-                Text(description,
-                    style: GoogleFonts.inter(
-                        fontSize: 12, color: kMuted, height: 1.3),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          PressableScale(
-            onTap: onRequest,
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: kPrimary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-                border:
-                    Border.all(color: kPrimary.withValues(alpha: 0.3)),
-              ),
-              child: Text('Request',
-                  style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: kPrimaryLight)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

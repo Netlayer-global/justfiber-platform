@@ -556,7 +556,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                       ScaffoldMessenger.of(context).hideCurrentSnackBar();
                       if (appState.plans.isNotEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
+                          const SnackBar(
                             content: Text(
                                 'Address is not live yet. Choose a preferred plan and submit the enquiry for sales follow-up.'),
                           ),

@@ -202,7 +202,7 @@ class ProfileTab extends StatelessWidget {
                           : const Color(0xFFFCA5A5),
                     ),
                     const Divider(height: 1, color: kDivider, indent: 56),
-                    _InfoRow(
+                    const _InfoRow(
                       icon: Icons.info_outline_rounded,
                       label: 'App Version',
                       value: 'v$_appVersion',

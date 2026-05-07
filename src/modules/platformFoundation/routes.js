@@ -449,7 +449,7 @@ const subscriberServiceSchema = z.object({
 });
 
 const natLogSchema = z.object({
-  loggedAt: z.string().datetime(),
+  loggedAt: z.coerce.date().transform((d) => d.toISOString()),
   eventType: z.enum(["open", "update", "close"]).default("open"),
   subscriberId: z.string().optional(),
   customerId: z.string().optional(),

@@ -8,8 +8,8 @@ import '../core/theme.dart';
 import '../widgets/pressable_scale.dart';
 import 'billing_payment_screen.dart';
 import 'document_viewer_screen.dart';
+import 'all_invoices_screen.dart';
 import 'payments_history_screen.dart';
-import 'plan_catalog_screen.dart';
 import 'support_history_screen.dart';
 
 class BillingHistoryScreen extends StatelessWidget {
@@ -96,11 +96,15 @@ class BillingHistoryScreen extends StatelessWidget {
                               billing.generatedDate.isEmpty
                                   ? '—'
                                   : _fmtDate(billing.generatedDate)),
-                          _row(
-                              'Due Date',
-                              billing.nextBillDate.isEmpty
-                                  ? '—'
-                                  : _fmtDate(billing.nextBillDate)),
+                          // Due Date appears only after a bill has been generated
+                          if (latestInvoice != null)
+                            _row(
+                                'Due Date',
+                                latestInvoice.dueDate.isNotEmpty
+                                    ? _fmtDate(latestInvoice.dueDate)
+                                    : (billing.nextBillDate.isEmpty
+                                        ? '—'
+                                        : _fmtDate(billing.nextBillDate))),
                           _row(
                               'Last Payment',
                               billing.lastPaymentAmount > 0
@@ -116,6 +120,20 @@ class BillingHistoryScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 20),
+
+                    // ── Data Usage (FUP) ─────────────────────────────
+                    if (billing.usageCapGb > 0) ...[
+                      _sectionLabel('DATA USAGE'),
+                      const SizedBox(height: 8),
+                      _UsageCard(
+                        usedGb: billing.usageGb,
+                        capGb: billing.usageCapGb,
+                        capReached: billing.usageCapReached,
+                        cycleStartedAt: billing.usageCycleStartedAt,
+                        fupSpeedMbps: billing.fupSpeedMbps,
+                      ),
+                      const SizedBox(height: 20),
+                    ],
 
                     // ── Latest Invoice Receipt ───────────────────────
                     _sectionLabel('LATEST INVOICE'),
@@ -181,30 +199,16 @@ class BillingHistoryScreen extends StatelessWidget {
 
                     const SizedBox(height: 20),
 
-                    // ── All Invoices ─────────────────────────────────
+                    // ── Show All Invoices (year-filtered archive) ────
                     if (billing.invoices.length > 1) ...[
-                      _sectionLabel('ALL INVOICES'),
-                      const SizedBox(height: 8),
-                      ...billing.invoices.map(
-                        (inv) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _InvoiceRow(
-                            invoice: inv,
-                            onOpen: (inv.pdfUrl.isNotEmpty ||
-                                    inv.viewUrl.isNotEmpty)
-                                ? () => _openDocument(
-                                      context,
-                                      appState,
-                                      'Invoice ${inv.invoiceNumber}',
-                                      inv.pdfUrl.isNotEmpty
-                                          ? inv.pdfUrl
-                                          : inv.viewUrl,
-                                    )
-                                : null,
-                          ),
+                      _ShowAllInvoicesCard(
+                        count: billing.invoices.length,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => const AllInvoicesScreen()),
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 20),
                     ],
 
                     // ── More Options ─────────────────────────────────
@@ -220,15 +224,6 @@ class BillingHistoryScreen extends StatelessWidget {
                               MaterialPageRoute(
                                   builder: (_) =>
                                       const PaymentsHistoryScreen()),
-                            ),
-                          ),
-                          const Divider(color: kBorder, height: 1),
-                          _linkRow(
-                            icon: Icons.wifi_rounded,
-                            label: 'View Plan Catalog',
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                  builder: (_) => const PlanCatalogScreen()),
                             ),
                           ),
                           const Divider(color: kBorder, height: 1),
@@ -1054,114 +1049,71 @@ class _PaymentReceiptCard extends StatelessWidget {
   }
 }
 
-// ── Invoice row (all invoices list) ──────────────────────────────────────────
+// ── Show all invoices link card ──────────────────────────────────────────────
 
-class _InvoiceRow extends StatelessWidget {
-  const _InvoiceRow({required this.invoice, this.onOpen});
-  final BillingInvoiceItem invoice;
-  final VoidCallback? onOpen;
+class _ShowAllInvoicesCard extends StatelessWidget {
+  const _ShowAllInvoicesCard({required this.count, required this.onTap});
+  final int count;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final isPaid =
-        invoice.customerStateLabel.toLowerCase().contains('paid');
-    final statusColor =
-        isPaid ? const Color(0xFF4ADE80) : const Color(0xFFFBBF24);
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: kSurface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: kBorder),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: kPrimary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(11),
-              border: Border.all(color: kPrimary.withValues(alpha: 0.2)),
-            ),
-            child: const Icon(Icons.receipt_rounded,
-                color: kPrimaryLight, size: 19),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  invoice.invoiceNumber.isEmpty
-                      ? 'Invoice'
-                      : invoice.invoiceNumber,
-                  style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  invoice.dueDate.isEmpty
-                      ? 'No due date'
-                      : 'Due ${_fmtDate(invoice.dueDate)}',
-                  style: GoogleFonts.inter(fontSize: 11, color: kMuted),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                'Rs ${invoice.totalAmount.toStringAsFixed(0)}',
-                style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: kSurface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: kBorder),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: kPrimary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: kPrimary.withValues(alpha: 0.25)),
               ),
-              const SizedBox(height: 4),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  invoice.customerStateLabel.isEmpty
-                      ? 'Pending'
-                      : invoice.customerStateLabel,
-                  style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: statusColor),
-                ),
-              ),
-              if (onOpen != null) ...[
-                const SizedBox(height: 4),
-                GestureDetector(
-                  onTap: onOpen,
-                  child: Text(
-                    'Open',
+              child: const Icon(Icons.history_rounded,
+                  color: kPrimaryLight, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Show All Invoices',
                     style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: kPrimaryLight),
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
-              ],
-            ],
-          ),
-        ],
+                  const SizedBox(height: 2),
+                  Text(
+                    'Browse $count past invoices, filter by year',
+                    style: GoogleFonts.inter(
+                      color: kMuted,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded,
+                color: Colors.white38, size: 20),
+          ],
+        ),
       ),
     );
   }
 }
+
 
 // ── Open invoice button ───────────────────────────────────────────────────────
 
@@ -1295,4 +1247,162 @@ String _fmtDate(String raw) {
     final t = raw.indexOf('T');
     return t > 0 ? raw.substring(0, t) : raw;
   }
+}
+
+// ── Data Usage card (FUP) ────────────────────────────────────────────────────
+
+class _UsageCard extends StatelessWidget {
+  const _UsageCard({
+    required this.usedGb,
+    required this.capGb,
+    required this.capReached,
+    required this.cycleStartedAt,
+    required this.fupSpeedMbps,
+  });
+
+  final double usedGb;
+  final double capGb;
+  final bool capReached;
+  final String cycleStartedAt;
+  final double fupSpeedMbps;
+
+  @override
+  Widget build(BuildContext context) {
+    final ratio = capGb <= 0 ? 0.0 : (usedGb / capGb).clamp(0.0, 1.0);
+    final pct = (ratio * 100).round();
+    final remaining = (capGb - usedGb).clamp(0.0, capGb);
+
+    Color barColor;
+    if (capReached || ratio >= 1.0) {
+      barColor = const Color(0xFFEF4444);
+    } else if (ratio >= 0.85) {
+      barColor = const Color(0xFFFBBF24);
+    } else {
+      barColor = const Color(0xFF34D399);
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: kBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: barColor.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  capReached
+                      ? Icons.warning_amber_rounded
+                      : Icons.data_usage_rounded,
+                  color: barColor,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${usedGb.toStringAsFixed(1)} GB used of ${capGb.toStringAsFixed(0)} GB',
+                      style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      capReached
+                          ? 'FUP limit reached — speeds throttled'
+                          : '${remaining.toStringAsFixed(1)} GB remaining ($pct% used)',
+                      style: GoogleFonts.inter(
+                          color: capReached ? barColor : kMuted,
+                          fontSize: 12,
+                          fontWeight: capReached
+                              ? FontWeight.w700
+                              : FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: Stack(
+              children: [
+                Container(
+                  height: 8,
+                  color: Colors.white.withValues(alpha: 0.06),
+                ),
+                FractionallySizedBox(
+                  widthFactor: ratio == 0 ? 0.02 : ratio,
+                  child: Container(
+                    height: 8,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          barColor.withValues(alpha: 0.8),
+                          barColor,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              if (cycleStartedAt.isNotEmpty)
+                _usagePill(
+                  Icons.event_rounded,
+                  'Cycle from ${_fmtDate(cycleStartedAt)}',
+                ),
+              if (fupSpeedMbps > 0 && capReached)
+                _usagePill(
+                  Icons.speed_rounded,
+                  'Post-FUP: ${fupSpeedMbps.toStringAsFixed(0)} Mbps',
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _usagePill(IconData icon, String text) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: kBorder),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: kMuted, size: 12),
+            const SizedBox(width: 5),
+            Text(text,
+                style: GoogleFonts.inter(
+                    color: kMuted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600)),
+          ],
+        ),
+      );
 }

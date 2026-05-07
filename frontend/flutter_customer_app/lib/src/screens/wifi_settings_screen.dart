@@ -9,7 +9,6 @@ import '../widgets/pressable_scale.dart';
 enum WifiLaunchAction {
   devices,
   guest,
-  parentalControls,
 }
 
 class WifiSettingsScreen extends StatefulWidget {
@@ -53,9 +52,6 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
           case WifiLaunchAction.guest:
             _showGuestWifiSheet(context, AppStateScope.of(context));
             break;
-          case WifiLaunchAction.parentalControls:
-            _showParentalControlsSheet(context, AppStateScope.of(context));
-            break;
         }
       });
     }
@@ -77,12 +73,9 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     final ssidLabel = wifi.ssid24.isEmpty ? 'Not configured' : wifi.ssid24;
     final blockedCount =
         appState.connectedDevices.where((d) => d.blocked).length;
-    final allowedCount =
-        appState.connectedDevices.where((d) => !d.blocked).length;
     final connectedCount = appState.connectedDevices.isNotEmpty
         ? appState.connectedDevices.length
         : wifi.connectedDevicesCount;
-    final parentalCount = appState.parentalRules.length;
 
     return Scaffold(
       backgroundColor: kBg,
@@ -103,10 +96,8 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                     isPaused: wifi.paused,
                     quality: appState.networkQuality.quality,
                     connectedCount: connectedCount,
-                    allowedCount: allowedCount,
                     blockedCount: blockedCount,
                     guestEnabled: wifi.guestEnabled,
-                    parentalCount: parentalCount,
                     onPause: () => _showPauseSheet(context, appState),
                   ),
                 ),
@@ -168,19 +159,6 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                                 _showGuestWifiSheet(context, appState),
                             badge: wifi.guestEnabled ? 'ON' : null,
                             badgeColor: const Color(0xFF4ADE80),
-                          ),
-                          _divider(),
-                          _ActionTile(
-                            icon: Icons.family_restroom_rounded,
-                            title: 'Parental controls',
-                            subtitle:
-                                'Schedules and restrictions for devices',
-                            accentColor: const Color(0xFFA78BFA),
-                            onTap: () =>
-                                _showParentalControlsSheet(context, appState),
-                            badge:
-                                parentalCount > 0 ? '$parentalCount rules' : null,
-                            badgeColor: const Color(0xFFA78BFA),
                           ),
                           _divider(),
                           _ActionTile(
@@ -457,6 +435,43 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
 
   Future<void> _showDiagnosticsSheet(
       BuildContext context, AppState appState) async {
+    // Data-exhausted gate: if FUP cap reached, show alert before diagnostics
+    final billing = appState.billing;
+    if (billing.usageCapReached && billing.usageCapGb > 0) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: kSurface,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20)),
+          title: Row(children: [
+            const Icon(Icons.warning_amber_rounded,
+                color: Color(0xFFFBBF24)),
+            const SizedBox(width: 8),
+            Text('Data exhausted',
+                style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800)),
+          ]),
+          content: Text(
+            'You have used ${billing.usageGb.toStringAsFixed(1)} GB of your ${billing.usageCapGb.toStringAsFixed(0)} GB FUP quota. Speeds may be reduced until your next billing cycle.',
+            style: GoogleFonts.inter(color: kMuted, fontSize: 13),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Close'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Run anyway'),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true) return;
+      if (!context.mounted) return;
+    }
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -828,226 +843,6 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     );
   }
 
-  Future<void> _showParentalControlsSheet(
-      BuildContext context, AppState appState) async {
-    final targetCtrl = TextEditingController();
-    final startCtrl = TextEditingController(text: '22:00');
-    final endCtrl = TextEditingController(text: '06:00');
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setLocal) {
-          bool submitting = false;
-          final rules = appState.parentalRules;
-          return Padding(
-            padding: EdgeInsets.fromLTRB(
-                12, 16, 12, 12 + MediaQuery.of(ctx).viewInsets.bottom),
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: kSurface,
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: kBorder),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Parental controls',
-                      style: GoogleFonts.inter(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 22,
-                          color: Colors.white)),
-                  const SizedBox(height: 8),
-                  if (rules.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: Text(
-                          'No active rules. Add a schedule to restrict Wi-Fi access.',
-                          style: GoogleFonts.inter(
-                              color: kMuted, height: 1.4, fontSize: 13)),
-                    )
-                  else
-                    ...rules.map((rule) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: kSurface,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: kBorder),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(rule.targetName,
-                                          style: GoogleFonts.inter(
-                                              fontWeight: FontWeight.w700,
-                                              color: Colors.white)),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                          '${rule.startTime} – ${rule.endTime}',
-                                          style: GoogleFonts.inter(
-                                              color: kMuted,
-                                              fontSize: 12)),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 5),
-                                  decoration: BoxDecoration(
-                                    color: rule.blocked
-                                        ? const Color(0xFF2A1108)
-                                        : kSurface,
-                                    borderRadius:
-                                        BorderRadius.circular(999),
-                                    border: Border.all(
-                                        color: rule.blocked
-                                            ? const Color(0x66F59E0B)
-                                            : kPrimary.withValues(alpha: 0.3)),
-                                  ),
-                                  child: Text(
-                                    rule.blocked ? 'Blocked' : 'Allowed',
-                                    style: GoogleFonts.inter(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 11,
-                                      color: rule.blocked
-                                          ? const Color(0xFFFDE68A)
-                                          : kPrimaryLight,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )),
-                  // Presets
-                  Text('Presets',
-                      style: GoogleFonts.inter(
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          fontSize: 13)),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _presetChip('Night lock', () => setLocal(() {
-                            startCtrl.text = '22:00';
-                            endCtrl.text = '06:00';
-                          }), submitting),
-                      _presetChip('Study hours', () => setLocal(() {
-                            startCtrl.text = '16:00';
-                            endCtrl.text = '18:00';
-                          }), submitting),
-                      _presetChip('Sleep mode', () => setLocal(() {
-                            startCtrl.text = '23:00';
-                            endCtrl.text = '07:00';
-                          }), submitting),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: targetCtrl,
-                    enabled: !submitting,
-                    style: GoogleFonts.inter(color: Colors.white),
-                    decoration: const InputDecoration(
-                        labelText: 'Rule or device name'),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: startCtrl,
-                          enabled: !submitting,
-                          style: GoogleFonts.inter(color: Colors.white),
-                          decoration: const InputDecoration(
-                              labelText: 'Start (HH:MM)'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextField(
-                          controller: endCtrl,
-                          enabled: !submitting,
-                          style: GoogleFonts.inter(color: Colors.white),
-                          decoration: const InputDecoration(
-                              labelText: 'End (HH:MM)'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: submitting
-                          ? null // ignore: dead_code
-                          : () async {
-                              final name = targetCtrl.text.trim();
-                              final start = startCtrl.text.trim();
-                              final end = endCtrl.text.trim();
-                              if (name.isEmpty) {
-                                ScaffoldMessenger.of(ctx).showSnackBar(
-                                    const SnackBar(
-                                        content: Text(
-                                            'Enter a rule or device name.')));
-                                return;
-                              }
-                              final timeRe = RegExp(r'^\d{2}:\d{2}$');
-                              if (!timeRe.hasMatch(start) ||
-                                  !timeRe.hasMatch(end)) {
-                                ScaffoldMessenger.of(ctx).showSnackBar(
-                                    const SnackBar(
-                                        content: Text(
-                                            'Use HH:MM format for times.')));
-                                return;
-                              }
-                              setLocal(() => submitting = true);
-                              final ok =
-                                  await appState.addParentalControl(
-                                      targetName: name,
-                                      startTime: start,
-                                      endTime: end);
-                              if (!ctx.mounted) return;
-                              if (ok) {
-                                Navigator.of(ctx).pop();
-                                ScaffoldMessenger.of(ctx).showSnackBar(
-                                    const SnackBar(
-                                        content: Text(
-                                            'Parental control added')));
-                                return;
-                              }
-                              setLocal(() => submitting = false);
-                              ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-                                  content: Text(appState.error ??
-                                      'Unable to add rule')));
-                            },
-                      child: Text(submitting
-                          ? 'Saving...'
-                          : 'Save parental control'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-    targetCtrl.dispose();
-    startCtrl.dispose();
-    endCtrl.dispose();
-  }
-
   Future<void> _showRestartSheet(
       BuildContext context, AppState appState) async {
     await showModalBottomSheet<void>(
@@ -1235,26 +1030,6 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     );
   }
 
-  Widget _presetChip(
-      String label, VoidCallback onTap, bool disabled) {
-    return GestureDetector(
-      onTap: disabled ? null : onTap,
-      child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: kSurface,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: kBorder),
-        ),
-        child: Text(label,
-            style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: disabled ? kMuted : Colors.white)),
-      ),
-    );
-  }
 }
 
 // ── WiFi Hero Card ────────────────────────────────────────────────────────────
@@ -1265,29 +1040,54 @@ class _WifiHeroCard extends StatelessWidget {
     required this.isPaused,
     required this.quality,
     required this.connectedCount,
-    required this.allowedCount,
     required this.blockedCount,
     required this.guestEnabled,
-    required this.parentalCount,
     required this.onPause,
   });
 
   final String ssid, quality;
   final bool isPaused, guestEnabled;
-  final int connectedCount, allowedCount, blockedCount, parentalCount;
+  final int connectedCount, blockedCount;
   final VoidCallback onPause;
+
+  int _signalBars(String q) {
+    final s = q.toLowerCase();
+    if (s.contains('excellent') || s.contains('great')) return 4;
+    if (s.contains('good')) return 3;
+    if (s.contains('fair') || s.contains('average')) return 2;
+    if (s.contains('poor') || s.contains('weak')) return 1;
+    return 3;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final bars = _signalBars(quality);
+    final qualityColor = bars >= 3
+        ? const Color(0xFF4ADE80)
+        : bars == 2
+            ? const Color(0xFFFBBF24)
+            : const Color(0xFFEF4444);
+
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF8224E3),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF13051F), Color(0xFF6D28D9), Color(0xFFA855F7)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: const Color(0x55A855F7)),
+        border: Border.all(color: const Color(0x55D8B4FE)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFA855F7).withValues(alpha: 0.25),
+            blurRadius: 28,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Stack(
         children: [
-          // Decorative orb
+          // Decorative orbs
           Positioned(
             top: -60,
             right: -50,
@@ -1298,7 +1098,24 @@ class _WifiHeroCard extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    Colors.white.withValues(alpha: 0.06),
+                    Colors.white.withValues(alpha: 0.08),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -50,
+            left: -40,
+            child: Container(
+              width: 160,
+              height: 160,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    qualityColor.withValues(alpha: 0.15),
                     Colors.transparent,
                   ],
                 ),
@@ -1307,11 +1124,11 @@ class _WifiHeroCard extends StatelessWidget {
           ),
 
           Padding(
-            padding: const EdgeInsets.all(22),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Status pill + pause toggle
+                // Status pill + Pause/Resume action
                 Row(
                   children: [
                     Container(
@@ -1320,35 +1137,32 @@ class _WifiHeroCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.2)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Container(
-                            width: 7,
-                            height: 7,
-                            decoration: BoxDecoration(
-                              color: isPaused
-                                  ? const Color(0xFFFBBF24)
-                                  : const Color(0xFF4ADE80),
-                              shape: BoxShape.circle,
-                            ),
+                          _WifiPulseDot(
+                            color: isPaused
+                                ? const Color(0xFFFBBF24)
+                                : const Color(0xFF4ADE80),
+                            animate: !isPaused,
                           ),
                           const SizedBox(width: 5),
                           Text(
-                            isPaused ? 'Paused' : 'Online',
+                            isPaused ? 'PAUSED' : 'ONLINE',
                             style: GoogleFonts.inter(
                               color: Colors.white,
                               fontSize: 11,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.8,
                             ),
                           ),
                         ],
                       ),
                     ),
                     const Spacer(),
-                    // Pause/resume quick toggle
                     PressableScale(
                       onTap: onPause,
                       child: Container(
@@ -1358,8 +1172,7 @@ class _WifiHeroCard extends StatelessWidget {
                           color: Colors.white.withValues(alpha: 0.14),
                           borderRadius: BorderRadius.circular(999),
                           border: Border.all(
-                              color:
-                                  Colors.white.withValues(alpha: 0.2)),
+                              color: Colors.white.withValues(alpha: 0.25)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -1389,19 +1202,21 @@ class _WifiHeroCard extends StatelessWidget {
 
                 const SizedBox(height: 18),
 
-                // SSID + wifi icon
+                // SSID + signal bars
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      width: 48,
-                      height: 48,
+                      width: 52,
+                      height: 52,
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.18)),
                       ),
                       child: const Icon(Icons.wifi_rounded,
-                          color: Colors.white, size: 26),
+                          color: Colors.white, size: 28),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -1417,14 +1232,22 @@ class _WifiHeroCard extends StatelessWidget {
                               letterSpacing: -0.4,
                               height: 1.1,
                             ),
-                            maxLines: 2,
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 3),
-                          Text(
-                            'Signal quality: $quality',
-                            style: GoogleFonts.inter(
-                                color: Colors.white60, fontSize: 12),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              _SignalBars(level: bars, color: qualityColor),
+                              const SizedBox(width: 8),
+                              Text(
+                                quality.isEmpty ? 'Unknown' : quality,
+                                style: GoogleFonts.inter(
+                                    color: qualityColor,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -1434,16 +1257,30 @@ class _WifiHeroCard extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // Stats row
+                // Stat tiles
                 Row(
                   children: [
-                    _stat('Devices', '$connectedCount'),
-                    _statDivider(),
-                    _stat('Allowed', '$allowedCount'),
-                    _statDivider(),
-                    _stat('Blocked', '$blockedCount'),
-                    _statDivider(),
-                    _stat('Guest', guestEnabled ? 'On' : 'Off'),
+                    Expanded(
+                      child: _heroStat(
+                          icon: Icons.devices_rounded,
+                          label: 'Devices',
+                          value: '$connectedCount'),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _heroStat(
+                          icon: Icons.shield_rounded,
+                          label: 'Blocked',
+                          value: '$blockedCount'),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _heroStat(
+                          icon: Icons.wifi_tethering_rounded,
+                          label: 'Guest',
+                          value: guestEnabled ? 'On' : 'Off',
+                          highlight: guestEnabled),
+                    ),
                   ],
                 ),
               ],
@@ -1454,30 +1291,161 @@ class _WifiHeroCard extends StatelessWidget {
     );
   }
 
-  Widget _stat(String label, String value) => Expanded(
-        child: Column(
+  Widget _heroStat({
+    required IconData icon,
+    required String label,
+    required String value,
+    bool highlight = false,
+  }) =>
+      Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+        decoration: BoxDecoration(
+          color: Colors.white
+              .withValues(alpha: highlight ? 0.18 : 0.10),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+              color: Colors.white
+                  .withValues(alpha: highlight ? 0.3 : 0.15)),
+        ),
+        child: Row(
           children: [
-            Text(value,
-                style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.3)),
-            const SizedBox(height: 2),
-            Text(label,
-                style: GoogleFonts.inter(
-                    color: Colors.white54,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500)),
+            Icon(icon, color: Colors.white, size: 16),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(value,
+                      style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2)),
+                  Text(label,
+                      style: GoogleFonts.inter(
+                          color: Colors.white60,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
           ],
         ),
       );
 
-  Widget _statDivider() => Container(
-        width: 1,
-        height: 26,
-        color: Colors.white.withValues(alpha: 0.18),
-      );
+}
+
+// ── Signal Bars ───────────────────────────────────────────────────────────────
+
+class _SignalBars extends StatelessWidget {
+  const _SignalBars({required this.level, required this.color});
+  final int level; // 1..4
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 22,
+      height: 14,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: List.generate(4, (i) {
+          final on = i < level;
+          return Padding(
+            padding: const EdgeInsets.only(right: 2),
+            child: Container(
+              width: 3.5,
+              height: 4.0 + i * 3,
+              decoration: BoxDecoration(
+                color: on
+                    ? color
+                    : Colors.white.withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(1),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+// ── Pulse Dot (WiFi hero) ─────────────────────────────────────────────────────
+
+class _WifiPulseDot extends StatefulWidget {
+  const _WifiPulseDot({required this.color, required this.animate});
+  final Color color;
+  final bool animate;
+
+  @override
+  State<_WifiPulseDot> createState() => _WifiPulseDotState();
+}
+
+class _WifiPulseDotState extends State<_WifiPulseDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.animate) _ctrl.repeat();
+  }
+
+  @override
+  void didUpdateWidget(covariant _WifiPulseDot oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.animate && !_ctrl.isAnimating) {
+      _ctrl.repeat();
+    } else if (!widget.animate && _ctrl.isAnimating) {
+      _ctrl.stop();
+      _ctrl.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 14,
+      height: 14,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (widget.animate)
+            AnimatedBuilder(
+              animation: _ctrl,
+              builder: (_, __) {
+                final t = _ctrl.value;
+                return Container(
+                  width: 7 + 7 * t,
+                  height: 7 + 7 * t,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: widget.color.withValues(alpha: 0.5 * (1 - t)),
+                  ),
+                );
+              },
+            ),
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: widget.color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ── Action Tile ────────────────────────────────────────────────────────────────
