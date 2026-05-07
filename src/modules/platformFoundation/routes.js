@@ -1754,8 +1754,20 @@ platformFoundationRouter.get(
     if (Number.isFinite(protocol) && protocol > 0) filter.protocol = protocol;
     if (routerIp) filter.routerIp = routerIp;
     if (pppoeUsername) filter.pppoeUsername = pppoeUsername;
-    if (customerId) filter.customerId = customerId;
     if (subscriberId) filter.subscriberId = subscriberId;
+    if (customerId) {
+      const linkedServices = await SubscriberService.find({
+        customerId
+      })
+        .select({ serviceId: 1, radiusUsername: 1, customerId: 1 })
+        .lean();
+      const linkedServiceIds = linkedServices.map((item) => String(item.serviceId || "").trim()).filter(Boolean);
+      const linkedUsernames = linkedServices.map((item) => String(item.radiusUsername || "").trim()).filter(Boolean);
+      const lookupOr = [{ customerId }];
+      if (linkedServiceIds.length) lookupOr.push({ subscriberId: { $in: linkedServiceIds } });
+      if (linkedUsernames.length) lookupOr.push({ pppoeUsername: { $in: linkedUsernames } });
+      filter.$or = lookupOr;
+    }
     if (
       timeFrom &&
       !Number.isNaN(timeFrom.getTime()) &&

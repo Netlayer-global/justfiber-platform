@@ -29,6 +29,7 @@ import { ServiceabilityZone } from "../../models/ServiceabilityZone.js";
 import { SalesAgent } from "../../models/SalesAgent.js";
 import { SupportTicket } from "../../models/SupportTicket.js";
 import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
+import { AccessProfile } from "../../models/AccessProfile.js";
 import { SubscriberService } from "../../models/SubscriberService.js";
 import { buildPagination } from "../../common/pagination.js";
 import { razorpayClient } from "../../integrations/razorpayClient.js";
@@ -1683,6 +1684,27 @@ function getDurationMonthsFromBillingTerm(billingTerm = "monthly") {
   return 1;
 }
 
+async function resolveAccessProfileCodeForPlan(plan = null, existingService = null) {
+  if (!plan) return String(existingService?.accessProfileCode || "").trim() || undefined;
+  if (plan.provisioning?.accessProfileCode) {
+    return String(plan.provisioning.accessProfileCode).trim() || undefined;
+  }
+  const exact = await AccessProfile.findOne({
+    active: true,
+    downMbps: Number(plan.speedMbps || 0),
+    ...(plan?.uploadSpeedMbps ? { upMbps: Number(plan.uploadSpeedMbps) } : {})
+  }).lean();
+  if (exact?.code) return String(exact.code).trim();
+  const downOnly = await AccessProfile.findOne({
+    active: true,
+    downMbps: Number(plan.speedMbps || 0)
+  })
+    .sort({ upMbps: 1, createdAt: 1 })
+    .lean();
+  if (downOnly?.code) return String(downOnly.code).trim();
+  return String(existingService?.accessProfileCode || "").trim() || undefined;
+}
+
 function resolvePlanChangeCycleMetrics(customer = {}, billingTerm = "monthly") {
   const requestedDurationMonths =
     billingTerm === "yearly" ? 12 : billingTerm === "halfYearly" ? 6 : billingTerm === "quarterly" ? 3 : 1;
@@ -1726,8 +1748,7 @@ async function syncPortalCustomerServicePlan(customer, plan, billingTerm = "mont
   const recurringAmount = getPlanTermPrice(plan, billingTerm);
   const routerRental = Number(plan.routerRental || 0) || 0;
   const totalPlanAmount = Number((recurringAmount + routerRental * durationMonths).toFixed(2));
-  const resolvedAccessProfileCode =
-    String(plan?.provisioning?.accessProfileCode || existingService?.accessProfileCode || "").trim() || undefined;
+  const resolvedAccessProfileCode = await resolveAccessProfileCodeForPlan(plan, existingService);
   await Customer.updateOne(
     { customerId: customer.customerId },
     {
