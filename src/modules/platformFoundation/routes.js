@@ -1784,9 +1784,29 @@ platformFoundationRouter.get(
       const scopedRouters = await BngNode.find(buildZoneScopedMatch("zoneCode", zoneCode))
         .select({ managementIp: 1, radiusClientIp: 1, additionalRadiusClientIps: 1 })
         .lean();
+      const linkedServices =
+        customerId || subscriberId || pppoeUsername
+          ? await SubscriberService.find({
+              $or: [
+                ...(customerId ? [{ customerId }] : []),
+                ...(subscriberId ? [{ serviceId: subscriberId }] : []),
+                ...(pppoeUsername ? [{ radiusUsername: pppoeUsername }] : [])
+              ]
+            })
+              .select({ bngNodeCode: 1 })
+              .lean()
+          : [];
+      const linkedNodeCodes = Array.from(
+        new Set(linkedServices.map((item) => String(item.bngNodeCode || "").trim()).filter(Boolean))
+      );
+      const linkedRouters = linkedNodeCodes.length
+        ? await BngNode.find({ nodeCode: { $in: linkedNodeCodes } })
+            .select({ managementIp: 1, radiusClientIp: 1, additionalRadiusClientIps: 1 })
+            .lean()
+        : [];
       const allowedRouterIps = Array.from(
         new Set(
-          scopedRouters.flatMap((item) =>
+          [...scopedRouters, ...linkedRouters].flatMap((item) =>
             [
               String(item.managementIp || "").trim(),
               String(item.radiusClientIp || "").trim(),

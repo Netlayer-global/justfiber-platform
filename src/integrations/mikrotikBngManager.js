@@ -259,6 +259,42 @@ async function runDisconnect({ host, port, secret, payload }) {
   };
 }
 
+async function resolveMikrotikNodeForSubscriber(service, radiusUsername) {
+  const username = String(radiusUsername || service?.radiusUsername || "").trim();
+  if (!username) return { node: null, sessions: [] };
+
+  if (service?.bngNodeCode) {
+    const preferredNode = await BngNode.findOne({ nodeCode: service.bngNodeCode }).lean();
+    if (preferredNode?.vendor === "mikrotik") {
+      try {
+        const sessions = await findActivePppSessions(preferredNode, username);
+        if (sessions.length) {
+          return { node: preferredNode, sessions };
+        }
+      } catch {}
+    }
+  }
+
+  const candidateNodes = await BngNode.find({ status: "active", vendor: "mikrotik" }).lean();
+  for (const node of candidateNodes) {
+    try {
+      const sessions = await findActivePppSessions(node, username);
+      if (sessions.length) {
+        return { node, sessions };
+      }
+    } catch {}
+  }
+
+  if (service?.bngNodeCode) {
+    const preferredNode = await BngNode.findOne({ nodeCode: service.bngNodeCode }).lean();
+    if (preferredNode?.vendor === "mikrotik") {
+      return { node: preferredNode, sessions: [] };
+    }
+  }
+
+  return { node: candidateNodes[0] || null, sessions: [] };
+}
+
 export class MikrotikBngManager {
   async getSubscriberActiveSession({ serviceId, radiusUsername } = {}) {
     const service =
@@ -271,45 +307,35 @@ export class MikrotikBngManager {
     if (!username) {
       return { found: false, reason: "missing_radius_username" };
     }
-    if (!service.bngNodeCode) {
-      return { found: false, reason: "missing_bng_node" };
-    }
-
-    const bngNode = await BngNode.findOne({ nodeCode: service.bngNodeCode }).lean();
+    const resolved = await resolveMikrotikNodeForSubscriber(service, username);
+    const bngNode = resolved.node;
+    const sessions = resolved.sessions;
     if (!bngNode) {
       return { found: false, reason: "bng_node_not_found" };
     }
     if (bngNode.vendor !== "mikrotik") {
       return { found: false, reason: "unsupported_vendor", vendor: bngNode.vendor };
     }
-
-    try {
-      const sessions = await findActivePppSessions(bngNode, username);
-      const primary = sessions[0] || null;
-      return {
-        found: Boolean(primary),
-        radiusUsername: username,
-        bngNodeCode: bngNode.nodeCode,
-        sessionCount: sessions.length,
-        session: primary
-          ? {
-              sessionId: String(primary[".id"] || "").trim(),
-              ipAddress: String(primary.address || "").trim() || null,
-              service: String(primary.service || "").trim() || null,
-              startedAt: null,
-              updatedAt: null,
-              live: true
-            }
-          : null
-      };
-    } catch (error) {
-      return {
-        found: false,
-        reason: error instanceof Error ? error.message : "router_api_failed",
-        radiusUsername: username,
-        bngNodeCode: bngNode.nodeCode
-      };
+    if (service?.bngNodeCode !== bngNode.nodeCode) {
+      await SubscriberService.updateOne({ _id: service._id }, { $set: { bngNodeCode: bngNode.nodeCode } }).catch(() => null);
     }
+    const primary = sessions[0] || null;
+    return {
+      found: Boolean(primary),
+      radiusUsername: username,
+      bngNodeCode: bngNode.nodeCode,
+      sessionCount: sessions.length,
+      session: primary
+        ? {
+            sessionId: String(primary[".id"] || "").trim(),
+            ipAddress: String(primary.address || "").trim() || null,
+            service: String(primary.service || "").trim() || null,
+            startedAt: null,
+            updatedAt: null,
+            live: true
+          }
+        : null
+    };
   }
 
   async disconnectSubscriberSession({ serviceId, radiusUsername, reason = "refresh", sessionHint = null } = {}) {
@@ -323,16 +349,16 @@ export class MikrotikBngManager {
     if (!username) {
       return { attempted: false, status: "skipped", reason: "missing_radius_username" };
     }
-    if (!service.bngNodeCode) {
-      return { attempted: false, status: "skipped", reason: "missing_bng_node" };
-    }
-
-    const bngNode = await BngNode.findOne({ nodeCode: service.bngNodeCode }).lean();
+    const resolved = await resolveMikrotikNodeForSubscriber(service, username);
+    const bngNode = resolved.node;
     if (!bngNode) {
       return { attempted: false, status: "skipped", reason: "bng_node_not_found" };
     }
     if (bngNode.vendor !== "mikrotik") {
       return { attempted: false, status: "skipped", reason: "unsupported_vendor", vendor: bngNode.vendor };
+    }
+    if (service?.bngNodeCode !== bngNode.nodeCode) {
+      await SubscriberService.updateOne({ _id: service._id }, { $set: { bngNodeCode: bngNode.nodeCode } }).catch(() => null);
     }
 
     const primaryRouterApiDisconnect = await forceDisconnectActivePppSessions(bngNode, username);
