@@ -4,6 +4,33 @@ import { env } from "../config/env.js";
 import { ApiError } from "./ApiError.js";
 import { CustomerUser } from "../models/CustomerUser.js";
 import { CustomerSession } from "../models/CustomerSession.js";
+import { Customer } from "../models/Customer.js";
+
+function normalizeCustomerUserIdentifier(value = "") {
+  return String(value || "").trim();
+}
+
+async function resolveCustomerUserLinkedIds(user) {
+  if (!user) return [];
+  const mobile = normalizeCustomerUserIdentifier(user.mobile);
+  const email = normalizeCustomerUserIdentifier(user.email).toLowerCase();
+  if (!mobile && !email) return [];
+  const customers = await Customer.find({
+    $or: [
+      ...(mobile ? [{ mobile }, { phone: mobile }] : []),
+      ...(email ? [{ email }] : [])
+    ]
+  })
+    .select({ customerId: 1 })
+    .lean();
+  return Array.from(
+    new Set(
+      customers
+        .map((item) => String(item.customerId || "").trim())
+        .filter(Boolean)
+    )
+  );
+}
 
 export function signCustomerAccessToken(user) {
   return jwt.sign(
@@ -45,6 +72,16 @@ export async function requireCustomerAuth(req, _res, next) {
     const user = await CustomerUser.findById(payload.sub);
     if (!user) {
       throw new ApiError(401, "Customer session invalid");
+    }
+    const resolvedLinkedIds = await resolveCustomerUserLinkedIds(user);
+    if (resolvedLinkedIds.length) {
+      const mergedLinkedIds = Array.from(
+        new Set([...(user.linkedCustomerIds || []), ...resolvedLinkedIds])
+      );
+      if (mergedLinkedIds.length !== (user.linkedCustomerIds || []).length) {
+        user.linkedCustomerIds = mergedLinkedIds;
+        await user.save();
+      }
     }
     req.customerUser = user;
     return next();
