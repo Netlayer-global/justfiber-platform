@@ -162,6 +162,27 @@ async function resolveAuthIdentity(payload = {}) {
   };
 }
 
+async function resolveAuthLinkedCustomerIds(identity = {}) {
+  const mobile = normalizeAuthIdentifier(identity.mobile);
+  const email = normalizeAuthIdentifier(identity.email).toLowerCase();
+  if (!mobile && !email) return [];
+  const customerMatches = await Customer.find({
+    $or: [
+      ...(mobile ? [{ mobile }, { phone: mobile }] : []),
+      ...(email ? [{ email }] : [])
+    ]
+  })
+    .select({ customerId: 1 })
+    .lean();
+  return Array.from(
+    new Set(
+      customerMatches
+        .map((item) => String(item.customerId || "").trim())
+        .filter(Boolean)
+    )
+  );
+}
+
 function normalizeZoneCode(value) {
   return String(value || "")
     .trim()
@@ -2374,6 +2395,7 @@ customerPortalRouter.post(
   asyncHandler(async (req, res) => {
     const payload = verifyOtpSchema.parse(req.body);
     const identity = await resolveAuthIdentity(payload);
+    const linkedCustomerIds = await resolveAuthLinkedCustomerIds(identity);
     const key = normalizeCustomerPortalOtpKey(identity.mobile || identity.email);
     if (!key || !verifyCustomerPortalDemoOtp(key, payload.otp)) {
       throw new ApiError(400, "Invalid OTP");
@@ -2389,10 +2411,21 @@ customerPortalRouter.post(
         email: identity.email || undefined,
         fullName: identity.fullName || payload.fullName,
         authMode: identity.mobile ? "mobile_otp" : "email_otp",
-        linkedCustomerIds: identity.linkedCustomerId ? [identity.linkedCustomerId] : []
+        linkedCustomerIds: Array.from(
+          new Set([
+            ...linkedCustomerIds,
+            ...(identity.linkedCustomerId ? [identity.linkedCustomerId] : [])
+          ])
+        )
       });
-    } else if (identity.linkedCustomerId && !user.linkedCustomerIds?.includes(identity.linkedCustomerId)) {
-      user.linkedCustomerIds = [...(user.linkedCustomerIds || []), identity.linkedCustomerId];
+    } else {
+      user.linkedCustomerIds = Array.from(
+        new Set([
+          ...(user.linkedCustomerIds || []),
+          ...linkedCustomerIds,
+          ...(identity.linkedCustomerId ? [identity.linkedCustomerId] : [])
+        ])
+      );
       if (!user.fullName && identity.fullName) user.fullName = identity.fullName;
       await user.save();
     }
