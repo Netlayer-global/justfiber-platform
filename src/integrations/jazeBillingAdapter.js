@@ -127,9 +127,9 @@ export async function fetchBillingSummary(jazeUserId) {
  *   raw: any
  * }>>}
  */
-export async function fetchInvoiceHistory(jazeUserId, { fromDate = "", toDate = "" } = {}) {
+export async function fetchInvoiceHistory(jazeUserId, { fromDate = "", toDate: toDateOpt = "" } = {}) {
   if (!jazeUserId) throw new Error("jazeUserId is required");
-  const raw = await jazeClient.getRenewalHistory({ userId: jazeUserId, fromDate, toDate });
+  const raw = await jazeClient.getRenewalHistory({ userId: jazeUserId, fromDate, toDate: toDateOpt });
   const entries = Array.isArray(raw?.message) ? raw.message : [];
 
   return entries
