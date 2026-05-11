@@ -226,6 +226,7 @@ class SalesPlan {
     required this.dataLimitGb,
     required this.dataPolicy,
     required this.tags,
+    this.billingPeriodMonths = 1,
   });
 
   final String planCode;
@@ -238,6 +239,37 @@ class SalesPlan {
   final double dataLimitGb;
   final String dataPolicy;
   final List<String> tags;
+  final int billingPeriodMonths;
+}
+
+class PlanDuration {
+  const PlanDuration({
+    required this.planCode,
+    required this.months,
+    required this.label,
+    required this.price,
+    this.otcCharge = 0,
+  });
+
+  final String planCode;
+  final int months;
+  final String label;
+  final double price;
+  final double otcCharge;
+}
+
+class PlanGroup {
+  const PlanGroup({
+    required this.speedMbps,
+    required this.displayName,
+    required this.category,
+    required this.durations,
+  });
+
+  final int speedMbps;
+  final String displayName;
+  final String category;
+  final List<PlanDuration> durations;
 }
 
 class SalesLead {

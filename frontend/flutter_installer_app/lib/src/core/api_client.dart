@@ -707,8 +707,35 @@ class InstallerApiClient {
             .map((t) => t.toString())
             .where((t) => t.isNotEmpty)
             .toList(),
+        billingPeriodMonths: int.tryParse('${map['billingPeriodMonths'] ?? 1}') ?? 1,
       );
     }).where((p) => p.planCode.isNotEmpty).toList();
+  }
+
+  Future<List<PlanGroup>> fetchGroupedPlans(InstallerSession session) async {
+    final list = _asList(await _request(
+      '/api/v1/installer/sales/plans?grouped=true',
+      token: session.accessToken,
+    ));
+    return list.map((item) {
+      final map = item as Map<String, dynamic>;
+      final durList = _asList(map['durations']);
+      return PlanGroup(
+        speedMbps: int.tryParse('${map['speedMbps'] ?? 0}') ?? 0,
+        displayName: (map['displayName'] ?? '').toString(),
+        category: (map['category'] ?? 'home').toString(),
+        durations: durList.map((d) {
+          final dm = d as Map<String, dynamic>;
+          return PlanDuration(
+            planCode: (dm['planCode'] ?? '').toString(),
+            months: int.tryParse('${dm['months'] ?? 1}') ?? 1,
+            label: (dm['label'] ?? '').toString(),
+            price: double.tryParse('${dm['price'] ?? 0}') ?? 0,
+            otcCharge: double.tryParse('${dm['otcCharge'] ?? 0}') ?? 0,
+          );
+        }).where((d) => d.planCode.isNotEmpty).toList(),
+      );
+    }).where((g) => g.durations.isNotEmpty).toList();
   }
 
   Future<void> deleteInstallerBooking(

@@ -98,6 +98,7 @@ installerAppRouter.get(
           months,
           label: months === 1 ? "1 Month" : months === 3 ? "3 Months" : months === 6 ? "6 Months" : months === 12 ? "1 Year" : `${months} Months`,
           price: plan.monthlyPrice || 0,
+          otcCharge: plan.otcCharge || 0,
           jazeGroupId: plan.provisioning?.jazeGroupId || null
         });
         groupMap[key].durations.sort((a, b) => a.months - b.months);

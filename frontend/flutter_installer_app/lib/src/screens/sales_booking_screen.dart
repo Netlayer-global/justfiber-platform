@@ -47,13 +47,33 @@ class _SalesBookingScreenState extends State<SalesBookingScreen> {
   // Step 3 – Customer Type
   String _customerType = 'home'; // 'home' | 'business'
 
-  // Step 4 – Plan
-  List<SalesPlan>? _plans;
+  // Step 4 – Speed (grouped plans)
+  List<PlanGroup>? _planGroups;
   bool _plansBusy = false;
   String? _plansError;
+  PlanGroup? _selectedGroup;
   String? _selectedPlanCode;
-  SalesPlan? get _selectedPlan =>
-      _plans?.where((p) => p.planCode == _selectedPlanCode).firstOrNull;
+
+  SalesPlan? get _selectedPlan {
+    final group = _selectedGroup;
+    final code = _selectedPlanCode;
+    if (group == null || code == null) return null;
+    final dur = group.durations.where((d) => d.planCode == code).firstOrNull;
+    if (dur == null) return null;
+    return SalesPlan(
+      planCode: dur.planCode,
+      planName: '${group.displayName} · ${dur.label}',
+      planCategory: group.category,
+      monthlyPrice: dur.price,
+      otcCharge: dur.otcCharge,
+      downloadSpeedMbps: group.speedMbps.toDouble(),
+      uploadSpeedMbps: 0,
+      dataLimitGb: 0,
+      dataPolicy: 'unlimited',
+      tags: const [],
+      billingPeriodMonths: dur.months,
+    );
+  }
 
   // Step 5 – Business Details (only if customerType == 'business')
   final _businessNameCtrl = TextEditingController();
@@ -61,9 +81,6 @@ class _SalesBookingScreenState extends State<SalesBookingScreen> {
   final _gstNumberCtrl = TextEditingController();
   final _formKeyBusiness = GlobalKey<FormState>();
   Uint8List? _gstCertBytes;
-
-  // Step 6 – Duration
-  int _durationMonths = 1;
 
   // Step 7 – Checkout & submit
   bool _submitting = false;
@@ -203,8 +220,8 @@ class _SalesBookingScreenState extends State<SalesBookingScreen> {
     });
     try {
       final appState = InstallerStateScope.of(context);
-      final plans = await appState.api.fetchSalesPlans(appState.session!);
-      if (mounted) setState(() => _plans = plans);
+      final groups = await appState.api.fetchGroupedPlans(appState.session!);
+      if (mounted) setState(() => _planGroups = groups);
     } catch (e) {
       if (mounted) setState(() => _plansError = e.toString());
     } finally {
@@ -279,7 +296,7 @@ class _SalesBookingScreenState extends State<SalesBookingScreen> {
     });
     try {
       final appState = InstallerStateScope.of(context);
-      final totalAmount = plan.monthlyPrice * _durationMonths + plan.otcCharge;
+      final totalAmount = plan.monthlyPrice + plan.otcCharge;
       final lead = await appState.api.createSalesBooking(
         fullName: _nameCtrl.text.trim(),
         mobile: _mobileCtrl.text.trim(),
@@ -292,7 +309,7 @@ class _SalesBookingScreenState extends State<SalesBookingScreen> {
         planCode: plan.planCode,
         planName: plan.planName,
         totalAmount: totalAmount,
-        durationMonths: _durationMonths,
+        durationMonths: plan.billingPeriodMonths,
         paymentMode: paymentMode,
         customerType: _customerType,
         businessName: _customerType == 'business'
@@ -447,20 +464,23 @@ class _SalesBookingScreenState extends State<SalesBookingScreen> {
           onNext: () {
             setState(() => _step = 4);
             // Start fetching plans now so they're ready when the plan UI renders
-            if (_plans == null && !_plansBusy) _loadPlans();
+            if (_planGroups == null && !_plansBusy) _loadPlans();
           },
         );
 
       case 4:
-        return _PlanStep(
-          plans: _plans,
+        return _SpeedStep(
+          planGroups: _planGroups,
           busy: _plansBusy,
           error: _plansError,
-          selectedPlanCode: _selectedPlanCode,
           customerType: _customerType,
+          selectedGroup: _selectedGroup,
           onRetry: _loadPlans,
-          onSelect: (code) => setState(() => _selectedPlanCode = code),
-          onNext: _selectedPlanCode != null
+          onSelect: (group) => setState(() {
+            _selectedGroup = group;
+            _selectedPlanCode = null;
+          }),
+          onNext: _selectedGroup != null
               ? () {
                   if (_customerType == 'business') {
                     setState(() => _step = 5);
@@ -494,11 +514,13 @@ class _SalesBookingScreenState extends State<SalesBookingScreen> {
         );
 
       case 6:
-        return _DurationStep(
-          selectedMonths: _durationMonths,
-          plan: _selectedPlan,
-          onSelect: (months) => setState(() => _durationMonths = months),
-          onNext: () => setState(() => _step = 7),
+        return _DurationFromGroupStep(
+          group: _selectedGroup!,
+          selectedPlanCode: _selectedPlanCode,
+          onSelect: (code) => setState(() => _selectedPlanCode = code),
+          onNext: _selectedPlanCode != null
+              ? () => setState(() => _step = 7)
+              : null,
         );
 
       case 7:
@@ -507,7 +529,7 @@ class _SalesBookingScreenState extends State<SalesBookingScreen> {
           mobile: _mobileCtrl.text.trim(),
           address: _addressCtrl.text.trim(),
           plan: _selectedPlan!,
-          durationMonths: _durationMonths,
+          durationMonths: _selectedPlan!.billingPeriodMonths,
           hasLocation: _lat != null,
           customerType: _customerType,
           businessName: _customerType == 'business'
@@ -1074,176 +1096,86 @@ class _TypeCard extends StatelessWidget {
   }
 }
 
-// ─── Step 4: Plan Selection ────────────────────────────────────────────────────
-
-class _PlanStep extends StatefulWidget {
-  const _PlanStep({
-    required this.plans,
+// ─── Step 4: Speed Selection (grouped) ────────────────────────────────
+class _SpeedStep extends StatelessWidget {
+  const _SpeedStep({
+    required this.planGroups,
     required this.busy,
     required this.error,
-    required this.selectedPlanCode,
     required this.customerType,
+    required this.selectedGroup,
     required this.onRetry,
     required this.onSelect,
     required this.onNext,
   });
 
-  final List<SalesPlan>? plans;
+  final List<PlanGroup>? planGroups;
   final bool busy;
   final String? error;
-  final String? selectedPlanCode;
   final String customerType;
+  final PlanGroup? selectedGroup;
   final VoidCallback onRetry;
-  final ValueChanged<String> onSelect;
+  final ValueChanged<PlanGroup> onSelect;
   final VoidCallback? onNext;
 
-  @override
-  State<_PlanStep> createState() => _PlanStepState();
-}
-
-class _PlanStepState extends State<_PlanStep> {
-  final _searchCtrl = TextEditingController();
-  String _query = '';
-
-  @override
-  void dispose() {
-    _searchCtrl.dispose();
-    super.dispose();
-  }
-
-  List<SalesPlan> _filtered(List<SalesPlan> allPlans) {
-    // Filter by customer type
-    List<SalesPlan> byType;
-    if (widget.customerType == 'business') {
-      byType = allPlans
-          .where((p) =>
-              p.planCategory == 'business' ||
-              p.planCategory == 'static_ip' ||
-              p.tags.any((t) => t.toLowerCase().contains('static')))
-          .toList();
-      if (byType.isEmpty) byType = allPlans; // fallback: show all
-    } else {
-      byType = allPlans
-          .where((p) => p.planCategory == 'home')
-          .toList();
-      if (byType.isEmpty) byType = allPlans; // fallback: show all
+  List<PlanGroup> _filtered(List<PlanGroup> all) {
+    if (customerType == 'business') {
+      final biz = all.where((g) => g.category == 'business' || g.category == 'static_ip').toList();
+      return biz.isEmpty ? all : biz;
     }
-
-    final q = _query.toLowerCase().trim();
-    if (q.isEmpty) return byType;
-    return byType.where((p) {
-      return p.planName.toLowerCase().contains(q) ||
-          p.downloadSpeedMbps.toInt().toString().contains(q) ||
-          p.tags.any((t) => t.toLowerCase().contains(q));
-    }).toList();
+    final home = all.where((g) => g.category == 'home').toList();
+    return home.isEmpty ? all : home;
   }
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _filtered(widget.plans ?? []);
-    final isBusinessType = widget.customerType == 'business';
-
+    final groups = _filtered(planGroups ?? []);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
           child: _StepHeader(
-            icon: isBusinessType
-                ? Icons.business_center_outlined
-                : Icons.grid_view_rounded,
-            title: isBusinessType
-                ? 'Business / Static IP Plans'
-                : 'Home Plans',
-            subtitle: isBusinessType
-                ? 'Choose a business or static IP fiber plan.'
-                : 'Choose the fiber plan for this customer.',
+            icon: Icons.speed_rounded,
+            title: 'Select Speed',
+            subtitle: 'Choose the internet speed for this customer.',
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: TextField(
-            controller: _searchCtrl,
-            style: GoogleFonts.inter(color: kText, fontSize: 14),
-            decoration: InputDecoration(
-              hintText: 'Search plans…',
-              hintStyle: GoogleFonts.inter(color: kSubtle, fontSize: 14),
-              prefixIcon: const Icon(Icons.search_rounded, size: 20),
-              suffixIcon: _query.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear_rounded, size: 18),
-                      onPressed: () => setState(() {
-                        _searchCtrl.clear();
-                        _query = '';
-                      }),
-                    )
-                  : null,
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-            onChanged: (v) => setState(() => _query = v),
-          ),
-        ),
-        if (widget.busy)
-          const Expanded(
-            child: Center(
-              child: CircularProgressIndicator(color: kPrimaryLight),
-            ),
-          )
-        else if (widget.error != null)
+        if (busy)
+          const Expanded(child: Center(child: CircularProgressIndicator(color: kPrimaryLight)))
+        else if (error != null)
           Expanded(
             child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(widget.error!,
-                      style: GoogleFonts.inter(
-                          color: const Color(0xFFEF4444), fontSize: 13)),
+                  Text(error!, style: GoogleFonts.inter(color: const Color(0xFFEF4444), fontSize: 13)),
                   const SizedBox(height: 12),
-                  OutlinedButton(
-                      onPressed: widget.onRetry,
-                      child: const Text('Retry')),
+                  OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
                 ],
               ),
             ),
           )
-        else if (widget.plans != null)
+        else if (planGroups != null)
           Expanded(
-            child: filtered.isEmpty
-                ? Center(
-                    child: Text(
-                      _query.isNotEmpty
-                          ? 'No plans match "$_query"'
-                          : 'No ${widget.customerType} plans available',
-                      style:
-                          GoogleFonts.inter(color: kMuted, fontSize: 13),
-                    ),
-                  )
+            child: groups.isEmpty
+                ? Center(child: Text('No plans available', style: GoogleFonts.inter(color: kMuted, fontSize: 13)))
                 : ListView.separated(
-                    padding:
-                        const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: 10),
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    itemCount: groups.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
-                      final plan = filtered[index];
-                      final selected =
-                          plan.planCode == widget.selectedPlanCode;
-                      return _PlanCard(
-                        plan: plan,
-                        selected: selected,
-                        onTap: () => widget.onSelect(plan.planCode),
-                      );
+                      final group = groups[index];
+                      final selected = group.speedMbps == selectedGroup?.speedMbps;
+                      return _SpeedCard(group: group, selected: selected, onTap: () => onSelect(group));
                     },
                   ),
           ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           child: _NextButton(
-            label: widget.customerType == 'business'
-                ? 'Next: Business Details'
-                : 'Next: Duration',
-            onPressed: widget.onNext,
+            label: customerType == 'business' ? 'Next: Business Details' : 'Next: Duration',
+            onPressed: onNext,
           ),
         ),
       ],
@@ -1251,146 +1183,65 @@ class _PlanStepState extends State<_PlanStep> {
   }
 }
 
-class _PlanCard extends StatelessWidget {
-  const _PlanCard({
-    required this.plan,
-    required this.selected,
-    required this.onTap,
-  });
+class _SpeedCard extends StatelessWidget {
+  const _SpeedCard({required this.group, required this.selected, required this.onTap});
 
-  final SalesPlan plan;
+  final PlanGroup group;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final isStaticIp = plan.planCategory == 'static_ip';
+    final minPrice = group.durations.isEmpty ? 0 : group.durations.map((d) => d.price).reduce((a, b) => a < b ? a : b);
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: selected ? kPrimary.withValues(alpha: 0.1) : kSurface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: selected ? kPrimary : kBorder,
-            width: selected ? 1.5 : 1,
-          ),
+          border: Border.all(color: selected ? kPrimary : kBorder, width: selected ? 1.5 : 1),
         ),
         child: Row(
           children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: selected ? kPrimary.withValues(alpha: 0.15) : kSurface2,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(Icons.bolt_rounded, color: selected ? kPrimaryLight : kMuted, size: 28),
+            ),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          plan.planName,
-                          style: GoogleFonts.inter(
-                            color: kText,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                      if (isStaticIp)
-                        Container(
-                          margin: const EdgeInsets.only(left: 8),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF8B5CF6)
-                                .withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            'Static IP',
-                            style: GoogleFonts.inter(
-                              color: const Color(0xFF8B5CF6),
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${plan.downloadSpeedMbps.toInt()} Mbps  •  ${plan.dataPolicy == 'unlimited' ? 'Unlimited' : '${plan.dataLimitGb.toInt()} GB'}',
-                    style:
-                        GoogleFonts.inter(color: kMuted, fontSize: 12),
-                  ),
-                  if (plan.tags.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 6,
-                      children: plan.tags
-                          .take(3)
-                          .map((tag) => Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: kSurface2,
-                                  borderRadius:
-                                      BorderRadius.circular(20),
-                                ),
-                                child: Text(tag,
-                                    style: GoogleFonts.inter(
-                                        color: kMuted, fontSize: 10)),
-                              ))
-                          .toList(),
-                    ),
-                  ],
+                  Text(group.displayName, style: GoogleFonts.inter(color: selected ? kPrimaryLight : kText, fontSize: 18, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 2),
+                  Text('${group.durations.length} plan${group.durations.length != 1 ? 's' : ''} available', style: GoogleFonts.inter(color: kMuted, fontSize: 12)),
                 ],
               ),
             ),
-            const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  '₹${plan.monthlyPrice.toInt()}',
-                  style: GoogleFonts.inter(
-                    color: selected ? kPrimaryLight : kText,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Text(
-                  '/month',
-                  style:
-                      GoogleFonts.inter(color: kSubtle, fontSize: 11),
-                ),
-                if (plan.otcCharge > 0) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    '+₹${plan.otcCharge.toInt()} OTC',
-                    style: GoogleFonts.inter(
-                        color: kSubtle, fontSize: 11),
-                  ),
-                ],
+                Text('from', style: GoogleFonts.inter(color: kSubtle, fontSize: 11)),
+                Text('₹${minPrice.toInt()}', style: GoogleFonts.inter(color: selected ? kPrimaryLight : kText, fontSize: 18, fontWeight: FontWeight.w900)),
               ],
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              width: 22,
-              height: 22,
+              width: 22, height: 22,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: selected ? kPrimary : Colors.transparent,
-                border: Border.all(
-                  color: selected ? kPrimary : kSubtle,
-                  width: 1.5,
-                ),
+                border: Border.all(color: selected ? kPrimary : kSubtle, width: 1.5),
               ),
-              child: selected
-                  ? const Icon(Icons.check_rounded,
-                      color: Colors.white, size: 14)
-                  : null,
+              child: selected ? const Icon(Icons.check_rounded, color: Colors.white, size: 14) : null,
             ),
           ],
         ),
@@ -1535,27 +1386,19 @@ class _UpperCaseFormatter extends TextInputFormatter {
   }
 }
 
-// ─── Step 6: Duration ─────────────────────────────────────────────────────────
-
-class _DurationStep extends StatelessWidget {
-  const _DurationStep({
-    required this.selectedMonths,
-    required this.plan,
+// ─── Step 6: Duration from selected group ────────────────────────────────
+class _DurationFromGroupStep extends StatelessWidget {
+  const _DurationFromGroupStep({
+    required this.group,
+    required this.selectedPlanCode,
     required this.onSelect,
     required this.onNext,
   });
 
-  final int selectedMonths;
-  final SalesPlan? plan;
-  final ValueChanged<int> onSelect;
-  final VoidCallback onNext;
-
-  static const _options = [
-    (1, '1 Month'),
-    (3, '3 Months'),
-    (6, '6 Months'),
-    (12, '12 Months'),
-  ];
+  final PlanGroup group;
+  final String? selectedPlanCode;
+  final ValueChanged<String> onSelect;
+  final VoidCallback? onNext;
 
   @override
   Widget build(BuildContext context) {
@@ -1564,85 +1407,64 @@ class _DurationStep extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _StepHeader(
+          _StepHeader(
             icon: Icons.calendar_today_outlined,
-            title: 'Subscription Duration',
-            subtitle:
-                'How many months does the customer want to subscribe?',
+            title: 'Select Duration',
+            subtitle: '${group.displayName} — choose how many months.',
           ),
           const SizedBox(height: 28),
-          ...(_options.map((opt) {
-            final months = opt.$1;
-            final label = opt.$2;
-            final selected = months == selectedMonths;
-            final total = plan != null
-                ? plan!.monthlyPrice * months + plan!.otcCharge
-                : 0.0;
+          ...group.durations.map((dur) {
+            final selected = dur.planCode == selectedPlanCode;
+            final total = dur.price + dur.otcCharge;
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: GestureDetector(
-                onTap: () => onSelect(months),
+                onTap: () => onSelect(dur.planCode),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 160),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: selected
-                        ? kPrimary.withValues(alpha: 0.1)
-                        : kSurface,
+                    color: selected ? kPrimary.withValues(alpha: 0.1) : kSurface,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: selected ? kPrimary : kBorder,
-                      width: selected ? 1.5 : 1,
-                    ),
+                    border: Border.all(color: selected ? kPrimary : kBorder, width: selected ? 1.5 : 1),
                   ),
                   child: Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          label,
-                          style: GoogleFonts.inter(
-                            color: kText,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(dur.label, style: GoogleFonts.inter(color: kText, fontSize: 15, fontWeight: FontWeight.w700)),
+                            if (dur.otcCharge > 0) ...
+                              [const SizedBox(height: 2), Text('+₹${dur.otcCharge.toInt()} one-time', style: GoogleFonts.inter(color: kSubtle, fontSize: 11))],
+                          ],
                         ),
                       ),
-                      if (plan != null)
-                        Text(
-                          '₹${total.toInt()}',
-                          style: GoogleFonts.inter(
-                            color:
-                                selected ? kPrimaryLight : kMuted,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text('₹${dur.price.toInt()}', style: GoogleFonts.inter(color: selected ? kPrimaryLight : kText, fontSize: 18, fontWeight: FontWeight.w900)),
+                          if (dur.otcCharge > 0)
+                            Text('total ₹${total.toInt()}', style: GoogleFonts.inter(color: kSubtle, fontSize: 10)),
+                        ],
+                      ),
                       const SizedBox(width: 10),
                       AnimatedContainer(
                         duration: const Duration(milliseconds: 160),
-                        width: 22,
-                        height: 22,
+                        width: 22, height: 22,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: selected
-                              ? kPrimary
-                              : Colors.transparent,
-                          border: Border.all(
-                            color: selected ? kPrimary : kSubtle,
-                            width: 1.5,
-                          ),
+                          color: selected ? kPrimary : Colors.transparent,
+                          border: Border.all(color: selected ? kPrimary : kSubtle, width: 1.5),
                         ),
-                        child: selected
-                            ? const Icon(Icons.check_rounded,
-                                color: Colors.white, size: 14)
-                            : null,
+                        child: selected ? const Icon(Icons.check_rounded, color: Colors.white, size: 14) : null,
                       ),
                     ],
                   ),
                 ),
               ),
             );
-          })),
+          }),
           const SizedBox(height: 24),
           _NextButton(label: 'Next: Checkout', onPressed: onNext),
         ],
@@ -1689,7 +1511,7 @@ class _CheckoutStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isBusiness = customerType == 'business';
-    final totalAmount = plan.monthlyPrice * durationMonths + plan.otcCharge;
+    final totalAmount = plan.monthlyPrice + plan.otcCharge;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -1773,7 +1595,7 @@ class _CheckoutStep extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 _SummaryRow(
-                  label: 'Monthly',
+                  label: 'Plan price',
                   value: '₹${plan.monthlyPrice.toInt()}',
                 ),
                 if (plan.otcCharge > 0) ...[
