@@ -20,6 +20,7 @@ const customerSchema = new mongoose.Schema(
     billingZoneName: String,
     billingStateCode: String,
     billingStateName: String,
+    jazeUserId: { type: String, index: true, sparse: true },
     jazeStatus: { type: String, default: "unknown", index: true },
     operationalStatus: { type: String, default: "unknown", index: true },
     expiryAt: Date,

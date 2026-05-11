@@ -12,6 +12,8 @@ import { SubscriberService } from "../models/SubscriberService.js";
 import { buildPppoeCredentials } from "../common/networkProvisioning.js";
 import { reconcilePaymentToInvoice, syncCustomerBillingState } from "../common/billingAccounting.js";
 import { internalBillingEngine } from "./internalBillingEngine.js";
+import { jazeClient } from "./jazeClient.js";
+import { env } from "../config/env.js";
 
 function deriveNumericSuffix(value) {
   const digits = String(value || "").replace(/\D/g, "");
@@ -647,6 +649,83 @@ export class InternalSubscriberPlatform {
           $set: { state: "active_customer" }
         }
       );
+    }
+
+    if (env.SERVICE_CONTROL_PROVIDER === "jaze" && !customer.jazeUserId) {
+      try {
+        const planCode =
+          installerJob.customerSnapshot?.planCode ||
+          booking?.selectedPlan?.planCode;
+        const plan = planCode
+          ? await PlanCatalog.findOne({ planCode }).lean()
+          : null;
+        const jazeGroupId =
+          plan?.provisioning?.jazeGroupId ||
+          installerJob.customerSnapshot?.jazeGroupId ||
+          null;
+        const fullName =
+          booking?.personalDetails?.fullName ||
+          installerJob.customerSnapshot?.fullName ||
+          customer.fullName ||
+          "JustFiber Customer";
+        const nameParts = fullName.trim().split(/\s+/);
+        const jazePayload = {
+          userGroupId: jazeGroupId,
+          userName: pppoe.username,
+          password: pppoe.password,
+          userState: "active",
+          firstName: nameParts[0] || fullName,
+          lastName: nameParts.slice(1).join(" ") || "",
+          phoneNumber:
+            booking?.personalDetails?.mobile ||
+            installerJob.customerSnapshot?.mobile ||
+            customer.mobile ||
+            "",
+          emailId:
+            booking?.personalDetails?.email ||
+            customer.email ||
+            "",
+          address_line1:
+            booking?.personalDetails?.fullAddress ||
+            booking?.personalDetails?.address ||
+            "",
+          address_city:
+            booking?.personalDetails?.city ||
+            installerJob.customerSnapshot?.city ||
+            "",
+          address_pin:
+            booking?.personalDetails?.pinCode ||
+            installerJob.customerSnapshot?.pinCode ||
+            "",
+          comments: `customerId:${identifiers.customerId} serviceId:${identifiers.serviceId}`
+        };
+        const jazeResponse = await jazeClient.createUser(jazePayload);
+        const jazeUserId =
+          jazeResponse?.data?.userId ||
+          jazeResponse?.userId ||
+          jazeResponse?.user_id ||
+          null;
+        if (jazeUserId) {
+          await Customer.updateOne(
+            { customerId: identifiers.customerId },
+            { $set: { jazeUserId: String(jazeUserId), jazeStatus: "active" } }
+          );
+          customer.jazeUserId = String(jazeUserId);
+          customer.jazeStatus = "active";
+        }
+        installerJob.activation = {
+          ...(installerJob.activation || {}),
+          jazeUserId: jazeUserId || null,
+          jazeProvisionedAt: new Date()
+        };
+      } catch (jazeError) {
+        console.error("[internalSubscriberPlatform] Jaze user creation failed:", jazeError.message);
+        installerJob.activation = {
+          ...(installerJob.activation || {}),
+          jazeProvisioningError: jazeError.message,
+          jazeProvisionedAt: new Date()
+        };
+      }
     }
 
     installerJob.customerId = identifiers.customerId;
