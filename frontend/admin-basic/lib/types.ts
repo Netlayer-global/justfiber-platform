@@ -82,6 +82,7 @@ export interface Plan {
   fairUsageResetPolicy?: 'monthly' | 'billing_cycle' | 'rolling_30'
   latencyClass?: 'standard' | 'gaming' | 'voice' | 'enterprise'
   contentionRatio?: string
+  billingPeriodMonths?: number
   price: number
   quarterlyPrice?: number
   halfYearlyPrice?: number

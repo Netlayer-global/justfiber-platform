@@ -58,6 +58,7 @@ const planSchema = z.object({
   fairUsageResetPolicy: z.enum(["monthly", "billing_cycle", "rolling_30"]).optional(),
   latencyClass: z.enum(["standard", "gaming", "voice", "enterprise"]).optional(),
   contentionRatio: z.string().optional(),
+  billingPeriodMonths: z.number().optional(),
   monthlyPrice: z.number().optional(),
   quarterlyPrice: z.number().optional(),
   halfYearlyPrice: z.number().optional(),
@@ -112,7 +113,8 @@ const planSchema = z.object({
     pppoePrefix: z.string().optional(),
     pppoeRealm: z.string().optional(),
     defaultPppoePassword: z.string().optional(),
-    wifiNamePrefix: z.string().optional()
+    wifiNamePrefix: z.string().optional(),
+    jazeGroupId: z.string().optional()
   }).optional(),
   merchandising: z.object({
     featured: z.boolean().optional(),
