@@ -34,7 +34,7 @@ import { CustomerUser } from "../../models/CustomerUser.js";
 import { AuditLog } from "../../models/AuditLog.js";
 import { getCustomerPortalDemoOtp, normalizeCustomerPortalOtpKey } from "../../common/customerPortalOtpStore.js";
 import { splitPlanTaxableAmount } from "../../common/invoicePolicy.js";
-import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
+import { serviceControlAdapter } from "../../integrations/serviceControlAdapter.js";
 import { SubscriberService } from "../../models/SubscriberService.js";
 import { BngNode } from "../../models/BngNode.js";
 import { PlanCatalog } from "../../models/PlanCatalog.js";
@@ -258,12 +258,12 @@ async function applyBillingCollectionsStatusChange({
   }
   let serviceControlResult = null;
   if (nextStatus === "suspended") {
-    serviceControlResult = await radiusServiceManager.suspendSubscriberAccess({
+    serviceControlResult = await serviceControlAdapter.suspendSubscriberAccess({
       serviceId: customer.serviceId,
       reason
     });
   } else if (nextStatus === "active") {
-    serviceControlResult = await radiusServiceManager.resumeSubscriberAccess({
+    serviceControlResult = await serviceControlAdapter.resumeSubscriberAccess({
       serviceId: customer.serviceId
     });
   } else {
@@ -4004,7 +4004,7 @@ adminOpsRouter.patch(
         ? await PlanCatalog.findOne({ planCode: customer.planCode }).lean()
         : null;
 
-      await radiusServiceManager.createSubscriberAccess({
+      await serviceControlAdapter.createSubscriberAccess({
         serviceId: customer.serviceId,
         customerId: customer.customerId,
         radiusUsername: pppoeUsername,
@@ -4118,7 +4118,7 @@ adminOpsRouter.post(
       throw new ApiError(400, "PPPoE username and password are required");
     }
 
-    const result = await radiusServiceManager.createSubscriberAccess({
+    const result = await serviceControlAdapter.createSubscriberAccess({
       serviceId: customer.serviceId,
       customerId: customer.customerId,
       radiusUsername,
@@ -4167,7 +4167,7 @@ adminOpsRouter.post(
     if (!customer.serviceId) {
       throw new ApiError(400, "Customer serviceId missing");
     }
-    const result = await radiusServiceManager.suspendSubscriberAccess({
+    const result = await serviceControlAdapter.suspendSubscriberAccess({
       serviceId: customer.serviceId,
       reason: String(req.body?.reason || "Service suspended from admin PPPoE control").trim()
     });
@@ -4194,7 +4194,7 @@ adminOpsRouter.post(
     if (!customer.serviceId) {
       throw new ApiError(400, "Customer serviceId missing");
     }
-    const result = await radiusServiceManager.resumeSubscriberAccess({
+    const result = await serviceControlAdapter.resumeSubscriberAccess({
       serviceId: customer.serviceId
     });
     return ok(res, {

@@ -36,7 +36,7 @@ import { razorpayClient } from "../../integrations/razorpayClient.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
 import { internalBillingEngine, repriceOpenInvoicesForCustomer } from "../../integrations/internalBillingEngine.js";
 import { buildBillingNotificationContent, notificationDispatcher } from "../../integrations/notificationDispatcher.js";
-import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
+import { serviceControlAdapter } from "../../integrations/serviceControlAdapter.js";
 import { syncDeviceFromGenie } from "../../common/deviceOperationalSync.js";
 import {
   applyBillingNoteAdjustment,
@@ -1841,7 +1841,7 @@ async function syncPortalCustomerServicePlan(customer, plan, billingTerm = "mont
       resolvedRadiusPassword = String(cleartextEntry?.value || "").trim();
     }
     if (existingService?.radiusUsername && resolvedRadiusPassword) {
-      await radiusServiceManager.createSubscriberAccess({
+      await serviceControlAdapter.createSubscriberAccess({
         serviceId: customer.serviceId,
         customerId: customer.customerId,
         radiusUsername: existingService.radiusUsername,
@@ -2121,7 +2121,7 @@ async function finalizeSuccessfulBillingPayment({
     }
   };
   if (customer.operationalStatus === "suspended" && customer.serviceId) {
-    await radiusServiceManager.resumeSubscriberAccess({
+    await serviceControlAdapter.resumeSubscriberAccess({
       serviceId: customer.serviceId
     }).catch(() => null);
     const device = await DeviceOperationalCache.findOne({ customerId: customer.customerId }).lean();

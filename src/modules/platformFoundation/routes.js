@@ -45,7 +45,7 @@ import { ServiceabilityZone } from "../../models/ServiceabilityZone.js";
 import { SystemConfig } from "../../models/SystemConfig.js";
 import { ApiError } from "../../common/ApiError.js";
 import { buildPagination } from "../../common/pagination.js";
-import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
+import { serviceControlAdapter } from "../../integrations/serviceControlAdapter.js";
 import { mikrotikBngManager } from "../../integrations/mikrotikBngManager.js";
 import { env } from "../../config/env.js";
 import { auditFromRequest } from "../../common/audit.js";
@@ -1682,7 +1682,7 @@ platformFoundationRouter.post(
     if (!service) {
       throw new Error("Subscriber service not found");
     }
-    const result = await radiusServiceManager.createSubscriberAccess({
+    const result = await serviceControlAdapter.createSubscriberAccess({
       serviceId: service.serviceId,
       customerId: service.customerId,
       radiusUsername: service.radiusUsername,
@@ -1701,7 +1701,7 @@ platformFoundationRouter.post(
   requirePermission(permissions.customerSuspend),
   asyncHandler(async (req, res) => {
     const payload = suspendSchema.parse(req.body || {});
-    const result = await radiusServiceManager.suspendSubscriberAccess({
+    const result = await serviceControlAdapter.suspendSubscriberAccess({
       serviceId: req.params.serviceId,
       reason: payload.reason
     });
@@ -1713,7 +1713,7 @@ platformFoundationRouter.post(
   "/foundation/subscriber-services/:serviceId/resume",
   requirePermission(permissions.customerResume),
   asyncHandler(async (req, res) => {
-    const result = await radiusServiceManager.resumeSubscriberAccess({
+    const result = await serviceControlAdapter.resumeSubscriberAccess({
       serviceId: req.params.serviceId
     });
     return ok(res, result);

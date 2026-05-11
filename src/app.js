@@ -1,6 +1,3 @@
-import path from "node:path";
-import { existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
@@ -49,12 +46,6 @@ function resolveCorsOrigin(originValue) {
 
 export function createApp() {
   const app = express();
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
-  const publicDir = path.resolve(__dirname, "../public");
-  const adminAppDir = path.join(publicDir, "admin-app");
-  const adminAppIndex = path.join(adminAppDir, "index.html");
-  const hasReactAdminBuild = () => existsSync(adminAppIndex);
 
   app.use(
     helmet({
@@ -80,31 +71,16 @@ export function createApp() {
   );
   app.use(requestContext);
   app.use(morgan("combined"));
-  app.use(express.static(publicDir));
 
-  app.get("/", (req, res) => {
-    const host = (req.hostname || "").toLowerCase();
-    if (host === (env.API_DOMAIN || "").toLowerCase()) {
-      return res.json({
-        success: true,
-        data: {
-          service: "justfiber-api",
-          domain: env.API_DOMAIN,
-          health: "/health/live",
-          versionPrefix: "/api/v1"
-        }
-      });
-    }
-    if (host === env.ADMIN_DOMAIN || host === env.NOC_DOMAIN) {
-      return res.redirect("/admin");
-    }
-    if (host === env.SALES_DOMAIN) {
-      return res.redirect("/sales");
-    }
-    if (host === env.USER_DOMAIN) {
-      return res.redirect("/user");
-    }
-    return res.redirect("/admin");
+  app.get("/", (_req, res) => {
+    res.json({
+      success: true,
+      data: {
+        service: "justfiber-api",
+        health: "/health/live",
+        versionPrefix: "/api/v1"
+      }
+    });
   });
 
   app.get("/health/live", (_req, res) => {
@@ -133,36 +109,6 @@ export function createApp() {
   app.use("/api/v1/installer", installerAppRouter);
   app.use("/api/v1/customer", customerPortalRouter);
   app.use("/api/v1/sales", salesAppRouter);
-
-  app.get("/admin", (_req, res) => {
-    res.sendFile(path.join(publicDir, "admin", "index.html"));
-  });
-
-  app.get("/admin-next", (_req, res) => {
-    const target = hasReactAdminBuild() ? adminAppIndex : path.join(publicDir, "admin", "index.html");
-    res.sendFile(target);
-  });
-
-  app.get("/admin-next/*", (_req, res) => {
-    const target = hasReactAdminBuild() ? adminAppIndex : path.join(publicDir, "admin", "index.html");
-    res.sendFile(target);
-  });
-
-  app.get("/user", (_req, res) => {
-    res.sendFile(path.join(publicDir, "user", "index.html"));
-  });
-
-  app.get("/user/login", (_req, res) => {
-    res.sendFile(path.join(publicDir, "user", "index.html"));
-  });
-
-  app.get("/sales", (_req, res) => {
-    res.sendFile(path.join(publicDir, "sales", "index.html"));
-  });
-
-  app.get("/noc", (_req, res) => {
-    res.sendFile(path.join(publicDir, "admin", "index.html"));
-  });
 
   app.use((_req, _res, next) => {
     next(new ApiError(404, "Route not found"));

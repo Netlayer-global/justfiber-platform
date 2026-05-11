@@ -35,7 +35,7 @@ import { Installer } from "../../models/Installer.js";
 import { InstallerJob } from "../../models/InstallerJob.js";
 import { InstallerNotification } from "../../models/InstallerNotification.js";
 import { SubscriberService } from "../../models/SubscriberService.js";
-import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
+import { serviceControlAdapter } from "../../integrations/serviceControlAdapter.js";
 import { mikrotikBngManager } from "../../integrations/mikrotikBngManager.js";
 import { buildPppoeCredentials, buildWifiCredentials } from "../../common/networkProvisioning.js";
 import { AccessProfile } from "../../models/AccessProfile.js";
@@ -141,7 +141,7 @@ async function deleteCustomerCascade(customer) {
   }
 
   for (const service of services) {
-    await radiusServiceManager.deleteSubscriberAccess({
+    await serviceControlAdapter.deleteSubscriberAccess({
       serviceId: service.serviceId,
       radiusUsername: service.radiusUsername,
       purgeAccounting: true
@@ -785,21 +785,21 @@ async function buildCustomerResponse(customer) {
   }).lean();
   const radiusSnapshot =
     subscriberService?.radiusUsername
-      ? await radiusServiceManager.getSubscriberAccessSnapshot({
+      ? await serviceControlAdapter.getSubscriberAccessSnapshot({
           serviceId: subscriberService.serviceId,
           radiusUsername: subscriberService.radiusUsername
         }).catch(() => null)
       : null;
   const radiusUsageSummary =
     subscriberService?.radiusUsername
-      ? await radiusServiceManager.getSubscriberUsageSummary({
+      ? await serviceControlAdapter.getSubscriberUsageSummary({
           serviceId: subscriberService.serviceId,
           radiusUsername: subscriberService.radiusUsername
         }).catch(() => null)
       : null;
   const radiusSessionHistory =
     subscriberService?.radiusUsername
-      ? await radiusServiceManager.getSubscriberSessionHistory({
+      ? await serviceControlAdapter.getSubscriberSessionHistory({
           serviceId: subscriberService.serviceId,
           radiusUsername: subscriberService.radiusUsername,
           limit: 5
@@ -1236,7 +1236,7 @@ customersRouter.post(
 
     if (payload.createRadius !== false) {
       runDetachedCustomerTask(`radius provisioning for ${customerId}`, async () => {
-        await radiusServiceManager.createSubscriberAccess({
+        await serviceControlAdapter.createSubscriberAccess({
           serviceId,
           customerId,
           radiusUsername,
@@ -1708,21 +1708,21 @@ customersRouter.post(
     ]);
     const radiusSnapshot =
       subscriberService?.radiusUsername
-        ? await radiusServiceManager.getSubscriberAccessSnapshot({
+        ? await serviceControlAdapter.getSubscriberAccessSnapshot({
             serviceId: subscriberService.serviceId,
             radiusUsername: subscriberService.radiusUsername
           }).catch(() => null)
         : null;
     const radiusUsageSummary =
       subscriberService?.radiusUsername
-        ? await radiusServiceManager.getSubscriberUsageSummary({
+        ? await serviceControlAdapter.getSubscriberUsageSummary({
             serviceId: subscriberService.serviceId,
             radiusUsername: subscriberService.radiusUsername
           }).catch(() => null)
         : null;
     const radiusSessionHistory =
       subscriberService?.radiusUsername
-        ? await radiusServiceManager.getSubscriberSessionHistory({
+        ? await serviceControlAdapter.getSubscriberSessionHistory({
             serviceId: subscriberService.serviceId,
             radiusUsername: subscriberService.radiusUsername,
             limit: 5
@@ -1935,7 +1935,7 @@ customersRouter.patch(
             metadata: subscriberService.metadata || {}
           };
           runDetachedCustomerTask(`radius sync for ${customer.customerId}`, async () => {
-            await radiusServiceManager.createSubscriberAccess(radiusPayload);
+            await serviceControlAdapter.createSubscriberAccess(radiusPayload);
           });
           radiusSyncApplied = true;
           radiusSyncQueued = true;

@@ -201,6 +201,86 @@ export class JazeClient {
   async getSingleUserDetails(userId) {
     return jazeRequest("GET", `/get_details/${encodeURIComponent(normalizeUserId(userId))}`);
   }
+
+  async getUsersCount(accountId) {
+    const id = accountId || env.JAZE_ACCOUNT_ID || env.JAZE_API_USERNAME;
+    return jazeRequest("GET", `/get_users_count/${encodeURIComponent(id)}`);
+  }
+
+  async getSessionHistory(userId, fromDate, toDate) {
+    const uid = normalizeUserId(userId);
+    const from = fromDate || "";
+    const to = toDate || "";
+    return jazeRequest("GET", `/get_usersession_details/${encodeURIComponent(uid)}/${from}/${to}`);
+  }
+
+  async getActiveSessions() {
+    return jazeRequest("GET", "/get_active_user_session_details");
+  }
+
+  async getRenewalHistory({ userId, fromDate, toDate }) {
+    return jazeRequest(
+      "POST",
+      "/get_renewal_details",
+      {
+        userId: normalizeUserId(userId),
+        ...(fromDate ? { fromDate } : {}),
+        ...(toDate ? { toDate } : {})
+      },
+      true
+    );
+  }
+
+  async getGroupDetails(groupId) {
+    const id = groupId ? encodeURIComponent(groupId) : "";
+    return jazeRequest("GET", `/get_group_details/${id}`);
+  }
+
+  async getAllInvoiceIds({ fromDate, toDate, status } = {}) {
+    const from = fromDate || "";
+    const to = toDate || "";
+    const st = status || "";
+    return jazeRequest("GET", `/get_all_invoice_ids/${from}/${to}/${st}`);
+  }
+
+  async getInvoiceDetails(invoiceId) {
+    return jazeRequest("GET", `/get_invoice_details/${encodeURIComponent(invoiceId)}`);
+  }
+
+  async getPaymentReceipt(userId, paymentId) {
+    return jazeRequest(
+      "GET",
+      `/get_payment_receipt/${encodeURIComponent(normalizeUserId(userId))}/${encodeURIComponent(paymentId)}`
+    );
+  }
+
+  async getPaymentDetailsByPaymentId(paymentId) {
+    return jazeRequest("GET", `/get_payment_details_by_paymentid/${encodeURIComponent(paymentId)}`);
+  }
+
+  async editUser({ userId, ...fields }) {
+    return jazeRequest(
+      "POST",
+      "/edit_user",
+      {
+        userId: normalizeUserId(userId),
+        accountId: env.JAZE_ACCOUNT_ID || env.JAZE_API_USERNAME,
+        ...fields
+      },
+      true
+    );
+  }
+
+  async getUsersByDate({ fromDate, toDate, basedOn } = {}) {
+    const from = encodeURIComponent(fromDate || "");
+    const to = encodeURIComponent(toDate || "");
+    const based = encodeURIComponent(basedOn || "");
+    return jazeRequest("GET", `/get_users_by_date/${from}/${to}/${based}`);
+  }
+
+  async getAllGroupDetails() {
+    return jazeRequest("GET", "/get_group_details/");
+  }
 }
 
 export const jazeClient = new JazeClient();

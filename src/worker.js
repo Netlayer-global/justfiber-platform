@@ -23,7 +23,7 @@ import { BillingRun } from "./models/BillingRun.js";
 import { PaymentTransaction } from "./models/PaymentTransaction.js";
 import { BillingLedgerEntry } from "./models/BillingLedgerEntry.js";
 import { SubscriberService } from "./models/SubscriberService.js";
-import { radiusServiceManager } from "./integrations/radiusServiceManager.js";
+import { serviceControlAdapter } from "./integrations/serviceControlAdapter.js";
 import { internalSubscriberPlatform } from "./integrations/internalSubscriberPlatform.js";
 import { internalBillingEngine } from "./integrations/internalBillingEngine.js";
 import { buildBillingNotificationContent, notificationDispatcher } from "./integrations/notificationDispatcher.js";
@@ -182,12 +182,12 @@ async function applyAutomatedCustomerStatusChange(customer, nextStatus, reason) 
   }
   let serviceControlResult = null;
   if (nextStatus === "suspended") {
-    serviceControlResult = await radiusServiceManager.suspendSubscriberAccess({
+    serviceControlResult = await serviceControlAdapter.suspendSubscriberAccess({
       serviceId: customer.serviceId,
       reason
     });
   } else if (nextStatus === "active") {
-    serviceControlResult = await radiusServiceManager.resumeSubscriberAccess({
+    serviceControlResult = await serviceControlAdapter.resumeSubscriberAccess({
       serviceId: customer.serviceId
     });
   } else {
@@ -393,7 +393,7 @@ const worker = new Worker(
         let serviceControlResult = null;
         let geniePresetApplied = false;
         if (job.data.actionType === "suspend") {
-          serviceControlResult = await radiusServiceManager.suspendSubscriberAccess({
+          serviceControlResult = await serviceControlAdapter.suspendSubscriberAccess({
             serviceId: job.data.serviceId,
             reason: request.payload.reason
           });
@@ -408,7 +408,7 @@ const worker = new Worker(
           }
           customer.operationalStatus = "suspended";
         } else {
-          serviceControlResult = await radiusServiceManager.resumeSubscriberAccess({
+          serviceControlResult = await serviceControlAdapter.resumeSubscriberAccess({
             serviceId: job.data.serviceId
           });
           const device = await DeviceOperationalCache.findOne({ customerId: job.data.customerId });
@@ -516,7 +516,7 @@ const worker = new Worker(
             "radius_create_pending",
             "Creating PPPoE user in FreeRADIUS"
           );
-          await radiusServiceManager.createSubscriberAccess({
+          await serviceControlAdapter.createSubscriberAccess({
             serviceId: jobRecord.serviceId,
             customerId: jobRecord.customerId,
             radiusUsername: pppoe.username,
@@ -1149,7 +1149,7 @@ async function runRecurringUsagePolicyTasks() {
 
       const customer = await Customer.findOne({ customerId: service.customerId });
       const cycleStart = resolveUsageCycleStart(service, customer);
-      const usage = await radiusServiceManager.getSubscriberUsageSummary({
+      const usage = await serviceControlAdapter.getSubscriberUsageSummary({
         serviceId: service.serviceId,
         radiusUsername: service.radiusUsername,
         since: cycleStart
@@ -1241,7 +1241,7 @@ async function runRecurringUsagePolicyTasks() {
           usagePolicyState: "fup_active",
           usageSummary: service.metadata?.usageSummary
         };
-        await radiusServiceManager.createSubscriberAccess({
+        await serviceControlAdapter.createSubscriberAccess({
           serviceId: service.serviceId,
           customerId: service.customerId,
           radiusUsername: service.radiusUsername,
@@ -1275,7 +1275,7 @@ async function runRecurringUsagePolicyTasks() {
           usagePolicyState: "base",
           usageSummary: service.metadata?.usageSummary
         };
-        await radiusServiceManager.createSubscriberAccess({
+        await serviceControlAdapter.createSubscriberAccess({
           serviceId: service.serviceId,
           customerId: service.customerId,
           radiusUsername: service.radiusUsername,
