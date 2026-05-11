@@ -485,6 +485,7 @@ function mapPlan(plan: any): Plan {
       pppoeRealm: plan.provisioning?.pppoeRealm || '',
       defaultPppoePassword: plan.provisioning?.defaultPppoePassword || '',
       wifiNamePrefix: plan.provisioning?.wifiNamePrefix || '',
+      jazeGroupId: plan.provisioning?.jazeGroupId || '',
     },
     merchandising: {
       featured: Boolean(plan.merchandising?.featured),
@@ -3472,4 +3473,15 @@ export const adminAPI = {
   },
   getCustomerLeadKyc: async (customerId: string) =>
     request<any>(`/api/v1/admin/customers/${encodeURIComponent(customerId)}/lead-kyc`),
+  getJazeGroups: async () =>
+    request<any[]>('/api/v1/admin/catalog/jaze-groups'),
+  syncJazePlans: async () =>
+    request<{ total: number; created: number; updated: number; details: any }>('/api/v1/admin/catalog/plans/sync-jaze', {
+      method: 'POST',
+    }),
+  changePlanJaze: async (customerId: string, data: { newPlanCode: string; reason?: string }) =>
+    request<any>(`/api/v1/admin/customers/${encodeURIComponent(customerId)}/plan-change`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 }

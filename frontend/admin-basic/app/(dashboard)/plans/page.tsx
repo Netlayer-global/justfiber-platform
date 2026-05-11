@@ -75,6 +75,7 @@ type PlanFormState = {
   pppoeRealm: string
   defaultPppoePassword: string
   wifiNamePrefix: string
+  jazeGroupId: string
   featured: boolean
   recommended: boolean
   spotlightLabel: string
@@ -142,6 +143,7 @@ const initialForm: PlanFormState = {
   pppoeRealm: '',
   defaultPppoePassword: '123456',
   wifiNamePrefix: 'JustFiber',
+  jazeGroupId: '',
   featured: false,
   recommended: false,
   spotlightLabel: '',
@@ -278,6 +280,7 @@ function toForm(plan?: Plan | null): PlanFormState {
     pppoeRealm: plan.provisioning?.pppoeRealm || '',
     defaultPppoePassword: plan.provisioning?.defaultPppoePassword || '123456',
     wifiNamePrefix: plan.provisioning?.wifiNamePrefix || 'JustFiber',
+    jazeGroupId: plan.provisioning?.jazeGroupId || '',
     featured: Boolean(plan.merchandising?.featured),
     recommended: Boolean(plan.merchandising?.recommended),
     spotlightLabel: plan.merchandising?.spotlightLabel || '',
@@ -306,9 +309,12 @@ function PlansContent() {
   const [workspaceView, setWorkspaceView] = useState<'library' | 'composer'>(requestedView)
   const [activeZoneCode, setActiveZoneCode] = useState('')
   const [activeZoneLabel, setActiveZoneLabel] = useState('JustFiber HQ')
+  const [jazeGroups, setJazeGroups] = useState<{ jazeGroupId: string; name: string; mappedInJustFiber: boolean }[]>([])
+  const [isSyncing, setIsSyncing] = useState(false)
 
   useEffect(() => {
     void loadPlans()
+    void loadJazeGroups()
   }, [])
 
   useEffect(() => {
@@ -344,6 +350,34 @@ function PlansContent() {
   useEffect(() => {
     setWorkspaceView(requestedView)
   }, [requestedView])
+
+  async function loadJazeGroups() {
+    try {
+      const res = await adminAPI.getJazeGroups()
+      if (res.success && Array.isArray(res.data)) {
+        setJazeGroups(res.data)
+      }
+    } catch {}
+  }
+
+  async function syncJazePlans() {
+    try {
+      setIsSyncing(true)
+      const res = await adminAPI.syncJazePlans()
+      if (!res.success) {
+        toast.error(res.error || 'Sync failed')
+        return
+      }
+      toast.success(`Synced: ${res.data?.created ?? 0} created, ${res.data?.updated ?? 0} updated`)
+      await loadPlans()
+      await loadJazeGroups()
+    } catch (error) {
+      console.error('[plans] Jaze sync failed:', error)
+      toast.error('Jaze sync failed')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
 
   async function loadPlans() {
     try {
@@ -490,6 +524,15 @@ function PlansContent() {
           channels: Number(form.voiceChannels || 0),
           extraPrice: Number(form.voiceExtraPrice || 0),
         },
+      },
+      provisioning: {
+        accessProfileCode: form.accessProfileCode.trim(),
+        vlanId: Number(form.vlanId || 100),
+        pppoePrefix: form.pppoePrefix.trim(),
+        pppoeRealm: form.pppoeRealm.trim(),
+        defaultPppoePassword: form.defaultPppoePassword.trim(),
+        wifiNamePrefix: form.wifiNamePrefix.trim(),
+        jazeGroupId: form.jazeGroupId.trim(),
       },
       merchandising: {
         featured: form.featured,
@@ -707,6 +750,10 @@ function PlansContent() {
               <Plus className="h-4 w-4" />
               New plan
             </button>
+            <button type="button" onClick={() => void syncJazePlans()} disabled={isSyncing} className="btn-secondary inline-flex items-center gap-2 border-purple-200 text-purple-700">
+              {isSyncing ? <Loader className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Sync from Jaze
+            </button>
             <button type="button" onClick={exportLibrary} className="btn-secondary inline-flex items-center gap-2">
               <Copy className="h-4 w-4" />
               Export
@@ -854,6 +901,28 @@ function PlansContent() {
           </div>
 
           <input className="input" placeholder="Spotlight label (Best Seller, Gamer Pick, OTT Plus)" value={form.spotlightLabel} onChange={(e) => setForm({ ...form, spotlightLabel: e.target.value })} />
+
+          <div className="rounded-[24px] border border-purple-100 bg-purple-50 p-4 space-y-3">
+            <div>
+              <div className="text-sm font-semibold text-purple-900">Jaze Group (RADIUS backend)</div>
+              <div className="mt-1 text-sm text-purple-600">Select the Jaze group that maps to this plan. This determines PPPoE speed on activation.</div>
+            </div>
+            <select
+              className="input"
+              value={form.jazeGroupId}
+              onChange={(e) => setForm({ ...form, jazeGroupId: e.target.value })}
+            >
+              <option value="">— Not mapped (select a Jaze group) —</option>
+              {jazeGroups.map((g) => (
+                <option key={g.jazeGroupId} value={g.jazeGroupId}>
+                  {g.name} {g.mappedInJustFiber ? '✓' : ''} (ID: {g.jazeGroupId})
+                </option>
+              ))}
+            </select>
+            {form.jazeGroupId && (
+              <div className="text-xs text-purple-700">Mapped group ID: <strong>{form.jazeGroupId}</strong></div>
+            )}
+          </div>
 
           <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4 space-y-4">
             <div>
@@ -1037,7 +1106,15 @@ function PlansContent() {
                   </div>
                 </div>
               </div>
-
+              {plan.provisioning?.jazeGroupId ? (
+                <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-purple-50 border border-purple-200 px-3 py-1 text-xs font-medium text-purple-700">
+                  Jaze: {plan.provisioning.jazeGroupId}
+                </div>
+              ) : (
+                <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-medium text-amber-700">
+                  No Jaze group mapped
+                </div>
+              )}
               <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-200 pt-4">
                 <button type="button" onClick={() => beginEdit(plan)} className="btn-secondary inline-flex items-center gap-2">
                   <Pencil className="h-4 w-4" />

@@ -137,6 +137,7 @@ export interface Plan {
     pppoeRealm?: string
     defaultPppoePassword?: string
     wifiNamePrefix?: string
+    jazeGroupId?: string
   }
   merchandising?: {
     featured?: boolean
