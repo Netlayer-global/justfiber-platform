@@ -33,6 +33,12 @@ import { AccessProfile } from "../../models/AccessProfile.js";
 import { SubscriberService } from "../../models/SubscriberService.js";
 import { buildPagination } from "../../common/pagination.js";
 import { razorpayClient } from "../../integrations/razorpayClient.js";
+import {
+  fetchBillingSummary,
+  fetchInvoiceHistory,
+  fetchFullBillingView,
+  generatePaymentLink
+} from "../../integrations/jazeBillingAdapter.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
 import { internalBillingEngine, repriceOpenInvoicesForCustomer } from "../../integrations/internalBillingEngine.js";
 import { buildBillingNotificationContent, notificationDispatcher } from "../../integrations/notificationDispatcher.js";
@@ -3552,6 +3558,92 @@ customerPortalRouter.get(
       promiseAmount: Number(collections.promiseAmount || 0),
       promiseNote: collections.promiseNote || "",
       pendingPlanChange: customer.billingSnapshot?.pendingPlanChange || null
+    });
+  })
+);
+
+// ─── Jaze-direct billing endpoints ───────────────────────────────────────────
+// Source of truth: Jaze. JustFiber acts as a thin proxy/adapter so customer apps
+// see real renewals, outstanding amounts, and payment links from Jaze.
+
+function buildDefaultBillingDateRange() {
+  const to = new Date();
+  const from = new Date();
+  from.setMonth(from.getMonth() - 12);
+  const fmt = (d) => d.toISOString().slice(0, 10);
+  return { fromDate: fmt(from), toDate: fmt(to) };
+}
+
+async function resolveJazeCustomer(req) {
+  const customer = await getOwnedLinkedCustomer({
+    customerUser: req.customerUser,
+    requestedCustomerId: getRequestedCustomerId(req)
+  }).then((item) => (item?.toObject ? item.toObject() : item));
+  if (!customer) {
+    throw new ApiError(404, "Customer not found");
+  }
+  if (!customer.jazeUserId) {
+    throw new ApiError(400, "Customer is not linked to a Jaze user. Activate via installer first.");
+  }
+  return customer;
+}
+
+customerPortalRouter.get(
+  "/billing/jaze/summary",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const customer = await resolveJazeCustomer(req);
+    const summary = await fetchBillingSummary(customer.jazeUserId);
+    return ok(res, {
+      customerId: customer.customerId,
+      jazeUserId: customer.jazeUserId,
+      ...summary
+    });
+  })
+);
+
+customerPortalRouter.get(
+  "/billing/jaze/invoices",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const customer = await resolveJazeCustomer(req);
+    const defaults = buildDefaultBillingDateRange();
+    const fromDate = String(req.query.fromDate || defaults.fromDate);
+    const toDate = String(req.query.toDate || defaults.toDate);
+    const invoices = await fetchInvoiceHistory(customer.jazeUserId, { fromDate, toDate });
+    return ok(res, { fromDate, toDate, count: invoices.length, invoices });
+  })
+);
+
+customerPortalRouter.post(
+  "/billing/jaze/payment-link",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const customer = await resolveJazeCustomer(req);
+    const result = await generatePaymentLink(customer.jazeUserId);
+    if (!result?.paymentLink) {
+      throw new ApiError(502, "Jaze did not return a payment link");
+    }
+    return ok(res, {
+      customerId: customer.customerId,
+      paymentLink: result.paymentLink
+    });
+  })
+);
+
+customerPortalRouter.get(
+  "/billing/jaze/view",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const customer = await resolveJazeCustomer(req);
+    const defaults = buildDefaultBillingDateRange();
+    const fromDate = String(req.query.fromDate || defaults.fromDate);
+    const toDate = String(req.query.toDate || defaults.toDate);
+    const view = await fetchFullBillingView(customer.jazeUserId, { fromDate, toDate });
+    return ok(res, {
+      customerId: customer.customerId,
+      jazeUserId: customer.jazeUserId,
+      ...view
     });
   })
 );
