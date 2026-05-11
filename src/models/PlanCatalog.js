@@ -7,6 +7,7 @@ const planCatalogSchema = new mongoose.Schema(
     category: { type: String, default: "home" },
     speedMbps: Number,
     uploadSpeedMbps: Number,
+    billingPeriodMonths: { type: Number, default: 1 },
     burstDownloadMbps: Number,
     burstUploadMbps: Number,
     dataLimitGb: Number,

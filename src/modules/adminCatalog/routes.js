@@ -602,10 +602,10 @@ adminCatalogRouter.post(
       });
 
       if (existing) {
-        await PlanCatalog.updateOne(
-          { _id: existing._id },
-          { $set: { "provisioning.jazeGroupId": jazeGroupId } }
-        );
+        const updateFields = { "provisioning.jazeGroupId": jazeGroupId };
+        if (durationMonths) updateFields.billingPeriodMonths = durationMonths;
+        if (speedMbps) updateFields.speedMbps = speedMbps;
+        await PlanCatalog.updateOne({ _id: existing._id }, { $set: updateFields });
         results.updated.push({ planCode: existing.planCode, jazeGroupId, name: groupName });
       } else {
         await PlanCatalog.create({

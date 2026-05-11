@@ -69,7 +69,7 @@ installerAppRouter.post(
 
 installerAppRouter.get(
   "/sales/plans",
-  asyncHandler(async (_req, res) => {
+  asyncHandler(async (req, res) => {
     const plans = await PlanCatalog.find({
       active: true,
       archivedAt: { $exists: false },
@@ -77,6 +77,35 @@ installerAppRouter.get(
     })
       .sort({ sortOrder: 1 })
       .lean();
+
+    if (req.query.grouped === "true") {
+      const groupMap = {};
+      for (const plan of plans) {
+        const speed = plan.speedMbps || 0;
+        const key = String(speed);
+        if (!groupMap[key]) {
+          groupMap[key] = {
+            speedMbps: speed,
+            displayName: speed ? `${speed} Mbps` : plan.name,
+            category: plan.category || "home",
+            features: Array.isArray(plan.features) ? plan.features : [],
+            durations: []
+          };
+        }
+        const months = plan.billingPeriodMonths || 1;
+        groupMap[key].durations.push({
+          planCode: plan.planCode,
+          months,
+          label: months === 1 ? "1 Month" : months === 3 ? "3 Months" : months === 6 ? "6 Months" : months === 12 ? "1 Year" : `${months} Months`,
+          price: plan.monthlyPrice || 0,
+          jazeGroupId: plan.provisioning?.jazeGroupId || null
+        });
+        groupMap[key].durations.sort((a, b) => a.months - b.months);
+      }
+      const grouped = Object.values(groupMap).sort((a, b) => a.speedMbps - b.speedMbps);
+      return ok(res, grouped);
+    }
+
     return ok(res, plans);
   })
 );
