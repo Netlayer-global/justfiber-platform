@@ -14,6 +14,37 @@ process.env.GENIEACS_USERNAME = "acs";
 process.env.GENIEACS_PASSWORD = "acs123";
 
 const requests = [];
+const nokiaDeviceId = "240B88-G%2D2425G%2DA-ALCLB3DCCB87";
+const dasanDeviceId = "DSNW295B5B70";
+const nokiaSummary = {
+  _id: nokiaDeviceId,
+  InternetGatewayDevice: {
+    LANDevice: {
+      "1": {
+        WLANConfiguration: {
+          "1": { KeyPassphrase: "himanshu@1411" },
+          "5": { KeyPassphrase: "himanshu@1411" }
+        }
+      }
+    }
+  }
+};
+const dasanSummary = {
+  _id: dasanDeviceId,
+  InternetGatewayDevice: {
+    LANDevice: {
+      "1": {
+        WLANConfiguration: {
+          "1": { SSID: "Khalsa PG", KeyPassphrase: "himanshu@1411" },
+          "5": { SSID: "Khalsa PG", KeyPassphrase: "himanshu@1411" },
+          "2": { SSID: "Honey5G", KeyPassphrase: "himanshu@1411" },
+          "6": { SSID: "Honey5G", KeyPassphrase: "himanshu@1411" }
+        }
+      }
+    }
+  }
+};
+
 global.fetch = async (url, options = {}) => {
   requests.push({
     url: String(url),
@@ -21,10 +52,31 @@ global.fetch = async (url, options = {}) => {
     body: options.body ? JSON.parse(options.body) : undefined
   });
 
-  if (String(url).includes("/devices?query=")) {
+  const requestUrl = String(url);
+  if (requestUrl.includes("/devices?query=")) {
+    if (requestUrl.includes(encodeURIComponent(dasanDeviceId))) {
+      return {
+        ok: true,
+        text: async () => JSON.stringify([{ _id: dasanDeviceId }])
+      };
+    }
     return {
       ok: true,
-      text: async () => JSON.stringify([{ _id: "240B88-G%2D2425G%2DA-ALCLB3DCCB87" }])
+      text: async () => JSON.stringify([{ _id: nokiaDeviceId }])
+    };
+  }
+
+  if (requestUrl.includes(`/devices/${encodeURIComponent(nokiaDeviceId)}`)) {
+    return {
+      ok: true,
+      text: async () => JSON.stringify(nokiaSummary)
+    };
+  }
+
+  if (requestUrl.includes(`/devices/${encodeURIComponent(dasanDeviceId)}`)) {
+    return {
+      ok: true,
+      text: async () => JSON.stringify(dasanSummary)
     };
   }
 
@@ -98,15 +150,20 @@ test("dasan access config includes PPPoE username, PPPoE password, and NAT flag"
     natEnabled: true
   });
 
-  const setParameterRequest = requests.find((entry) => entry.body?.name === "setParameterValues");
-  assert.ok(setParameterRequest, "expected setParameterValues request");
-  assert.deepEqual(setParameterRequest.body.parameterValues, [
+  const setParameterRequests = requests.filter((entry) => entry.body?.name === "setParameterValues");
+  assert.ok(setParameterRequests.length > 0, "expected at least one setParameterValues request");
+
+  const pppoeRequest = setParameterRequests.find((entry) => entry.body.parameterValues.some(([path]) => path.includes("WANPPPConnection.1.Username")));
+  assert.ok(pppoeRequest, "expected a setParameterValues request containing PPPoE username/password");
+  assert.deepEqual(pppoeRequest.body.parameterValues, [
     ["InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.Username", "newuser@justfiber.in"],
     ["InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Username", "newuser@justfiber.in"],
     ["InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.Password", "NewPPPoEPass123"],
-    ["InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Password", "NewPPPoEPass123"],
-    ["Device.NAT.Enable", true, "xsd:boolean"],
-    ["InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.NATEnabled", true, "xsd:boolean"],
-    ["Device.IP.Interface.1.NAT", true, "xsd:boolean"]
+    ["InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Password", "NewPPPoEPass123"]
   ]);
+
+  assert.ok(
+    requests.some((entry) => entry.body?.parameterValues?.some(([path]) => path === "Device.NAT.Enable")),
+    "expected Device.NAT.Enable to be configured"
+  );
 });

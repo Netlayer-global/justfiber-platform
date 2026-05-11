@@ -1,3 +1,5 @@
+import path from "path";
+import { fileURLToPath } from "url";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
@@ -85,6 +87,15 @@ export function createApp() {
 
   app.get("/health/live", (_req, res) => {
     res.json({ success: true, data: { status: "live" } });
+  });
+
+  const publicRoot = path.dirname(fileURLToPath(new URL("./../public/index.html", import.meta.url)));
+
+  app.use("/admin", express.static(path.join(publicRoot, "admin"), { index: "index.html" }));
+  app.use("/user", express.static(path.join(publicRoot, "user"), { index: "index.html" }));
+  app.use("/sales", express.static(path.join(publicRoot, "sales"), { index: "index.html" }));
+  app.get("/noc", (_req, res) => {
+    res.sendFile(path.join(publicRoot, "admin", "index.html"));
   });
 
   app.get("/health/ready", (_req, res) => {

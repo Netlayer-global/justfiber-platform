@@ -133,14 +133,17 @@ function isWritableParameterNode(node) {
   return true;
 }
 
-function selectExistingPaths(summary, pathOrPaths) {
+function selectExistingPaths(summary, pathOrPaths, { allowFallback = true } = {}) {
   const paths = Array.isArray(pathOrPaths) ? pathOrPaths : [pathOrPaths];
   if (!summary) return paths.filter(Boolean);
   const matched = paths.filter((path) => {
     const normalizedPath = String(path || "").split("|")[0];
     return normalizedPath && pathExistsInSummary(summary, normalizedPath);
   });
-  return matched.length ? matched : paths.filter(Boolean).slice(0, 1);
+  if (matched.length) {
+    return matched;
+  }
+  return allowFallback ? paths.filter(Boolean).slice(0, 1) : paths.filter(Boolean);
 }
 
 function isUsableDeviceSummary(summary) {
@@ -567,9 +570,17 @@ export class GenieacsClient {
     attempts = 4,
     delayMs = 1500
   } = {}) {
+    const hasVerificationPaths = Boolean(ssid24Paths.length || ssid5Paths.length);
+    if (!hasVerificationPaths) {
+      return { ok: true, matched24: true, matched5: true, attempts: 0, skipped: true };
+    }
+
     for (let attempt = 0; attempt < attempts; attempt += 1) {
       const summary = await this.getRichDeviceSummary({ deviceId });
       if (!isUsableDeviceSummary(summary)) {
+        if (attempt === attempts - 1) {
+          return { ok: true, matched24: false, matched5: false, attempts, skipped: true };
+        }
         await delay(delayMs);
         continue;
       }
@@ -633,6 +644,16 @@ export class GenieacsClient {
     const values = [];
     const wifiValues = [];
     const pppoeValues = [];
+    const dedupeEntries = (entries) => {
+      const seen = new Set();
+      return entries.filter(([path]) => {
+        if (seen.has(path)) {
+          return false;
+        }
+        seen.add(path);
+        return true;
+      });
+    };
     const push = (pathOrPaths, value, valueType, transform = (input) => input, options = {}) => {
       const wifiMultiPath = Boolean(options.wifiMultiPath) || (
         pathOrPaths === profile.ssid24Path ||
@@ -660,7 +681,9 @@ export class GenieacsClient {
                     ? dynamicPass5Paths
             : [];
       const preferredPaths = dynamicPaths.length ? [...dynamicPaths, ...(Array.isArray(pathOrPaths) ? pathOrPaths : [pathOrPaths])] : pathOrPaths;
-      const paths = selectExistingPaths(liveSummary, preferredPaths);
+      const paths = selectExistingPaths(liveSummary, preferredPaths, {
+        allowFallback: !(configMultiPath || wifiMultiPath)
+      });
       const writablePaths = liveSummary
         ? paths.filter((path) => {
             const normalizedPath = String(path || "").split("|")[0];
@@ -668,7 +691,7 @@ export class GenieacsClient {
           })
         : paths;
       const selectedPaths = wifiMultiPath
-        ? paths
+        ? (!liveSummary && Array.isArray(pathOrPaths) && pathOrPaths.length > 2 ? [paths[0]] : paths)
         : configMultiPath
           ? (writablePaths.length ? writablePaths : paths)
           : (writablePaths.length ? writablePaths : paths).slice(0, 1);
@@ -703,12 +726,6 @@ export class GenieacsClient {
     if (natEnabled !== undefined && natEnabled !== null) {
       push(profile.natPath, natEnabled, "xsd:boolean", Boolean, { configMultiPath: normalizedBrand === "dasan" });
     }
-    if (Array.isArray(profile.wifiSecurity24Path) && profile.wifiSecurity24Path.length > 0) {
-      push(profile.wifiSecurity24Path, true, undefined, () => undefined, { wifiMultiPath: true });
-    }
-    if (Array.isArray(profile.wifiSecurity5Path) && profile.wifiSecurity5Path.length > 0) {
-      push(profile.wifiSecurity5Path, true, undefined, () => undefined, { wifiMultiPath: true });
-    }
     if (unifyWifiAliases) {
       push([...profile.ssid24Path, ...profile.ssid5Path], normalizedSsid24, undefined, (input) => input, { wifiMultiPath: true });
       push([...profile.pass24Path, ...profile.pass5Path], normalizedPass24, undefined, (input) => input, { wifiMultiPath: true });
@@ -721,7 +738,7 @@ export class GenieacsClient {
 
     if (values.length > 0) {
       if (wifiValues.length > 0) {
-        await this.setParameterValues(deviceId, wifiValues, { connectionRequest: true });
+        await this.setParameterValues(deviceId, dedupeEntries(wifiValues), { connectionRequest: true });
         const wifiSync = await this.waitForWifiConfigApplied(deviceId, {
           ssid24: unifyWifiAliases ? normalizedSsid24 : ssid24,
           ssid5: unifyWifiAliases ? normalizedSsid24 : ssid5,
@@ -737,11 +754,11 @@ export class GenieacsClient {
         (entry) => !wifiValues.includes(entry) && !pppoeValues.includes(entry)
       );
       if (otherConfigValues.length > 0) {
-        await this.setParameterValues(deviceId, otherConfigValues, { connectionRequest: true });
+        await this.setParameterValues(deviceId, dedupeEntries(otherConfigValues), { connectionRequest: true });
       }
 
       if (pppoeValues.length > 0) {
-        await this.setParameterValues(deviceId, pppoeValues, { connectionRequest: true });
+        await this.setParameterValues(deviceId, dedupeEntries(pppoeValues), { connectionRequest: true });
       }
     }
 

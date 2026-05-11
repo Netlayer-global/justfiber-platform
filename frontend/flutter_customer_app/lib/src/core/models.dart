@@ -849,3 +849,86 @@ class SupportDiagnosis {
   final double packetLossPercent;
   final double estimatedSpeedMbps;
 }
+
+// ─── Jaze-direct billing models ──────────────────────────────────────────────
+
+class JazeBillingSummary {
+  const JazeBillingSummary({
+    required this.customerName,
+    required this.username,
+    required this.status,
+    required this.currentPlanName,
+    required this.activationDate,
+    required this.expiryDate,
+    required this.outstanding,
+    required this.lastInvoiceDate,
+    required this.lastPaymentDate,
+    required this.paymentStatus,
+    required this.uploadMbps,
+    required this.downloadMbps,
+    required this.usageBytes,
+    required this.cycleStart,
+    required this.cycleEnd,
+  });
+
+  final String customerName;
+  final String username;
+  final String status;
+  final String currentPlanName;
+  final String activationDate;
+  final String expiryDate;
+  final double outstanding;
+  final String lastInvoiceDate;
+  final String lastPaymentDate;
+  final String paymentStatus;
+  final int uploadMbps;
+  final int downloadMbps;
+  final int usageBytes;
+  final String cycleStart;
+  final String cycleEnd;
+
+  bool get isPaid => paymentStatus.toLowerCase() == 'paid';
+  bool get hasDue => outstanding > 0;
+}
+
+class JazeInvoice {
+  const JazeInvoice({
+    required this.invoiceId,
+    required this.orderId,
+    required this.periodStart,
+    required this.periodEnd,
+    required this.issuedAt,
+    required this.amount,
+    required this.baseAmount,
+    required this.taxAmount,
+    required this.durationDays,
+    required this.durationLabel,
+    required this.planGroupName,
+    required this.notes,
+  });
+
+  final String invoiceId;
+  final String orderId;
+  final String periodStart;
+  final String periodEnd;
+  final String issuedAt;
+  final double amount;
+  final double baseAmount;
+  final double taxAmount;
+  final int durationDays;
+  final String durationLabel;
+  final String planGroupName;
+  final String notes;
+}
+
+class JazeBillingView {
+  const JazeBillingView({
+    required this.summary,
+    required this.invoices,
+    required this.paymentLink,
+  });
+
+  final JazeBillingSummary? summary;
+  final List<JazeInvoice> invoices;
+  final String paymentLink;
+}

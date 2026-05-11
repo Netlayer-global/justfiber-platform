@@ -9,6 +9,33 @@
  */
 
 import { jazeClient } from "./jazeClient.js";
+import { PlanCatalog } from "../models/PlanCatalog.js";
+
+// In-memory cache for Jaze group -> plan name lookup (refreshed every 5 min).
+let _planNameCache = { map: new Map(), expiresAt: 0 };
+
+async function getPlanNameByJazeGroupId(groupId) {
+  if (!groupId) return "";
+  const now = Date.now();
+  if (now > _planNameCache.expiresAt) {
+    try {
+      const plans = await PlanCatalog.find(
+        { "provisioning.jazeGroupId": { $exists: true, $ne: "" } },
+        { "provisioning.jazeGroupId": 1, name: 1, planCode: 1 }
+      ).lean();
+      const map = new Map();
+      for (const p of plans) {
+        const id = String(p?.provisioning?.jazeGroupId || "");
+        if (id) map.set(id, p.name || p.planCode || "");
+      }
+      _planNameCache = { map, expiresAt: now + 5 * 60_000 };
+    } catch {
+      // Cache failure shouldn't break billing — silently fall back to empty name.
+      _planNameCache = { map: new Map(), expiresAt: now + 60_000 };
+    }
+  }
+  return _planNameCache.map.get(String(groupId)) || "";
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -132,11 +159,13 @@ export async function fetchInvoiceHistory(jazeUserId, { fromDate = "", toDate: t
   const raw = await jazeClient.getRenewalHistory({ userId: jazeUserId, fromDate, toDate: toDateOpt });
   const entries = Array.isArray(raw?.message) ? raw.message : [];
 
-  return entries
-    .map((entry) => {
+  const adapted = await Promise.all(
+    entries.map(async (entry) => {
       const r = entry?.RenewalDetails;
       if (!r) return null;
       const days = parseRenewalDays(r.renewal_days);
+      const planGroupId = String(r.present_group_id || "");
+      const planGroupName = await getPlanNameByJazeGroupId(planGroupId);
       return {
         invoiceId: String(r.id || r.order_id || ""),
         orderId: String(r.order_id || ""),
@@ -148,13 +177,15 @@ export async function fetchInvoiceHistory(jazeUserId, { fromDate = "", toDate: t
         taxAmount: toNumber(r.tax_amount),
         durationDays: days,
         durationLabel: durationLabelFromDays(days),
-        planGroupId: String(r.present_group_id || ""),
-        planGroupName: "", // Jaze doesn't include name here; can join via group cache later
+        planGroupId,
+        planGroupName,
         notes: String(r.notes || ""),
         adminUsername: String(r.admin_username || ""),
         raw: r,
       };
     })
+  );
+  return adapted
     .filter(Boolean)
     .sort((a, b) => {
       const dA = a.issuedAt ? new Date(a.issuedAt).getTime() : 0;
