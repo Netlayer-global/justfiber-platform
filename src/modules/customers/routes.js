@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { z } from "zod";
 import PDFDocument from "pdfkit";
 import { asyncHandler } from "../../common/asyncHandler.js";
 import { ok } from "../../common/response.js";
@@ -51,6 +52,9 @@ import { NetworkNodeStatus } from "../../models/NetworkNodeStatus.js";
 import { SalesAgent } from "../../models/SalesAgent.js";
 import { applyBillingNoteAdjustment } from "../../common/billingAccounting.js";
 import { internalBillingEngine, repriceOpenInvoicesForCustomer } from "../../integrations/internalBillingEngine.js";
+import { jazeClient } from "../../integrations/jazeClient.js";
+import { env } from "../../config/env.js";
+
 export const customersRouter = Router();
 
 customersRouter.use(requireAuth);
@@ -2809,5 +2813,56 @@ customersRouter.post(
       metadata: payload
     });
     return ok(res, { actionRequestId: request._id, status: request.status });
+  })
+);
+
+customersRouter.post(
+  "/:customerId/plan-change",
+  requirePermission(permissions.customerUpdate),
+  asyncHandler(async (req, res) => {
+    const { newPlanCode, reason } = z.object({
+      newPlanCode: z.string().min(2),
+      reason: z.string().optional()
+    }).parse(req.body);
+
+    const customer = await Customer.findOne({ customerId: req.params.customerId });
+    if (!customer) throw new ApiError(404, "Customer not found");
+
+    const newPlan = await PlanCatalog.findOne({ planCode: newPlanCode.toUpperCase(), active: true }).lean();
+    if (!newPlan) throw new ApiError(404, "Plan not found");
+
+    let jazeResult = null;
+    if (env.SERVICE_CONTROL_PROVIDER === "jaze") {
+      const jazeGroupId = newPlan.provisioning?.jazeGroupId;
+      if (!jazeGroupId) throw new ApiError(400, `Plan ${newPlanCode} has no jazeGroupId mapped`);
+      if (!customer.jazeUserId) throw new ApiError(400, "Customer has no jazeUserId — activate via installer first");
+
+      jazeResult = await jazeClient.editUser({
+        userId: customer.jazeUserId,
+        userGroupId: jazeGroupId,
+        comments: reason || `Plan changed to ${newPlanCode}`
+      });
+    }
+
+    const oldPlanCode = customer.planCode;
+    customer.planCode = newPlan.planCode;
+    customer.planName = newPlan.name;
+    await customer.save();
+
+    await auditFromRequest(req, {
+      action: "customer.plan_changed",
+      entityType: "customer",
+      entityId: customer.customerId,
+      metadata: { oldPlanCode, newPlanCode: newPlan.planCode, jazeGroupId: newPlan.provisioning?.jazeGroupId, reason }
+    });
+
+    return ok(res, {
+      customerId: customer.customerId,
+      oldPlanCode,
+      newPlanCode: newPlan.planCode,
+      newPlanName: newPlan.name,
+      jazeGroupId: newPlan.provisioning?.jazeGroupId || null,
+      jazeResult
+    });
   })
 );

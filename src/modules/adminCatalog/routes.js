@@ -13,6 +13,8 @@ import { PlanCatalog } from "../../models/PlanCatalog.js";
 import { SalesAgent } from "../../models/SalesAgent.js";
 import { ServiceabilityZone } from "../../models/ServiceabilityZone.js";
 import { getPlanProvisioningIssues, isPlanProvisioningReady } from "../../common/networkProvisioning.js";
+import { jazeClient } from "../../integrations/jazeClient.js";
+import { env } from "../../config/env.js";
 
 const salesAgentSchema = z.object({
   agentCode: z.string().min(3),
@@ -538,5 +540,93 @@ adminCatalogRouter.post(
       endAt: payload.endAt ? new Date(payload.endAt) : undefined
     });
     return ok(res, banner, { created: true });
+  })
+);
+
+adminCatalogRouter.get(
+  "/catalog/jaze-groups",
+  requirePermission(permissions.configRead),
+  asyncHandler(async (_req, res) => {
+    if (env.SERVICE_CONTROL_PROVIDER !== "jaze") {
+      throw new ApiError(400, "Jaze integration not enabled");
+    }
+    const response = await jazeClient.getAllGroupDetails();
+    const groups = Array.isArray(response?.data) ? response.data : [];
+    const existingPlans = await PlanCatalog.find({}, "provisioning.jazeGroupId planCode name").lean();
+    const mappedGroupIds = new Set(existingPlans.map((p) => p.provisioning?.jazeGroupId).filter(Boolean));
+    return ok(res, groups.map((g) => ({
+      jazeGroupId: String(g.Group_id),
+      name: g.Group_name,
+      profileId: g.Profile_id,
+      activeUsers: g.Active_Users,
+      totalUsers: g.Total_Users,
+      onlineUsers: g.Online_Users,
+      mappedInJustFiber: mappedGroupIds.has(String(g.Group_id))
+    })));
+  })
+);
+
+adminCatalogRouter.post(
+  "/catalog/plans/sync-jaze",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (_req, res) => {
+    if (env.SERVICE_CONTROL_PROVIDER !== "jaze") {
+      throw new ApiError(400, "Jaze integration not enabled");
+    }
+    const response = await jazeClient.getAllGroupDetails();
+    const groups = Array.isArray(response?.data) ? response.data : [];
+
+    const results = { created: [], updated: [], skipped: [] };
+
+    for (const group of groups) {
+      const jazeGroupId = String(group.Group_id);
+      const groupName = String(group.Group_name || "").trim();
+
+      const speedMatch = groupName.match(/(\d+)M/i);
+      const durationMatch = groupName.match(/-(\d+)M\b/i);
+      const speedMbps = speedMatch ? Number(speedMatch[1]) : null;
+      const durationMonths = durationMatch ? Number(durationMatch[1]) : 1;
+
+      const rawCode = groupName
+        .replace(/JUSTFIBER\s*/i, "")
+        .replace(/\s+/g, "-")
+        .replace(/[^A-Z0-9-]/gi, "")
+        .toUpperCase();
+      const planCode = `JF-${rawCode}`;
+
+      const existing = await PlanCatalog.findOne({
+        $or: [
+          { "provisioning.jazeGroupId": jazeGroupId },
+          { planCode }
+        ]
+      });
+
+      if (existing) {
+        await PlanCatalog.updateOne(
+          { _id: existing._id },
+          { $set: { "provisioning.jazeGroupId": jazeGroupId } }
+        );
+        results.updated.push({ planCode: existing.planCode, jazeGroupId, name: groupName });
+      } else {
+        await PlanCatalog.create({
+          planCode,
+          name: groupName,
+          speedMbps,
+          uploadSpeedMbps: speedMbps ? Math.max(2, Math.round(speedMbps * 0.35)) : null,
+          dataPolicy: "unlimited",
+          billingPeriodMonths: durationMonths,
+          active: true,
+          provisioning: { jazeGroupId }
+        });
+        results.created.push({ planCode, jazeGroupId, name: groupName });
+      }
+    }
+
+    return ok(res, {
+      total: groups.length,
+      created: results.created.length,
+      updated: results.updated.length,
+      details: results
+    });
   })
 );
