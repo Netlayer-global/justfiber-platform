@@ -121,7 +121,7 @@ async function handleSalesCall(payload, event) {
         source: "smartflo_sales",
         leadCategory: "home",
         mobile: caller_number,
-        fullName: "",
+        fullName: `Sales Call — ${caller_number}`,
         notes: callStatus === "missed"
           ? `Missed sales call from ${caller_number} (Smartflo call ID: ${call_id})`
           : `Inbound sales call from ${caller_number} (Smartflo call ID: ${call_id})`,
@@ -216,7 +216,7 @@ async function handleComplaintCall(payload, event) {
           source: "smartflo_unknown_caller",
           leadCategory: "home",
           mobile: caller_number,
-          fullName: "",
+          fullName: `Unknown Caller — ${caller_number}`,
           notes: `Unknown caller on complaint line. IVR input: ${ivr_input || "none"}. Call ID: ${call_id}`,
           activityLog: [
             {
@@ -245,7 +245,7 @@ async function handleComplaintCall(payload, event) {
         source: "smartflo_unknown_caller",
         leadCategory: "home",
         mobile: caller_number,
-        fullName: "",
+        fullName: `Missed Call — ${caller_number}`,
         notes: `Missed call on complaint line from unknown number. Call ID: ${call_id}`,
         activityLog: [
           {
