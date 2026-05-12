@@ -41,6 +41,7 @@ import {
   syncCustomerBillingState
 } from "./common/billingAccounting.js";
 import { applyCustomerWaiverResolution, applyCustomerWriteoffResolution } from "./common/billingResolutions.js";
+import { runJazeSyncJob } from "./jobs/jazeSyncJob.js";
 
 await connectMongo();
 await seedSystemData();
@@ -1100,6 +1101,7 @@ console.log("Admin worker started");
 
 let billingSchedulerRunning = false;
 let usagePolicySchedulerRunning = false;
+let jazeSyncRunning = false;
 
 function resolveUsageCycleStart(service, customer) {
   const resetPolicy = service?.metadata?.networkProfile?.fairUsageResetPolicy || "monthly";
@@ -1799,3 +1801,24 @@ setInterval(() => {
 }, 15 * 60 * 1000);
 
 void runRecurringUsagePolicyTasks();
+
+async function runJazeSync() {
+  if (jazeSyncRunning) {
+    console.log("[jaze-sync] Previous sync still running, skipping this cycle");
+    return;
+  }
+  jazeSyncRunning = true;
+  try {
+    await runJazeSyncJob();
+  } catch (error) {
+    console.error("[jaze-sync] Unhandled error in sync job:", error.message);
+  } finally {
+    jazeSyncRunning = false;
+  }
+}
+
+setInterval(() => {
+  void runJazeSync();
+}, 10 * 60 * 1000);
+
+void runJazeSync();

@@ -882,4 +882,26 @@ class InstallerApiClient {
       timeout: const Duration(seconds: 45),
     );
   }
+
+  /// Records a cash payment collected from a customer via the Jaze makePayment API.
+  /// Returns the transaction details on success.
+  Future<Map<String, dynamic>> collectCashPayment(
+    InstallerSession session, {
+    required String customerId,
+    required double amount,
+    String? notes,
+  }) async {
+    final data = _asMap(await _request(
+      '/api/v1/admin/payments/collect-cash',
+      method: 'POST',
+      token: session.accessToken,
+      body: {
+        'customerId': customerId,
+        'amount': amount,
+        'method': 'cash',
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
+      },
+    ));
+    return data;
+  }
 }
