@@ -1538,6 +1538,65 @@ class ApiClient {
     }
     return null;
   }
+
+  Future<JazeBillingView> fetchJazeBilling(CustomerSession session,
+      {String? customerId, String? fromDate, String? toDate}) async {
+    final path = _withCustomerId('/api/v1/customer/billing/jaze/view', customerId);
+    final queryParams = <String, String>{};
+    if (fromDate != null) queryParams['fromDate'] = fromDate;
+    if (toDate != null) queryParams['toDate'] = toDate;
+    final uri = _uri(path).replace(queryParameters: queryParams);
+
+    final data = _asMap(
+      await _request(uri.toString(), token: session.accessToken),
+    );
+    final summaryMap = _asMap(data['summary']);
+    final summary = summaryMap.isEmpty
+        ? null
+        : JazeBillingSummary(
+            customerName: (summaryMap['customerName'] ?? '').toString(),
+            username: (summaryMap['username'] ?? '').toString(),
+            status: (summaryMap['status'] ?? '').toString(),
+            currentPlanName: (summaryMap['currentPlan']?['name'] ?? '').toString(),
+            activationDate: (summaryMap['activationDate'] ?? '').toString(),
+            expiryDate: (summaryMap['expiryDate'] ?? '').toString(),
+            outstanding: double.tryParse('${summaryMap['outstanding'] ?? 0}') ?? 0,
+            lastInvoiceDate: (summaryMap['lastInvoiceDate'] ?? '').toString(),
+            lastPaymentDate: (summaryMap['lastPaymentDate'] ?? '').toString(),
+            paymentStatus: (summaryMap['paymentStatus'] ?? '').toString(),
+            uploadMbps: int.tryParse('${summaryMap['bandwidth']?['uploadMbps'] ?? 0}') ?? 0,
+            downloadMbps: int.tryParse('${summaryMap['bandwidth']?['downloadMbps'] ?? 0}') ?? 0,
+            usageBytes: int.tryParse('${summaryMap['bandwidth']?['usageBytes'] ?? 0}') ?? 0,
+            cycleStart: (summaryMap['bandwidth']?['cycleStart'] ?? '').toString(),
+            cycleEnd: (summaryMap['bandwidth']?['cycleEnd'] ?? '').toString(),
+          );
+
+    final invoices = (_asList(data['invoices'])).map((item) {
+      final map = item as Map<String, dynamic>;
+      return JazeInvoice(
+        invoiceId: (map['invoiceId'] ?? '').toString(),
+        orderId: (map['orderId'] ?? '').toString(),
+        periodStart: (map['periodStart'] ?? '').toString(),
+        periodEnd: (map['periodEnd'] ?? '').toString(),
+        issuedAt: (map['issuedAt'] ?? '').toString(),
+        amount: double.tryParse('${map['amount'] ?? 0}') ?? 0,
+        baseAmount: double.tryParse('${map['baseAmount'] ?? 0}') ?? 0,
+        taxAmount: double.tryParse('${map['taxAmount'] ?? 0}') ?? 0,
+        durationDays: int.tryParse('${map['durationDays'] ?? 0}') ?? 0,
+        durationLabel: (map['durationLabel'] ?? '').toString(),
+        planGroupName: (map['planGroupName'] ?? '').toString(),
+        notes: (map['notes'] ?? '').toString(),
+      );
+    }).toList();
+
+    final paymentLink = (_asMap(data['payment'])['paymentLink'] ?? '').toString();
+
+    return JazeBillingView(
+      summary: summary,
+      invoices: invoices,
+      paymentLink: paymentLink,
+    );
+  }
 }
 
 extension _FirstOrNull<T> on List<T> {
