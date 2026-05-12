@@ -371,6 +371,12 @@ export default function JobsPage() {
                   <p className="text-sm text-slate-500 mt-1">{job.customerName || job.customerId}</p>
                   <p className="text-sm text-slate-500">{job.address || 'Address unavailable'}</p>
                   {job.customerPhone ? <p className="text-sm text-slate-500">Phone: {job.customerPhone}</p> : null}
+                  {job.completionOtpDemo ? (
+                    <div className="mt-2 inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+                      <span className="text-xs font-medium text-emerald-700">Completion OTP:</span>
+                      <span className="text-lg font-bold tracking-widest text-emerald-900">{job.completionOtpDemo}</span>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 text-sm min-w-[260px]">
@@ -412,7 +418,7 @@ export default function JobsPage() {
                   </div>
                   <div>
                     <p className="text-slate-500 text-xs">OTP</p>
-                    <p className="font-semibold">{job.completionOtpVerifiedAt ? 'Verified' : '-'}</p>
+                    <p className="font-semibold">{job.completionOtpDemo || (job.completionOtpVerifiedAt ? 'Verified' : '-')}</p>
                   </div>
                   {job.scheduledDate ? (
                     <div className="col-span-2 flex items-center gap-2 text-slate-500">
