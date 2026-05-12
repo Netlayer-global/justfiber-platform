@@ -3272,6 +3272,23 @@ customerPortalRouter.post(
       }
     );
 
+    // Update ConnectionBooking payment status if this payment was for a booking
+    const bookingNumber = payment.notes?.bookingNumber;
+    if (bookingNumber) {
+      await ConnectionBooking.updateOne(
+        { bookingNumber },
+        {
+          $set: {
+            "payment.status": "paid",
+            "payment.paidAt": new Date(),
+            "payment.provider": "razorpay",
+            "payment.reference": payment.id,
+            status: "paid"
+          }
+        }
+      );
+    }
+
     await IntegrationEventLog.create({
       ...baseLog,
       status: "success",
