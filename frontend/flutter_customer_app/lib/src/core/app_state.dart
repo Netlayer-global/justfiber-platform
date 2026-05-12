@@ -109,6 +109,8 @@ class AppState extends ChangeNotifier {
     notes: [],
   );
 
+  JazeBillingView? jazeBilling;
+
   List<RequestItem> requests = const [];
   List<SupportTicketItem> tickets = const [];
   List<NotificationItem> notifications = const [];
@@ -299,6 +301,12 @@ class AppState extends ChangeNotifier {
           runRefreshTask(
               'billing',
               () async => billing = await api.fetchBilling(current,
+                  customerId: selectedCustomerId)),
+        if (hasConnections)
+          runRefreshTask(
+              'jaze billing',
+              () async => jazeBilling = await api.fetchJazeBilling(
+                  current,
                   customerId: selectedCustomerId)),
         runRefreshTask('notifications',
             () async => notifications = await api.fetchNotifications(current)),
@@ -1018,6 +1026,26 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       error = e.toString();
       return null;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadJazeBilling() async {
+    final current = session;
+    if (current == null) return;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      jazeBilling = await api.fetchJazeBilling(
+        current,
+        customerId: selectedCustomerId,
+      );
+    } catch (e) {
+      error = e.toString();
+      jazeBilling = null;
     } finally {
       busy = false;
       notifyListeners();

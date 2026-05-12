@@ -19,9 +19,17 @@ class BillingHistoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final billing = appState.billing;
+    final jazeBilling = appState.jazeBilling;
+
+    // Prefer Jaze billing if available, otherwise fall back to legacy
+    final useJaze = jazeBilling != null && jazeBilling.summary != null;
+    final jazeSummary = jazeBilling?.summary;
+    final jazeInvoices = jazeBilling?.invoices ?? [];
 
     final latestInvoice =
-        billing.invoices.isEmpty ? null : billing.invoices.first;
+        useJaze && jazeInvoices.isNotEmpty
+            ? null // Jaze invoices have different structure, handle separately
+            : (billing.invoices.isEmpty ? null : billing.invoices.first);
     final latestPayment =
         billing.payments.isEmpty ? null : billing.payments.first;
     final recurringAmt = billing.recurringAmount > 0
@@ -29,12 +37,15 @@ class BillingHistoryScreen extends StatelessWidget {
         : (billing.dueAmount > 0
             ? billing.dueAmount
             : billing.lastPaymentAmount);
-    final hasDue = billing.dueAmount > 0;
+    final hasDue = useJaze
+        ? (jazeSummary?.hasDue ?? false)
+        : billing.dueAmount > 0;
     final hasAlert = billing.lastSuspensionWarningAt.isNotEmpty ||
         billing.lastOverdueReminderAt.isNotEmpty;
 
-    final isFirstLoad =
-        appState.busy && billing.currentPlan.isEmpty && billing.invoices.isEmpty;
+    final isFirstLoad = appState.busy &&
+        (!useJaze && billing.currentPlan.isEmpty && billing.invoices.isEmpty) ||
+        (useJaze && jazeSummary == null);
 
     return Scaffold(
       backgroundColor: kBg,
@@ -50,11 +61,13 @@ class BillingHistoryScreen extends StatelessWidget {
             SliverToBoxAdapter(
               child: _BillingHeader(
                 billing: billing,
+                jazeSummary: jazeSummary,
+                useJaze: useJaze,
                 hasDue: hasDue,
                 hasAlert: hasAlert,
                 onPayNow: !hasDue || appState.busy
                     ? null
-                    : () => _payNow(context, appState),
+                    : () => _payNow(context, appState, jazeBilling),
                 onHistory: () => Navigator.of(context).push(
                   MaterialPageRoute(
                       builder: (_) => const PaymentsHistoryScreen()),
@@ -75,36 +88,48 @@ class BillingHistoryScreen extends StatelessWidget {
                       child: Column(
                         children: [
                           _row('Plan',
-                              billing.currentPlan.isEmpty
-                                  ? '—'
-                                  : billing.currentPlan),
+                              useJaze
+                                  ? (jazeSummary?.currentPlanName ?? '—')
+                                  : (billing.currentPlan.isEmpty
+                                      ? '—'
+                                      : billing.currentPlan)),
                           _row(
                               'Monthly',
-                              recurringAmt > 0
-                                  ? 'Rs ${recurringAmt.toStringAsFixed(0)}'
-                                  : '—'),
+                              useJaze
+                                  ? '—' // Jaze doesn't separate monthly, shows total per duration
+                                  : (recurringAmt > 0
+                                      ? 'Rs ${recurringAmt.toStringAsFixed(0)}'
+                                      : '—')),
                           _row('Bill Cycle',
-                              billing.billCycle.isEmpty
-                                  ? '—'
-                                  : billing.billCycle),
+                              useJaze
+                                  ? (jazeInvoices.isNotEmpty
+                                      ? jazeInvoices.first.durationLabel
+                                      : '—')
+                                  : (billing.billCycle.isEmpty
+                                      ? '—'
+                                      : billing.billCycle)),
                           _row('Bill Mode',
-                              billing.billMode.isEmpty
-                                  ? '—'
-                                  : billing.billMode),
+                              useJaze
+                                  ? 'Pay As You Go (Jaze)'
+                                  : (billing.billMode.isEmpty
+                                      ? '—'
+                                      : billing.billMode)),
                           _row(
                               'Generated',
-                              billing.generatedDate.isEmpty
-                                  ? '—'
-                                  : _fmtDate(billing.generatedDate)),
-                          // Due Date appears only after a bill has been generated
-                          if (latestInvoice != null)
-                            _row(
-                                'Due Date',
-                                latestInvoice.dueDate.isNotEmpty
-                                    ? _fmtDate(latestInvoice.dueDate)
-                                    : (billing.nextBillDate.isEmpty
-                                        ? '—'
-                                        : _fmtDate(billing.nextBillDate))),
+                              useJaze && jazeInvoices.isNotEmpty
+                                  ? _fmtDate(jazeInvoices.first.issuedAt)
+                                  : (billing.generatedDate.isEmpty
+                                      ? '—'
+                                      : _fmtDate(billing.generatedDate))),
+                          _row(
+                              'Expiry',
+                              useJaze
+                                  ? (jazeSummary?.expiryDate.isNotEmpty
+                                      ? _fmtDate(jazeSummary!.expiryDate)
+                                      : '—')
+                                  : (billing.nextBillDate.isEmpty
+                                      ? '—'
+                                      : _fmtDate(billing.nextBillDate))),
                           _row(
                               'Last Payment',
                               billing.lastPaymentAmount > 0
@@ -122,7 +147,14 @@ class BillingHistoryScreen extends StatelessWidget {
                     const SizedBox(height: 20),
 
                     // ── Data Usage (FUP) ─────────────────────────────
-                    if (billing.usageCapGb > 0) ...[
+                    if (useJaze && jazeSummary?.bandwidth != null) ...[
+                      _sectionLabel('DATA USAGE'),
+                      const SizedBox(height: 8),
+                      _JazeUsageCard(
+                        bandwidth: jazeSummary!.bandwidth!,
+                      ),
+                      const SizedBox(height: 20),
+                    ] else if (billing.usageCapGb > 0) ...[
                       _sectionLabel('DATA USAGE'),
                       const SizedBox(height: 8),
                       _UsageCard(
@@ -339,13 +371,33 @@ class BillingHistoryScreen extends StatelessWidget {
 
   // ─── Actions ──────────────────────────────────────────────────────────────
 
-  Future<void> _payNow(BuildContext context, AppState appState) async {
+  Future<void> _payNow(
+      BuildContext context, AppState appState, JazeBillingView? jazeBilling) async {
     final messenger = ScaffoldMessenger.of(context);
     if (appState.session == null) {
       messenger.showSnackBar(
           const SnackBar(content: Text('Please login again to continue.')));
       return;
     }
+
+    // Use Jaze payment link if available
+    if (jazeBilling?.payment?.paymentLink.isNotEmpty ?? false) {
+      final paymentUrl = jazeBilling!.payment!.paymentLink;
+      // Open Jaze payment portal in browser
+      if (context.mounted) {
+        messenger.showSnackBar(
+            const SnackBar(content: Text('Opening payment portal...')));
+      }
+      // In a real app, use url_launcher to open the browser
+      // For now, just show the link
+      if (context.mounted) {
+        messenger.showSnackBar(
+            SnackBar(content: Text('Payment: $paymentUrl')));
+      }
+      return;
+    }
+
+    // Fallback to legacy payment flow
     final order = await appState.loadBillingPaymentOrder(
         amount: appState.billing.dueAmount);
     if (!context.mounted) return;
@@ -450,6 +502,8 @@ class _BillingShimmer extends StatelessWidget {
 class _BillingHeader extends StatelessWidget {
   const _BillingHeader({
     required this.billing,
+    this.jazeSummary,
+    required this.useJaze,
     required this.hasDue,
     required this.hasAlert,
     required this.onPayNow,
@@ -457,6 +511,8 @@ class _BillingHeader extends StatelessWidget {
   });
 
   final BillingData billing;
+  final JazeBillingSummary? jazeSummary;
+  final bool useJaze;
   final bool hasDue;
   final bool hasAlert;
   final VoidCallback? onPayNow;
@@ -535,9 +591,13 @@ class _BillingHeader extends StatelessWidget {
 
                 // Amount + subtitle
                 Text(
-                  hasDue
-                      ? 'Rs ${billing.dueAmount.toStringAsFixed(0)}'
-                      : billing.currentPlan.isEmpty ? 'All Clear' : billing.currentPlan,
+                  useJaze
+                      ? (hasDue
+                          ? 'Rs ${jazeSummary?.outstanding.toStringAsFixed(0) ?? "0"}'
+                          : 'All Clear')
+                      : (hasDue
+                          ? 'Rs ${billing.dueAmount.toStringAsFixed(0)}'
+                          : (billing.currentPlan.isEmpty ? 'All Clear' : billing.currentPlan)),
                   style: GoogleFonts.inter(
                     color: Colors.white,
                     fontSize: hasDue ? 48 : 32,
@@ -548,17 +608,31 @@ class _BillingHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  billing.nextBillDate.isEmpty
-                      ? 'No outstanding dues'
-                      : (hasDue
-                          ? 'Due by ${_fmtDate(billing.nextBillDate)}'
-                          : 'Next bill ${_fmtDate(billing.nextBillDate)}'),
+                  useJaze
+                      ? (jazeSummary?.expiryDate.isNotEmpty ?? false
+                          ? 'Expires ${_fmtDate(jazeSummary!.expiryDate)}'
+                          : 'No expiry date')
+                      : (billing.nextBillDate.isEmpty
+                          ? 'No outstanding dues'
+                          : (hasDue
+                              ? 'Due by ${_fmtDate(billing.nextBillDate)}'
+                              : 'Next bill ${_fmtDate(billing.nextBillDate)}')),
                   style: GoogleFonts.inter(
                     color: Colors.white60,
                     fontSize: 13,
                   ),
                 ),
-                if (!hasDue && billing.recurringAmount > 0) ...[
+                if (!hasDue && useJaze && jazeSummary?.currentPlanName.isNotEmpty ?? false) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    jazeSummary!.currentPlanName,
+                    style: GoogleFonts.inter(
+                      color: Colors.white54,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+                if (!hasDue && !useJaze && billing.recurringAmount > 0) ...[
                   const SizedBox(height: 4),
                   Text(
                     'Rs ${billing.recurringAmount.toStringAsFixed(0)}/mo · ${billing.billMode}',
@@ -1250,6 +1324,133 @@ String _fmtDate(String raw) {
 }
 
 // ── Data Usage card (FUP) ────────────────────────────────────────────────────
+
+class _JazeUsageCard extends StatelessWidget {
+  const _JazeUsageCard({required this.bandwidth});
+
+  final JazeBandwidth bandwidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final usedGb = bandwidth.usageBytes / (1024 * 1024 * 1024);
+    final downloadMbps = bandwidth.downloadMbps;
+    final uploadMbps = bandwidth.uploadMbps;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: kBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF34D399).withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.data_usage_rounded,
+                  color: Color(0xFF34D399),
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Total Usage',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${usedGb.toStringAsFixed(1)} GB',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF34D399),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _bandwidthRow(
+                  icon: Icons.arrow_downward_rounded,
+                  label: 'Download',
+                  value: '${downloadMbps.toStringAsFixed(0)} Mbps',
+                  color: const Color(0xFF60A5FA),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _bandwidthRow(
+                  icon: Icons.arrow_upward_rounded,
+                  label: 'Upload',
+                  value: '${uploadMbps.toStringAsFixed(0)} Mbps',
+                  color: const Color(0xFFF472B6),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _bandwidthRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 14, color: color),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: color.withValues(alpha: 0.8),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _UsageCard extends StatelessWidget {
   const _UsageCard({
