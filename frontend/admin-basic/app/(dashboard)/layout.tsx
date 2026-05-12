@@ -36,6 +36,7 @@ import { adminAPI, clearAuthToken, getAuthToken } from '@/lib/api'
 import type { FranchiseProfile } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { Avatar } from '@/components/ui/avatar'
+import { CommandPalette } from '@/components/ui/command-palette'
 
 type NavItem = {
   href: string
@@ -95,10 +96,12 @@ function SidebarContent({
   pathname,
   collapsed,
   onNavigate,
+  onOpenCommandPalette,
 }: {
   pathname: string
   collapsed?: boolean
   onNavigate?: () => void
+  onOpenCommandPalette?: () => void
 }) {
   const [search, setSearch] = useState('')
 
@@ -126,13 +129,17 @@ function SidebarContent({
           ) : null}
         </Link>
         {!collapsed ? (
-          <div className="modernize-search mt-4">
+          <div className="modernize-search mt-4" onClick={onOpenCommandPalette} role="button" tabIndex={0}>
             <Search className="h-4 w-4 text-slate-400" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search modules..."
               className="flex-1 bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
+              onFocus={(e) => {
+                e.target.blur()
+                onOpenCommandPalette?.()
+              }}
             />
             <kbd className="kbd hidden lg:inline-flex">⌘K</kbd>
           </div>
@@ -208,6 +215,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [collapsed, setCollapsed] = useState(false)
   const [zoneMenuOpen, setZoneMenuOpen] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [zoneOptions, setZoneOptions] = useState<Array<{ key: string; label: string }>>([])
   const [canAccessAllZones, setCanAccessAllZones] = useState(false)
   const [zoneScopeReady, setZoneScopeReady] = useState(false)
@@ -262,7 +270,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     function handler(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
-        setMobileSidebarOpen(true)
+        setCommandPaletteOpen(true)
       }
     }
     window.addEventListener('keydown', handler)
@@ -388,7 +396,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex min-h-screen w-full">
         <aside className={cn('hidden shrink-0 border-r border-slate-100 transition-all duration-200 lg:block', sidebarWidth)}>
           <div className={cn('fixed inset-y-0 z-30 border-r border-slate-100 bg-white transition-all duration-200', sidebarWidth)}>
-            <SidebarContent pathname={pathname} collapsed={collapsed} />
+            <SidebarContent pathname={pathname} collapsed={collapsed} onOpenCommandPalette={() => setCommandPaletteOpen(true)} />
             <button
               type="button"
               onClick={toggleCollapse}
@@ -409,7 +417,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <SidebarContent pathname={pathname} onNavigate={() => setMobileSidebarOpen(false)} />
+              <SidebarContent pathname={pathname} onNavigate={() => setMobileSidebarOpen(false)} onOpenCommandPalette={() => { setMobileSidebarOpen(false); setCommandPaletteOpen(true) }} />
             </div>
           </div>
         ) : null}
@@ -422,7 +430,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </button>
 
               <div className="hidden min-w-[280px] max-w-[440px] flex-1 lg:block">
-                <button type="button" onClick={() => setMobileSidebarOpen(true)} className="modernize-search w-full text-left">
+                <button type="button" onClick={() => setCommandPaletteOpen(true)} className="modernize-search w-full text-left">
                   <Search className="h-4 w-4 text-slate-400" />
                   <span className="flex-1">Search customers, billing, jobs, devices...</span>
                   <kbd className="kbd">⌘K</kbd>
@@ -528,6 +536,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </main>
         </div>
       </div>
+
+      <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
     </div>
   )
 }
