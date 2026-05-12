@@ -717,7 +717,7 @@ export class InternalSubscriberPlatform {
         if (jazeUserId) {
           await Customer.updateOne(
             { customerId: identifiers.customerId },
-            { $set: { jazeUserId: String(jazeUserId), jazeStatus: "active" } }
+            { $set: { jazeUserId: String(jazeUserId), jazeStatus: "active", pppoeUsername: pppoe.username } }
           );
           customer.jazeUserId = String(jazeUserId);
           customer.jazeStatus = "active";
