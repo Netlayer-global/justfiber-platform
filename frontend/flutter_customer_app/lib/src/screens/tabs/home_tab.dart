@@ -10,7 +10,6 @@ import '../booking_payment_screen.dart';
 import '../lead_booking_flow_screen.dart';
 import '../notifications_screen.dart';
 import '../plan_catalog_screen.dart';
-import '../public_plan_catalog_screen.dart';
 
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key, required this.onNavigate});
@@ -114,30 +113,6 @@ class HomeTab extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-          ],
-
-          // ── Plans Section ─────────────────────────────────────────
-          if (appState.plans.isNotEmpty) ...[
-            _SectionHeader(
-              label: 'PLANS',
-              action: 'View All',
-              onAction: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => const PublicPlanCatalogScreen())),
-            ),
-            const SizedBox(height: 12),
-            _PlanCarousel(
-              plans: appState.plans,
-              currentPlanName: billing.currentPlan,
-              onSelectPlan: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => LeadBookingFlowScreen(
-                          initialMobile: appState.session?.mobile))),
-              onViewAll: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => const PublicPlanCatalogScreen())),
-            ),
-            const SizedBox(height: 24),
           ],
 
           // ── Usage Stats ───────────────────────────────────────────
@@ -878,283 +853,20 @@ class _BillingStrip extends StatelessWidget {
 // ─── Section Header ────────────────────────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.label, this.action, this.onAction});
+  const _SectionHeader({required this.label});
   final String label;
-  final String? action;
-  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 16, 0),
-      child: Row(
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: kMuted,
-              letterSpacing: 1.6,
-            ),
-          ),
-          const Spacer(),
-          if (action != null && onAction != null)
-            GestureDetector(
-              onTap: onAction,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: kPrimary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: kPrimary.withValues(alpha: 0.28)),
-                ),
-                child: Text(
-                  action!,
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: kPrimaryLight,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Plan Carousel ─────────────────────────────────────────────────────────────
-
-class _PlanCarousel extends StatelessWidget {
-  const _PlanCarousel({
-    required this.plans,
-    required this.currentPlanName,
-    required this.onSelectPlan,
-    required this.onViewAll,
-  });
-
-  final List<PlanItem> plans;
-  final String currentPlanName;
-  final VoidCallback onSelectPlan;
-  final VoidCallback onViewAll;
-
-  static const _gradients = [
-    [Color(0xFF7C3AED), Color(0xFF3B0764)],
-    [Color(0xFF0284C7), Color(0xFF0C4A6E)],
-    [Color(0xFF059669), Color(0xFF064E3B)],
-    [Color(0xFFD97706), Color(0xFF78350F)],
-    [Color(0xFFDC2626), Color(0xFF7F1D1D)],
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final visible = plans.take(6).toList();
-    return SizedBox(
-      height: 188,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.only(left: 18, right: 6),
-        itemCount: visible.length + 1,
-        itemBuilder: (ctx, i) {
-          if (i == visible.length) {
-            return _ViewAllCard(onTap: onViewAll);
-          }
-          final plan = visible[i];
-          final grad = _gradients[i % _gradients.length];
-          final isCurrent = plan.name.toLowerCase() == currentPlanName.toLowerCase();
-          return _PlanCard(
-            plan: plan,
-            gradColors: grad,
-            isCurrent: isCurrent,
-            onTap: onSelectPlan,
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _PlanCard extends StatelessWidget {
-  const _PlanCard({
-    required this.plan,
-    required this.gradColors,
-    required this.isCurrent,
-    required this.onTap,
-  });
-
-  final PlanItem plan;
-  final List<Color> gradColors;
-  final bool isCurrent;
-  final VoidCallback onTap;
-
-  String get _speedLabel {
-    if (plan.speedMbps >= 1000) {
-      return '${(plan.speedMbps / 1000).toStringAsFixed(plan.speedMbps % 1000 == 0 ? 0 : 1)} Gbps';
-    }
-    return '${plan.speedMbps.toStringAsFixed(0)} Mbps';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 152,
-        margin: const EdgeInsets.only(right: 12),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: gradColors,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(26),
-          border: isCurrent
-              ? Border.all(color: Colors.white.withValues(alpha: 0.55), width: 1.5)
-              : Border.all(color: Colors.white.withValues(alpha: 0.12)),
-          boxShadow: [
-            BoxShadow(
-              color: gradColors[0].withValues(alpha: 0.28),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Current badge or spacer
-            if (isCurrent)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.22),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  'Current',
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              )
-            else
-              const SizedBox(height: 16),
-
-            const SizedBox(height: 8),
-
-            // Speed — large
-            Text(
-              _speedLabel,
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontSize: 26,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -1.0,
-                height: 1.0,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              plan.name,
-              style: GoogleFonts.inter(
-                color: Colors.white60,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-
-            const Spacer(),
-
-            // Price
-            Text(
-              plan.monthlyPrice > 0
-                  ? '₹${plan.monthlyPrice.toInt()}/mo'
-                  : 'Contact us',
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Select pill button
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: onTap,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: BorderSide(color: Colors.white.withValues(alpha: 0.45)),
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(999)),
-                ),
-                child: Text(
-                  isCurrent ? 'Active' : 'Select',
-                  style:
-                      GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ViewAllCard extends StatelessWidget {
-  const _ViewAllCard({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 100,
-        margin: const EdgeInsets.only(right: 18),
-        decoration: BoxDecoration(
-          color: kSurface,
-          borderRadius: BorderRadius.circular(26),
-          border: Border.all(color: kBorder),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: kPrimary.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-                border: Border.all(color: kPrimary.withValues(alpha: 0.25)),
-              ),
-              child: const Icon(Icons.grid_view_rounded,
-                  color: kPrimaryLight, size: 20),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'View\nAll',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                color: kPrimaryLight,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
+      child: Text(
+        label,
+        style: GoogleFonts.inter(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: kMuted,
+          letterSpacing: 1.6,
         ),
       ),
     );
