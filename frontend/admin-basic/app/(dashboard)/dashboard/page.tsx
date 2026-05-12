@@ -73,6 +73,10 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState('')
+  const [otpLookup, setOtpLookup] = useState('')
+  const [otpValue, setOtpValue] = useState('')
+  const [otpLoading, setOtpLoading] = useState(false)
+  const [otpError, setOtpError] = useState('')
   const [currentZoneLabel, setCurrentZoneLabel] = useState('Admin')
   const [currentZoneCode, setCurrentZoneCode] = useState('default')
 
@@ -126,6 +130,18 @@ export default function DashboardPage() {
       setIsLoading(false)
       setIsRefreshing(false)
     }
+  }
+
+  async function fetchDemoOtp() {
+    if (!otpLookup.trim()) { setOtpError('Enter mobile number first'); setOtpValue(''); return }
+    setOtpLoading(true); setOtpError(''); setOtpValue('')
+    try {
+      const res = await adminAPI.getCustomerDemoOtp(otpLookup.trim())
+      if (res.success && res.data?.otp) setOtpValue(res.data.otp)
+      else setOtpError(typeof res.error === 'string' ? res.error : (res.error as any)?.message || 'OTP not found')
+    } catch (err) {
+      setOtpError(err instanceof Error ? err.message : 'OTP lookup failed')
+    } finally { setOtpLoading(false) }
   }
 
   const userCountSummary = useMemo(() => {
@@ -403,6 +419,42 @@ export default function DashboardPage() {
             View network map <ArrowUpRight className="h-3 w-3" />
           </Link>
         </div>
+      </Card>
+
+      {/* OTP Lookup */}
+      <Card>
+        <h3 className="text-base font-bold text-slate-900">OTP Lookup</h3>
+        <p className="mt-1 text-sm text-slate-500">Fetch customer login or job completion OTP for testing.</p>
+        <div className="mt-4 flex items-end gap-3">
+          <div className="flex-1">
+            <label className="text-xs font-semibold text-slate-600">Mobile number</label>
+            <input
+              className="input mt-1"
+              placeholder="Enter mobile number"
+              value={otpLookup}
+              onChange={(e) => setOtpLookup(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') void fetchDemoOtp() }}
+            />
+          </div>
+          <button
+            className="btn-primary h-[42px] px-5"
+            onClick={() => void fetchDemoOtp()}
+            disabled={otpLoading}
+          >
+            {otpLoading ? 'Fetching...' : 'Get OTP'}
+          </button>
+        </div>
+        {otpValue && (
+          <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+            <span className="text-sm text-emerald-700">OTP: </span>
+            <span className="text-lg font-bold text-emerald-900 tracking-widest">{otpValue}</span>
+          </div>
+        )}
+        {otpError && (
+          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {otpError}
+          </div>
+        )}
       </Card>
     </div>
   )
