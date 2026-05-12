@@ -181,7 +181,7 @@ export class JazeClient {
     );
   }
 
-  async createUser({ userGroupId, accountId, userName, password, userState = "active", phoneNumber, comments }) {
+  async createUser({ userGroupId, accountId, userName, password, userState = "active", phoneNumber, firstName, lastName, emailId, address_line1, address_city, address_pin, comments }) {
     return jazeRequest(
       "POST",
       "/add_user",
@@ -191,7 +191,13 @@ export class JazeClient {
         userName,
         password,
         userState,
+        firstName: firstName || userName,
+        lastName: lastName || "",
         phoneNumber,
+        emailId: emailId || "",
+        address_line1: address_line1 || "",
+        address_city: address_city || "",
+        address_pin: address_pin || "",
         comments
       },
       true
