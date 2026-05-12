@@ -10,7 +10,7 @@ import 'notification_service.dart';
 
 const installerApiBase = String.fromEnvironment(
   'JUSTFIBER_API_BASE',
-  defaultValue: 'http://103.139.191.114:4000',
+  defaultValue: 'https://api.justfiber.in',
 );
 const _installerLoginKey = 'installer.login';
 const _installerAccessTokenKey = 'installer.access_token';

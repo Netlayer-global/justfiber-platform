@@ -1,0 +1,3 @@
+-keep class io.flutter.** { *; }
+-keep class com.justfiber.** { *; }
+-dontwarn com.google.firebase.**

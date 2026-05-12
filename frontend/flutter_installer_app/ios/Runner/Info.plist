@@ -47,5 +47,9 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Camera access is used to scan router serial barcodes during installation and complaint visits.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>JustFiber Field uses your location to navigate to customer addresses during installation and complaint visits.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>JustFiber Field uses your location to navigate to customer addresses during installation and complaint visits.</string>
 </dict>
 </plist>
