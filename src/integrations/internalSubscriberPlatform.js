@@ -663,6 +663,14 @@ export class InternalSubscriberPlatform {
           plan?.provisioning?.jazeGroupId ||
           installerJob.customerSnapshot?.jazeGroupId ||
           null;
+        if (!jazeGroupId) {
+          console.warn(`[internalSubscriberPlatform] Skipping Jaze createUser — no jazeGroupId for plan ${planCode}`);
+          installerJob.activation = {
+            ...(installerJob.activation || {}),
+            jazeProvisioningError: `No jazeGroupId mapped for plan ${planCode}`,
+            jazeProvisionedAt: new Date()
+          };
+        } else {
         const fullName =
           booking?.personalDetails?.fullName ||
           installerJob.customerSnapshot?.fullName ||
@@ -701,6 +709,7 @@ export class InternalSubscriberPlatform {
         };
         const jazeResponse = await jazeClient.createUser(jazePayload);
         const jazeUserId =
+          jazeResponse?.message?.userId ||
           jazeResponse?.data?.userId ||
           jazeResponse?.userId ||
           jazeResponse?.user_id ||
@@ -718,6 +727,7 @@ export class InternalSubscriberPlatform {
           jazeUserId: jazeUserId || null,
           jazeProvisionedAt: new Date()
         };
+        }
       } catch (jazeError) {
         console.error("[internalSubscriberPlatform] Jaze user creation failed:", jazeError.message);
         installerJob.activation = {
