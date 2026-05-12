@@ -64,8 +64,6 @@ const NAV_SECTIONS: NavSection[] = [
       { href: '/plans', label: 'Plans', icon: Cable },
       { href: '/sales', label: 'Sales & Leads', icon: Briefcase },
       { href: '/customers', label: 'Customers', icon: UserRound },
-      { href: '/user-management', label: 'User Management', icon: UserSquare2 },
-      { href: '/billing', label: 'Billing & Invoices', icon: CreditCard },
     ],
   },
   {
@@ -80,10 +78,7 @@ const NAV_SECTIONS: NavSection[] = [
     subheader: 'NETWORK',
     items: [
       { href: '/devices', label: 'Devices', icon: HardDrive },
-      { href: '/routers', label: 'Routers / BNG', icon: Router },
       { href: '/network-map', label: 'Network Map', icon: MapPinned },
-      { href: '/nat-logs', label: 'NAT Logs', icon: Search },
-      { href: '/ip-management', label: 'IP Pools', icon: Network },
       { href: '/serviceability', label: 'Serviceability', icon: MapPinned },
       { href: '/provisioning', label: 'Provisioning', icon: ShieldCheck },
     ],
@@ -91,7 +86,6 @@ const NAV_SECTIONS: NavSection[] = [
   {
     subheader: 'SYSTEM',
     items: [
-      { href: '/apps', label: 'Integrations', icon: Blocks },
       { href: '/my-zone-details', label: 'My Zone Details', icon: MapPinned },
     ],
   },
@@ -480,9 +474,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <Link href="/my-zone-details" className="block rounded-xl px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
                           My Zone Details
                         </Link>
-                        <Link href="/settings" className="block rounded-xl px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
-                          Zone Settings
-                        </Link>
                       </div>
                     </div>
                   ) : null}
@@ -512,9 +503,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </button>
                   {profileMenuOpen ? (
                     <div className="absolute right-0 z-30 mt-2 w-56 animate-scale-in rounded-2xl border border-slate-200 bg-white p-2 shadow-large">
-                      <Link href="/settings" className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
-                        <Settings className="h-4 w-4" /> Settings
-                      </Link>
                       <Link href="/activity-logs" className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
                         <History className="h-4 w-4" /> Activity
                       </Link>

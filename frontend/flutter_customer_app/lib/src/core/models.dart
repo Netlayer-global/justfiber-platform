@@ -255,6 +255,8 @@ class BillingPaymentItem {
     required this.reference,
     required this.viewUrl,
     required this.pdfUrl,
+    this.method = '',
+    this.notes = '',
   });
 
   final String transactionId;
@@ -264,6 +266,26 @@ class BillingPaymentItem {
   final String reference;
   final String viewUrl;
   final String pdfUrl;
+  final String method;
+  final String notes;
+
+  /// Returns a user-friendly payment method label.
+  /// "UPI" for upi, "Cash" for cash, "Online" as default for missing/unrecognized.
+  String get methodLabel {
+    final m = method.trim().toLowerCase();
+    if (m == 'upi') return 'UPI';
+    if (m == 'cash') return 'Cash';
+    if (m.isEmpty) return 'Online';
+    // Recognized Jaze methods that map to Online
+    if (m == 'onlinepayment' || m == 'online') return 'Online';
+    return 'Online';
+  }
+
+  /// Returns notes truncated to 200 characters if longer.
+  String get truncatedNotes {
+    if (notes.length <= 200) return notes;
+    return '${notes.substring(0, 200)}…';
+  }
 }
 
 class BillingNoteItem {
@@ -889,6 +911,16 @@ class JazeBillingSummary {
 
   bool get isPaid => paymentStatus.toLowerCase() == 'paid';
   bool get hasDue => outstanding > 0;
+
+  /// Convenience getter to access bandwidth data as a JazeBandwidth object.
+  JazeBandwidth? get bandwidth =>
+      (downloadMbps > 0 || uploadMbps > 0 || usageBytes > 0)
+          ? JazeBandwidth(
+              downloadMbps: downloadMbps,
+              uploadMbps: uploadMbps,
+              usageBytes: usageBytes,
+            )
+          : null;
 }
 
 class JazeInvoice {
@@ -931,4 +963,17 @@ class JazeBillingView {
   final JazeBillingSummary? summary;
   final List<JazeInvoice> invoices;
   final String paymentLink;
+}
+
+/// Bandwidth/usage data from Jaze billing summary.
+class JazeBandwidth {
+  const JazeBandwidth({
+    required this.downloadMbps,
+    required this.uploadMbps,
+    required this.usageBytes,
+  });
+
+  final int downloadMbps;
+  final int uploadMbps;
+  final int usageBytes;
 }

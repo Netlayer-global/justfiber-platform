@@ -250,11 +250,8 @@ function OpticalHistoryChart({ items }: { items: DeviceOpticalSample[] }) {
 export default function DevicesPage() {
   const [devices, setDevices] = useState<Device[]>([])
   const [opticalHistory, setOpticalHistory] = useState<DeviceOpticalSample[]>([])
-  const [opticalDebug, setOpticalDebug] = useState<{ parsedOpticalInfo?: Record<string, any>; candidates?: Array<{ path: string; value: unknown }> } | null>(null)
   const [selectedDeviceId, setSelectedDeviceId] = useState('')
   const [attachCustomerId, setAttachCustomerId] = useState('')
-  const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([])
-  const [actionLogs, setActionLogs] = useState<Array<{ id: string; label: string; status: 'success' | 'warning'; at: string }>>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSyncingFleet, setIsSyncingFleet] = useState(false)
   const [isRefreshingDevice, setIsRefreshingDevice] = useState(false)
@@ -271,29 +268,15 @@ export default function DevicesPage() {
     async function loadOpticalHistory() {
       if (!selectedDeviceId) {
         setOpticalHistory([])
-        setOpticalDebug(null)
         return
       }
-      const [historyRes, debugRes] = await Promise.all([
-        adminAPI.getDeviceOpticalHistory(selectedDeviceId, { days: 7, limit: 120 }),
-        adminAPI.getDeviceOpticalDebug(selectedDeviceId),
-      ])
+      const historyRes = await adminAPI.getDeviceOpticalHistory(selectedDeviceId, { days: 7, limit: 120 })
       if (historyRes.success && Array.isArray(historyRes.data)) {
         setOpticalHistory(historyRes.data)
-      }
-      if (debugRes.success && debugRes.data) {
-        setOpticalDebug(debugRes.data)
       }
     }
     void loadOpticalHistory()
   }, [selectedDeviceId])
-
-  function logAction(label: string, status: 'success' | 'warning' = 'success') {
-    setActionLogs((current) => [
-      { id: `${Date.now()}-${Math.random()}`, label, status, at: new Date().toISOString() },
-      ...current,
-    ].slice(0, 8))
-  }
 
   function mergeDeviceList(primary: Device[], secondary: Device[]) {
     const merged = new Map<string, Device>()
@@ -375,21 +358,15 @@ export default function DevicesPage() {
       if (!silent) {
         toast.success(syncFromGenie ? 'Device synced from Genie' : 'Device detail refreshed')
       }
-      logAction(syncFromGenie ? `Live sync completed for ${selectedDeviceId}` : `Detail refreshed for ${selectedDeviceId}`)
       const historyRes = await adminAPI.getDeviceOpticalHistory(selectedDeviceId, { days: 7, limit: 120 })
       if (historyRes.success && Array.isArray(historyRes.data)) {
         setOpticalHistory(historyRes.data)
-      }
-      const debugRes = await adminAPI.getDeviceOpticalDebug(selectedDeviceId)
-      if (debugRes.success && debugRes.data) {
-        setOpticalDebug(debugRes.data)
       }
     } catch (error) {
       console.error('[devices] Failed to refresh device detail:', error)
       if (!silent) {
         toast.error('Failed to refresh device detail')
       }
-      if (!silent) logAction(`Refresh failed for ${selectedDeviceId}`, 'warning')
     } finally {
       setIsRefreshingDevice(false)
     }
@@ -404,12 +381,10 @@ export default function DevicesPage() {
         return
       }
       toast.success(`Genie sync complete: ${res.data.synced}/${res.data.scanned} updated`)
-      logAction(`Fleet sync updated ${res.data.synced} devices`)
       await loadDevices(selectedDeviceId)
     } catch (error) {
       console.error('[devices] Fleet sync failed:', error)
       toast.error('Genie sync failed')
-      logAction('Fleet sync failed', 'warning')
     } finally {
       setIsSyncingFleet(false)
     }
@@ -425,12 +400,10 @@ export default function DevicesPage() {
         return
       }
       toast.success(`${presetName.replace('SERVICE_', '').replace('_', ' ')} requested`)
-      logAction(`${presetName.replace('SERVICE_', 'Device ')} requested for ${selectedDeviceId}`)
       await refreshSelectedDevice()
     } catch (error) {
       console.error('[devices] Preset action failed:', error)
       toast.error('Preset action failed')
-      logAction(`Preset request failed for ${selectedDeviceId}`, 'warning')
     } finally {
       setIsRunningAction(false)
     }
@@ -446,11 +419,9 @@ export default function DevicesPage() {
         return
       }
       toast.success('Reboot request sent')
-      logAction(`Reboot requested for ${selectedDeviceId}`)
     } catch (error) {
       console.error('[devices] Reboot failed:', error)
       toast.error('Reboot request failed')
-      logAction(`Reboot request failed for ${selectedDeviceId}`, 'warning')
     } finally {
       setIsRunningAction(false)
     }
@@ -471,79 +442,10 @@ export default function DevicesPage() {
         return
       }
       toast.success(`Attached ${selectedDevice.deviceId || selectedDevice.id} to ${customerId}`)
-      logAction(`Attached ${selectedDevice.deviceId || selectedDevice.id} to ${customerId}`)
       await loadDevices(selectedDevice.id)
     } catch (error) {
       console.error('[devices] Failed to attach device:', error)
       toast.error('Failed to attach device')
-      logAction(`Attach failed for ${selectedDevice.deviceId || selectedDevice.id}`, 'warning')
-    } finally {
-      setIsRunningAction(false)
-    }
-  }
-
-  function toggleBulkSelection(deviceId: string) {
-    setSelectedDeviceIds((current) =>
-      current.includes(deviceId) ? current.filter((item) => item !== deviceId) : [...current, deviceId]
-    )
-  }
-
-  function selectFilteredDevices() {
-    setSelectedDeviceIds(filteredDevices.map((device) => device.id))
-  }
-
-  function clearBulkSelection() {
-    setSelectedDeviceIds([])
-  }
-
-  async function runBulkPreset(presetName: PresetName) {
-    if (!selectedDeviceIds.length) {
-      toast.error('Select devices first')
-      return
-    }
-    try {
-      setIsRunningAction(true)
-      const results = await Promise.all(
-        selectedDeviceIds.map((deviceId) => adminAPI.applyDevicePreset(deviceId, presetName))
-      )
-      const failed = results.filter((item) => !item.success).length
-      toast.success(
-        failed
-          ? `${selectedDeviceIds.length - failed}/${selectedDeviceIds.length} preset actions queued`
-          : `${selectedDeviceIds.length} preset actions queued`
-      )
-      logAction(`Bulk preset ${presetName.replace('SERVICE_', '').toLowerCase()} queued for ${selectedDeviceIds.length} devices`)
-      await loadDevices(selectedDeviceId)
-    } catch (error) {
-      console.error('[devices] Bulk preset action failed:', error)
-      toast.error('Bulk preset action failed')
-      logAction(`Bulk preset failed for ${selectedDeviceIds.length} devices`, 'warning')
-    } finally {
-      setIsRunningAction(false)
-    }
-  }
-
-  async function rebootSelectedDevices() {
-    if (!selectedDeviceIds.length) {
-      toast.error('Select devices first')
-      return
-    }
-    try {
-      setIsRunningAction(true)
-      const results = await Promise.all(
-        selectedDeviceIds.map((deviceId) => adminAPI.rebootDevice(deviceId, 'Bulk reboot from devices console'))
-      )
-      const failed = results.filter((item) => !item.success).length
-      toast.success(
-        failed
-          ? `${selectedDeviceIds.length - failed}/${selectedDeviceIds.length} reboot requests sent`
-          : `${selectedDeviceIds.length} reboot requests sent`
-      )
-      logAction(`Bulk reboot requested for ${selectedDeviceIds.length} devices`)
-    } catch (error) {
-      console.error('[devices] Bulk reboot failed:', error)
-      toast.error('Bulk reboot failed')
-      logAction(`Bulk reboot failed for ${selectedDeviceIds.length} devices`, 'warning')
     } finally {
       setIsRunningAction(false)
     }
@@ -791,12 +693,7 @@ export default function DevicesPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <div className="card p-5">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Selected devices</div>
-          <div className="mt-3 text-3xl font-semibold text-slate-900">{selectedDeviceIds.length}</div>
-          <div className="mt-2 text-sm text-slate-500">Ready for bulk actions</div>
-        </div>
+      <div className="grid gap-4 md:grid-cols-3">
         <div className="card p-5">
           <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Suspended state</div>
           <div className="mt-3 text-3xl font-semibold text-slate-900">{suspendCount}</div>
@@ -811,40 +708,6 @@ export default function DevicesPage() {
           <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Live search scope</div>
           <div className="mt-3 text-3xl font-semibold text-slate-900">{filteredDevices.length}</div>
           <div className="mt-2 text-sm text-slate-500">Devices currently visible in this filter</div>
-        </div>
-      </div>
-
-      <div className="card p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="text-xs uppercase tracking-[0.22em] text-slate-400">Bulk device actions</div>
-            <div className="mt-2 text-2xl font-semibold text-slate-900">Operate on selected devices</div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn-secondary" onClick={selectFilteredDevices}>
-              Select visible
-            </button>
-            <button type="button" className="btn-secondary" onClick={clearBulkSelection}>
-              Clear selection
-            </button>
-          </div>
-        </div>
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-          <button type="button" className="btn-primary" disabled={isRunningAction} onClick={() => void runBulkPreset('SERVICE_PREPARE')}>
-            Bulk prepare
-          </button>
-          <button type="button" className="btn-secondary" disabled={isRunningAction} onClick={() => void runBulkPreset('SERVICE_ACTIVATE')}>
-            Bulk activate
-          </button>
-          <button type="button" className="btn-secondary" disabled={isRunningAction} onClick={() => void runBulkPreset('SERVICE_SUSPEND')}>
-            Bulk suspend
-          </button>
-          <button type="button" className="btn-secondary" disabled={isRunningAction} onClick={() => void runBulkPreset('SERVICE_RESUME')}>
-            Bulk resume
-          </button>
-          <button type="button" className="btn-secondary" disabled={isRunningAction} onClick={() => void rebootSelectedDevices()}>
-            Bulk reboot
-          </button>
         </div>
       </div>
 
@@ -882,15 +745,6 @@ export default function DevicesPage() {
                   }`}
                 >
                   <div className="mb-2 flex items-center justify-between gap-3">
-                    <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
-                      <input
-                        type="checkbox"
-                        checked={selectedDeviceIds.includes(device.id)}
-                        onClick={(event) => event.stopPropagation()}
-                        onChange={() => toggleBulkSelection(device.id)}
-                      />
-                      Select
-                    </label>
                     <button
                       type="button"
                       onClick={(event) => {
@@ -1027,52 +881,24 @@ export default function DevicesPage() {
                 <p className="text-sm text-slate-500">Use this after selecting a device from the left roster.</p>
               </div>
 
-              <div className="grid gap-4 xl:grid-cols-2">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="font-semibold text-slate-900">Device event timeline</h3>
-                    <Activity className="h-4 w-4 text-slate-500" />
-                  </div>
-                  <div className="space-y-3">
-                    {selectedTimeline.length ? (
-                      selectedTimeline.map((item) => (
-                        <div key={`${item.label}-${item.at}`} className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                          <div className="text-sm font-semibold text-slate-900">{item.label}</div>
-                          <div className="mt-1 text-xs text-slate-500">{formatDateTime(item.at)}</div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-sm text-slate-500">
-                        No timeline events available for this device.
-                      </div>
-                    )}
-                  </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-semibold text-slate-900">Device event timeline</h3>
+                  <Activity className="h-4 w-4 text-slate-500" />
                 </div>
-
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="font-semibold text-slate-900">Recent action tracker</h3>
-                    <ArrowUpRight className="h-4 w-4 text-slate-500" />
-                  </div>
-                  <div className="space-y-3">
-                    {actionLogs.length ? (
-                      actionLogs.map((item) => (
-                        <div key={item.id} className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="text-sm font-semibold text-slate-900">{item.label}</div>
-                            <span className={`rounded-full px-3 py-1 text-xs font-medium ${item.status === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-                              {item.status}
-                            </span>
-                          </div>
-                          <div className="mt-1 text-xs text-slate-500">{formatDateTime(item.at)}</div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-sm text-slate-500">
-                        No recent device actions recorded in this session.
+                <div className="space-y-3">
+                  {selectedTimeline.length ? (
+                    selectedTimeline.map((item) => (
+                      <div key={`${item.label}-${item.at}`} className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                        <div className="text-sm font-semibold text-slate-900">{item.label}</div>
+                        <div className="mt-1 text-xs text-slate-500">{formatDateTime(item.at)}</div>
                       </div>
-                    )}
-                  </div>
+                    ))
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-sm text-slate-500">
+                      No timeline events available for this device.
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1208,17 +1034,6 @@ export default function DevicesPage() {
                     <pre className="overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">{JSON.stringify(selectedDevice.opticalInfo || {}, null, 2)}</pre>
                   </div>
                 </div>
-                {opticalDebug?.candidates?.length ? (
-                  <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-                    <div className="mb-3 flex items-center justify-between gap-2">
-                      <h3 className="font-semibold text-slate-900">Optical candidate paths</h3>
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                        {opticalDebug.candidates.length} candidates
-                      </span>
-                    </div>
-                    <pre className="overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">{JSON.stringify(opticalDebug.candidates, null, 2)}</pre>
-                  </div>
-                ) : null}
               </details>
             </>
           ) : (

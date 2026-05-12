@@ -32,6 +32,9 @@ import { PageHeader } from '@/components/ui/page-header'
 import { SkeletonCard } from '@/components/ui/skeleton'
 import { Tabs } from '@/components/ui/tabs'
 import { toast } from 'sonner'
+import { Modal } from '@/components/ui/modal'
+import type { Plan } from '@/lib/types'
+import { CashCollectionSection } from './CashCollectionSection'
 
 export default function CustomerDetailPage() {
   const params = useParams<{ customerId: string }>()
@@ -284,11 +287,60 @@ function OverviewTab({ customer, onRefresh }: { customer: Customer; onRefresh: (
   const [reprovisPreset, setReprovisPreset] = useState<'SERVICE_ACTIVATE' | 'SERVICE_RESUME' | 'SERVICE_PREPARE' | 'SERVICE_SUSPEND'>('SERVICE_ACTIVATE')
   const [reprovisioning, setReprovisioning] = useState(false)
 
+  // Plan change modal state
+  const [planChangeOpen, setPlanChangeOpen] = useState(false)
+  const [availablePlans, setAvailablePlans] = useState<Plan[]>([])
+  const [loadingPlans, setLoadingPlans] = useState(false)
+  const [selectedPlanCode, setSelectedPlanCode] = useState('')
+  const [planChangeReason, setPlanChangeReason] = useState('')
+  const [changingPlan, setChangingPlan] = useState(false)
+
   useEffect(() => {
     setWifi24(ssid24)
     setWifi5(ssid5)
     setPppoeUserInput(pppoeUsername)
   }, [ssid24, ssid5, pppoeUsername, customer.id])
+
+  async function openPlanChangeModal() {
+    setPlanChangeOpen(true)
+    setSelectedPlanCode('')
+    setPlanChangeReason('')
+    if (availablePlans.length === 0) {
+      try {
+        setLoadingPlans(true)
+        const res = await adminAPI.getPlans({ zoneCode: null })
+        if (res.success && res.data?.items) {
+          setAvailablePlans(res.data.items.filter((p: Plan) => p.status === 'active'))
+        }
+      } catch {
+        toast.error('Failed to load plans')
+      } finally {
+        setLoadingPlans(false)
+      }
+    }
+  }
+
+  async function handlePlanChange() {
+    if (!selectedPlanCode || !customer.customerId) return
+    try {
+      setChangingPlan(true)
+      const res = await adminAPI.changePlanJaze(customer.customerId, {
+        newPlanCode: selectedPlanCode,
+        reason: planChangeReason || undefined,
+      })
+      if (!res.success) {
+        toast.error(typeof res.error === 'string' ? res.error : 'Plan change failed')
+        return
+      }
+      toast.success(`Plan changed to ${res.data?.newPlanName || selectedPlanCode}`)
+      setPlanChangeOpen(false)
+      await onRefresh()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Plan change failed')
+    } finally {
+      setChangingPlan(false)
+    }
+  }
 
   async function handleWifiSave() {
     if (!primaryDevice?.deviceId) {
@@ -439,7 +491,7 @@ function OverviewTab({ customer, onRefresh }: { customer: Customer; onRefresh: (
             {customer.status === 'active' ? 'Suspend Service' : 'Resume Service'}
           </Button>
           <Button variant="secondary" className="w-full justify-start" icon={<RefreshCw className="h-4 w-4" />}>Disconnect Session</Button>
-          <Button variant="secondary" className="w-full justify-start" icon={<Cable className="h-4 w-4" />}>Change Plan</Button>
+          <Button variant="secondary" className="w-full justify-start" icon={<Cable className="h-4 w-4" />} onClick={openPlanChangeModal}>Change Plan</Button>
         </div>
         {customer.radiusService ? (
           <div className="mt-5 space-y-2 rounded-xl bg-slate-50 p-3 text-xs">
@@ -636,6 +688,89 @@ function OverviewTab({ customer, onRefresh }: { customer: Customer; onRefresh: (
           </div>
         </div>
       </Card>
+
+      {/* Plan Change Modal */}
+      <Modal
+        open={planChangeOpen}
+        onClose={() => setPlanChangeOpen(false)}
+        title="Change Plan"
+        description={`Change the active plan for ${customer.name || customer.customerId}`}
+        size="md"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setPlanChangeOpen(false)} disabled={changingPlan}>
+              Cancel
+            </Button>
+            <Button onClick={() => void handlePlanChange()} disabled={changingPlan || !selectedPlanCode}>
+              {changingPlan ? 'Changing...' : 'Confirm Plan Change'}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="rounded-lg bg-slate-50 p-3 text-xs">
+            <div className="flex justify-between">
+              <span className="text-slate-500">Current Plan</span>
+              <span className="font-semibold text-slate-900">{customer.plan?.name || 'Unassigned'}</span>
+            </div>
+            <div className="mt-1 flex justify-between">
+              <span className="text-slate-500">Plan Code</span>
+              <span className="font-mono text-slate-700">{customer.plan?.id || '—'}</span>
+            </div>
+          </div>
+
+          <label className="block space-y-1">
+            <div className="text-sm font-medium text-slate-700">New Plan</div>
+            {loadingPlans ? (
+              <div className="flex items-center gap-2 py-2 text-sm text-slate-500">
+                <RefreshCw className="h-4 w-4 animate-spin" /> Loading plans...
+              </div>
+            ) : (
+              <select
+                className="input w-full"
+                value={selectedPlanCode}
+                onChange={(e) => setSelectedPlanCode(e.target.value)}
+              >
+                <option value="">Select a plan...</option>
+                {availablePlans
+                  .filter((p) => p.planCode !== customer.plan?.id && p.id !== customer.plan?.id)
+                  .map((p) => (
+                    <option key={p.id} value={p.planCode || p.id}>
+                      {p.name} — {p.speed}Mbps — ₹{p.price}/mo
+                    </option>
+                  ))}
+              </select>
+            )}
+          </label>
+
+          {selectedPlanCode && (() => {
+            const selected = availablePlans.find((p) => (p.planCode || p.id) === selectedPlanCode)
+            if (!selected) return null
+            return (
+              <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs">
+                <div className="font-semibold text-blue-900">{selected.name}</div>
+                <div className="mt-1 grid grid-cols-2 gap-2 text-blue-800">
+                  <div>Speed: {selected.speed} Mbps ↓ / {selected.uploadSpeed || selected.speed} Mbps ↑</div>
+                  <div>Price: ₹{selected.price}/mo</div>
+                  <div>Category: {selected.category || 'home'}</div>
+                  <div>Data: {selected.dataPolicy === 'unlimited' ? 'Unlimited' : `${selected.dataLimitGb || '—'} GB`}</div>
+                </div>
+              </div>
+            )
+          })()}
+
+          <label className="block space-y-1">
+            <div className="text-sm font-medium text-slate-700">Reason (optional)</div>
+            <input
+              className="input w-full"
+              value={planChangeReason}
+              onChange={(e) => setPlanChangeReason(e.target.value)}
+              placeholder="e.g. Customer requested upgrade"
+              maxLength={200}
+            />
+          </label>
+        </div>
+      </Modal>
     </div>
   )
 }
@@ -760,6 +895,8 @@ function BillingTab({ customer }: { customer: Customer }) {
   const payments = customer.payments || []
   return (
     <div className="space-y-5">
+      <CashCollectionSection customer={customer} />
+
       <Card padding="none">
         <CardHeader><CardTitle>Invoices</CardTitle></CardHeader>
         {invoices.length === 0 ? (

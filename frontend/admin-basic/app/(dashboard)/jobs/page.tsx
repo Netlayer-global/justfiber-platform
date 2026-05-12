@@ -472,40 +472,7 @@ export default function JobsPage() {
                       </span>
                     ) : null}
                   </div>
-                  {(job.wifiSsid24 || job.wifiSsid5) ? (
-                    <div className="mt-3 grid gap-2 text-xs text-slate-600 md:grid-cols-2">
-                      <div className="rounded border border-slate-200 bg-white px-3 py-2">
-                        Wi-Fi 2.4G: {job.wifiSsid24 || '-'}
-                      </div>
-                      <div className="rounded border border-slate-200 bg-white px-3 py-2">
-                        Wi-Fi 5G: {job.wifiSsid5 || '-'}
-                      </div>
-                      <div className="rounded border border-slate-200 bg-white px-3 py-2 md:col-span-2">
-                        Wi-Fi password: {job.wifiPassword || '-'}
-                      </div>
-                      <div className="rounded border border-slate-200 bg-white px-3 py-2">
-                        PPPoE user: {job.pppoeUsername || '-'}
-                      </div>
-                      <div className="rounded border border-slate-200 bg-white px-3 py-2">
-                        PPPoE password: {job.pppoePassword || '-'}
-                      </div>
-                    </div>
-                  ) : null}
-                  {job.activationSmsPreview ? (
-                    <div className="mt-3 rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
-                      <div className="font-semibold text-slate-900">Activation SMS Preview</div>
-                      <div className="mt-1 whitespace-pre-wrap">{job.activationSmsPreview}</div>
-                    </div>
-                  ) : null}
-                  {(job.completionOtpDemo || job.completionOtpSmsPreview) ? (
-                    <div className="mt-3 rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="font-semibold text-slate-900">Installation OTP Demo</div>
-                        <div className="font-mono text-sm text-purple-700">{job.completionOtpDemo || '-'}</div>
-                      </div>
-                      {job.completionOtpSmsPreview ? <div className="mt-2 whitespace-pre-wrap">{job.completionOtpSmsPreview}</div> : null}
-                    </div>
-                  ) : null}
+
                   {(job.oldSerialNumber || job.finalSerialNumber) ? (
                     <div className="mt-3 grid gap-2 text-xs text-slate-600 md:grid-cols-2">
                       <div className="rounded border border-slate-200 bg-white px-3 py-2">

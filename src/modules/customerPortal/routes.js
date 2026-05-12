@@ -3619,15 +3619,35 @@ customerPortalRouter.post(
   "/billing/jaze/payment-link",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const customer = await resolveJazeCustomer(req);
-    const result = await generatePaymentLink(customer.jazeUserId);
-    if (!result?.paymentLink) {
-      throw new ApiError(502, "Jaze did not return a payment link");
+    const customerUser = req.customerUser;
+    const linkedIds = customerUser.linkedCustomerIds || [];
+    if (!linkedIds.length) {
+      throw new ApiError(400, "No linked customer account found. Contact support.");
     }
-    return ok(res, {
-      customerId: customer.customerId,
-      paymentLink: result.paymentLink
-    });
+
+    // Resolve the first linked customer with a jazeUserId
+    const customer = await Customer.findOne({
+      customerId: { $in: linkedIds },
+      jazeUserId: { $exists: true, $ne: "" }
+    }).lean();
+
+    if (!customer?.jazeUserId) {
+      throw new ApiError(400, "Customer must be activated via an installer first.");
+    }
+
+    let result;
+    try {
+      result = await generatePaymentLink(customer.jazeUserId);
+    } catch (err) {
+      throw new ApiError(502, "Payment link could not be generated. Try again later.");
+    }
+
+    const { paymentLink } = result || {};
+    if (!paymentLink || !paymentLink.startsWith("https://")) {
+      throw new ApiError(502, "Payment link could not be generated. Try again later.");
+    }
+
+    return ok(res, { paymentLink, customerId: customer.customerId });
   })
 );
 

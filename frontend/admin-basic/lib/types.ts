@@ -187,6 +187,7 @@ export interface Customer {
   zoneName?: string
   zoneStateCode?: string
   zoneStateName?: string
+  jazeUserId?: string
   billingSnapshot?: Record<string, any>
   invoiceSummary?: Record<string, any>
   devices?: CustomerDevice[]

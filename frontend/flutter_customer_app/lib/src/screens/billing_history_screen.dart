@@ -1,19 +1,51 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../core/app_state.dart';
 import '../core/models.dart';
+import '../core/payment_constants.dart';
 import '../core/theme.dart';
 import '../widgets/pressable_scale.dart';
-import 'billing_payment_screen.dart';
 import 'document_viewer_screen.dart';
 import 'all_invoices_screen.dart';
+import 'payment_webview_screen.dart';
 import 'payments_history_screen.dart';
 import 'support_history_screen.dart';
 
-class BillingHistoryScreen extends StatelessWidget {
+/// Tracks the state of the post-payment billing refresh.
+enum _BillingRefreshState {
+  /// No refresh in progress; normal display.
+  idle,
+
+  /// Refresh is in progress (loading indicator shown).
+  refreshing,
+
+  /// Refresh succeeded but data appears stale (same outstanding amount).
+  staleData,
+
+  /// Refresh failed or timed out.
+  failed,
+}
+
+class BillingHistoryScreen extends StatefulWidget {
   const BillingHistoryScreen({super.key});
+
+  @override
+  State<BillingHistoryScreen> createState() => _BillingHistoryScreenState();
+}
+
+class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
+  /// Current post-payment refresh state.
+  _BillingRefreshState _refreshState = _BillingRefreshState.idle;
+
+  /// The outstanding amount captured before the payment was initiated.
+  double? _prePaymentOutstanding;
+
+  /// Timeout duration for the billing refresh call.
+  static const _refreshTimeout = Duration(seconds: 10);
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +107,15 @@ class BillingHistoryScreen extends StatelessWidget {
               ),
             ),
 
+            // ── Post-payment refresh status banner ─────────────────────
+            if (_refreshState != _BillingRefreshState.idle)
+              SliverToBoxAdapter(
+                child: _BillingRefreshBanner(
+                  state: _refreshState,
+                  onRefresh: () => _manualRefresh(appState),
+                ),
+              ),
+
             // ── Bill Summary ─────────────────────────────────────────
             SliverToBoxAdapter(
               child: Padding(
@@ -124,7 +165,7 @@ class BillingHistoryScreen extends StatelessWidget {
                           _row(
                               'Expiry',
                               useJaze
-                                  ? (jazeSummary?.expiryDate.isNotEmpty
+                                  ? ((jazeSummary?.expiryDate.isNotEmpty == true)
                                       ? _fmtDate(jazeSummary!.expiryDate)
                                       : '—')
                                   : (billing.nextBillDate.isEmpty
@@ -371,6 +412,48 @@ class BillingHistoryScreen extends StatelessWidget {
 
   // ─── Actions ──────────────────────────────────────────────────────────────
 
+  /// Performs a billing refresh with a 10-second timeout.
+  /// Returns `true` if the refresh succeeded, `false` otherwise.
+  Future<bool> _refreshBillingWithTimeout(AppState appState) async {
+    try {
+      await appState.loadJazeBilling().timeout(_refreshTimeout);
+      return true;
+    } on TimeoutException {
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Manual refresh triggered by the user tapping the refresh button.
+  Future<void> _manualRefresh(AppState appState) async {
+    if (!mounted) return;
+    setState(() => _refreshState = _BillingRefreshState.refreshing);
+
+    final success = await _refreshBillingWithTimeout(appState);
+
+    if (!mounted) return;
+
+    if (!success) {
+      setState(() => _refreshState = _BillingRefreshState.failed);
+      return;
+    }
+
+    // Check for stale data
+    final newOutstanding = appState.jazeBilling?.summary?.outstanding;
+    if (_prePaymentOutstanding != null &&
+        newOutstanding != null &&
+        (newOutstanding - _prePaymentOutstanding!).abs() < 0.01) {
+      setState(() => _refreshState = _BillingRefreshState.staleData);
+    } else {
+      // Data updated successfully — clear refresh state
+      setState(() {
+        _refreshState = _BillingRefreshState.idle;
+        _prePaymentOutstanding = null;
+      });
+    }
+  }
+
   Future<void> _payNow(
       BuildContext context, AppState appState, JazeBillingView? jazeBilling) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -380,38 +463,85 @@ class BillingHistoryScreen extends StatelessWidget {
       return;
     }
 
-    // Use Jaze payment link if available
-    if (jazeBilling?.payment?.paymentLink.isNotEmpty ?? false) {
-      final paymentUrl = jazeBilling!.payment!.paymentLink;
-      // Open Jaze payment portal in browser
-      if (context.mounted) {
-        messenger.showSnackBar(
-            const SnackBar(content: Text('Opening payment portal...')));
+    // Store pre-payment outstanding amount for stale data detection (Req 3.3)
+    _prePaymentOutstanding = jazeBilling?.summary?.outstanding;
+
+    // Determine payment URL: use cached Jaze link or request a fresh one
+    String? paymentUrl;
+    if (jazeBilling?.paymentLink.isNotEmpty ?? false) {
+      paymentUrl = jazeBilling!.paymentLink;
+    } else {
+      // Request a fresh payment link from the backend
+      try {
+        paymentUrl = await appState.api.requestPaymentLink(appState.session!);
+      } on Exception catch (e) {
+        if (context.mounted) {
+          messenger.showSnackBar(SnackBar(
+            content: Text('Unable to generate payment link: $e'),
+          ));
+        }
+        return;
       }
-      // In a real app, use url_launcher to open the browser
-      // For now, just show the link
+    }
+
+    if (paymentUrl == null || paymentUrl.isEmpty) {
       if (context.mounted) {
         messenger.showSnackBar(
-            SnackBar(content: Text('Payment: $paymentUrl')));
+            const SnackBar(content: Text('Unable to generate payment link.')));
       }
       return;
     }
 
-    // Fallback to legacy payment flow
-    final order = await appState.loadBillingPaymentOrder(
-        amount: appState.billing.dueAmount);
     if (!context.mounted) return;
-    if (order == null) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(appState.error ?? 'Unable to create payment order'),
-      ));
-      return;
-    }
-    await Navigator.of(context).push(
+
+    // Navigate to the in-app WebView payment screen
+    final success = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-          builder: (_) => BillingPaymentScreen(paymentOrder: order)),
+        builder: (_) => PaymentWebViewScreen(
+          paymentUrl: paymentUrl!,
+          jazeDomain: kJazePaymentDomain,
+        ),
+      ),
     );
-    await appState.refresh();
+
+    // On success: refresh billing data with timeout (Req 1.5, 3.1, 3.2, 3.3, 3.4)
+    if (success == true) {
+      if (!mounted) return;
+      setState(() => _refreshState = _BillingRefreshState.refreshing);
+
+      if (context.mounted) {
+        messenger.showSnackBar(const SnackBar(
+          content: Text('Payment successful! Refreshing billing...'),
+        ));
+      }
+
+      // Refresh billing with 10-second timeout (Req 3.1)
+      final refreshed = await _refreshBillingWithTimeout(appState);
+
+      if (!mounted) return;
+
+      if (!refreshed) {
+        // Timeout or failure: show unavailable message, retain previous data (Req 3.4)
+        setState(() => _refreshState = _BillingRefreshState.failed);
+        return;
+      }
+
+      // Check for stale data (Req 3.3)
+      final newOutstanding = appState.jazeBilling?.summary?.outstanding;
+      if (_prePaymentOutstanding != null &&
+          newOutstanding != null &&
+          (newOutstanding - _prePaymentOutstanding!).abs() < 0.01) {
+        // Outstanding unchanged — data is stale
+        setState(() => _refreshState = _BillingRefreshState.staleData);
+      } else {
+        // Data updated successfully
+        setState(() {
+          _refreshState = _BillingRefreshState.idle;
+          _prePaymentOutstanding = null;
+        });
+      }
+    }
+    // On failure/cancellation: return to billing screen without refresh (Req 1.8)
   }
 
   Future<void> _openDocument(BuildContext context, AppState appState,
@@ -498,6 +628,172 @@ class _BillingShimmer extends StatelessWidget {
 }
 
 // ── Billing gradient header ───────────────────────────────────────────────────
+
+// ── Post-payment refresh status banner ────────────────────────────────────────
+
+class _BillingRefreshBanner extends StatelessWidget {
+  const _BillingRefreshBanner({
+    required this.state,
+    required this.onRefresh,
+  });
+
+  final _BillingRefreshState state;
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: _backgroundColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _borderColor),
+        ),
+        child: _buildContent(),
+      ),
+    );
+  }
+
+  Color get _backgroundColor {
+    switch (state) {
+      case _BillingRefreshState.refreshing:
+        return const Color(0xFF1A1A2E);
+      case _BillingRefreshState.staleData:
+        return const Color(0xFF1F1A00);
+      case _BillingRefreshState.failed:
+        return const Color(0xFF2A0A0A);
+      case _BillingRefreshState.idle:
+        return Colors.transparent;
+    }
+  }
+
+  Color get _borderColor {
+    switch (state) {
+      case _BillingRefreshState.refreshing:
+        return const Color(0x558B5CF6);
+      case _BillingRefreshState.staleData:
+        return const Color(0x55FBBF24);
+      case _BillingRefreshState.failed:
+        return const Color(0x55FF6B6B);
+      case _BillingRefreshState.idle:
+        return Colors.transparent;
+    }
+  }
+
+  Widget _buildContent() {
+    switch (state) {
+      case _BillingRefreshState.refreshing:
+        return Row(
+          children: [
+            const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Color(0xFF8B5CF6),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Refreshing billing...',
+                style: GoogleFonts.inter(
+                  color: const Color(0xFFA78BFA),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+
+      case _BillingRefreshState.staleData:
+        return Row(
+          children: [
+            const Icon(Icons.schedule_rounded,
+                color: Color(0xFFFBBF24), size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Payment processing may take up to 2 minutes',
+                style: GoogleFonts.inter(
+                  color: const Color(0xFFFDE68A),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            _RefreshButton(onTap: onRefresh),
+          ],
+        );
+
+      case _BillingRefreshState.failed:
+        return Row(
+          children: [
+            const Icon(Icons.cloud_off_rounded,
+                color: Color(0xFFFF6B6B), size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Payment submitted, billing temporarily unavailable',
+                style: GoogleFonts.inter(
+                  color: const Color(0xFFFF8A8A),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            _RefreshButton(onTap: onRefresh),
+          ],
+        );
+
+      case _BillingRefreshState.idle:
+        return const SizedBox.shrink();
+    }
+  }
+}
+
+class _RefreshButton extends StatelessWidget {
+  const _RefreshButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.refresh_rounded, color: Colors.white70, size: 14),
+            const SizedBox(width: 4),
+            Text(
+              'Refresh',
+              style: GoogleFonts.inter(
+                color: Colors.white70,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Billing gradient header (continued) ──────────────────────────────────────
 
 class _BillingHeader extends StatelessWidget {
   const _BillingHeader({
@@ -622,7 +918,7 @@ class _BillingHeader extends StatelessWidget {
                     fontSize: 13,
                   ),
                 ),
-                if (!hasDue && useJaze && jazeSummary?.currentPlanName.isNotEmpty ?? false) ...[
+                if (!hasDue && useJaze && (jazeSummary?.currentPlanName.isNotEmpty == true)) ...[
                   const SizedBox(height: 4),
                   Text(
                     jazeSummary!.currentPlanName,

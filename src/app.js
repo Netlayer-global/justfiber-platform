@@ -19,11 +19,13 @@ import { adminInstallersRouter } from "./modules/adminInstallers/routes.js";
 import { adminSalesRouter } from "./modules/adminSales/routes.js";
 import { adminCatalogRouter } from "./modules/adminCatalog/routes.js";
 import { adminOpsRouter } from "./modules/adminOps/routes.js";
+import { paymentRouter } from "./modules/adminOps/paymentRoutes.js";
 import { platformFoundationRouter } from "./modules/platformFoundation/routes.js";
 import { customerPortalRouter } from "./modules/customerPortal/routes.js";
 import { installerAuthRouter } from "./modules/installerAuth/routes.js";
 import { installerAppRouter } from "./modules/installerApp/routes.js";
 import { salesAppRouter } from "./modules/salesApp/routes.js";
+import { jazeWebhookRouter } from "./modules/webhooks/jazeWebhookRoutes.js";
 import { ApiError } from "./common/ApiError.js";
 
 function resolveCorsOrigin(originValue) {
@@ -115,11 +117,13 @@ export function createApp() {
   app.use("/api/v1/admin", adminSalesRouter);
   app.use("/api/v1/admin", adminCatalogRouter);
   app.use("/api/v1/admin", adminOpsRouter);
+  app.use("/api/v1/admin/payments", paymentRouter);
   app.use("/api/v1/admin", platformFoundationRouter);
   app.use("/api/v1/installer/auth", installerAuthRouter);
   app.use("/api/v1/installer", installerAppRouter);
   app.use("/api/v1/customer", customerPortalRouter);
   app.use("/api/v1/sales", salesAppRouter);
+  app.use("/api/v1/webhooks", jazeWebhookRouter);
 
   app.use((_req, _res, next) => {
     next(new ApiError(404, "Route not found"));

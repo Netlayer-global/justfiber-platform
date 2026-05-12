@@ -18,13 +18,29 @@ class PaymentsHistoryScreen extends StatefulWidget {
 
 class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
   String _filter = 'all';
+  /// Cached payments retained on API error (Req 7.4)
+  List<BillingPaymentItem> _cachedPayments = const [];
+  String? _errorMessage;
 
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final billing = appState.billing;
     final all = billing.payments;
-    final payments = all.where((p) {
+
+    // Update cache when we have fresh data
+    if (all.isNotEmpty) {
+      _cachedPayments = all;
+      _errorMessage = null;
+    }
+
+    // Use cached entries if current data is empty but we had previous data
+    final displayAll = all.isNotEmpty ? all : _cachedPayments;
+
+    // Limit to max 50 entries, sorted by date descending (already sorted by API)
+    final limited = displayAll.length > 50 ? displayAll.sublist(0, 50) : displayAll;
+
+    final payments = limited.where((p) {
       if (_filter == 'all') return true;
       final hay = '${p.reference} ${p.provider} ${p.transactionId}'.toLowerCase();
       if (_filter == 'success') return p.paidAt.isNotEmpty;
@@ -33,16 +49,16 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
       return true;
     }).toList();
 
-    final successCount = all.where((p) => p.paidAt.isNotEmpty).length;
-    final pendingCount = all.where((p) => p.paidAt.isEmpty && !p.reference.toLowerCase().contains('failed')).length;
-    final failedCount = all.where((p) => p.reference.toLowerCase().contains('failed')).length;
+    final successCount = limited.where((p) => p.paidAt.isNotEmpty).length;
+    final pendingCount = limited.where((p) => p.paidAt.isEmpty && !p.reference.toLowerCase().contains('failed')).length;
+    final failedCount = limited.where((p) => p.reference.toLowerCase().contains('failed')).length;
 
     return Scaffold(
       backgroundColor: kBg,
       body: RefreshIndicator(
         color: kPrimary,
         backgroundColor: kSurface,
-        onRefresh: appState.refresh,
+        onRefresh: () => _refreshPayments(appState),
         child: CustomScrollView(
           slivers: [
             // ── Gradient header ─────────────────────────────────────────
@@ -91,7 +107,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Row(
                             children: [
-                              _heroStat('Total', '${all.length}'),
+                              _heroStat('Total', '${limited.length}'),
                               _heroDivider(),
                               _heroStat('Success', '$successCount'),
                               _heroDivider(),
@@ -127,6 +143,34 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
             ),
 
             // ── Payment list ─────────────────────────────────────────────
+            if (_errorMessage != null)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0x22EF4444),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0x44EF4444)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline_rounded,
+                            color: Color(0xFFFF8A8A), size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: GoogleFonts.inter(
+                                color: const Color(0xFFFF8A8A), fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(18, 14, 18, 32),
               sliver: payments.isEmpty
@@ -171,6 +215,28 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _refreshPayments(AppState appState) async {
+    try {
+      await appState.refresh();
+      if (mounted) {
+        // Check if billing data is empty after refresh (possible API error)
+        if (appState.billing.payments.isEmpty && _cachedPayments.isNotEmpty) {
+          setState(() {
+            _errorMessage = 'Payment history could not be loaded. Showing cached entries.';
+          });
+        } else {
+          setState(() => _errorMessage = null);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Payment history could not be loaded. Showing cached entries.';
+        });
+      }
+    }
   }
 
   Widget _heroStat(String label, String value) => Expanded(
@@ -360,17 +426,32 @@ class _PaymentCard extends StatelessWidget {
                 ),
               ],
             ),
-            if (payment.provider.isNotEmpty || payment.reference.isNotEmpty) ...[
+            if (payment.provider.isNotEmpty || payment.reference.isNotEmpty || payment.methodLabel.isNotEmpty) ...[
               const SizedBox(height: 10),
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
                 children: [
+                  _methodBadge(payment.methodLabel),
                   if (payment.provider.isNotEmpty)
                     _infoBadge(payment.provider.toUpperCase()),
                   if (payment.reference.isNotEmpty && !isFailed)
                     _infoBadge(payment.reference),
                 ],
+              ),
+            ],
+            // Show notes for cash payments (truncated to 200 chars)
+            if (payment.methodLabel == 'Cash' && payment.notes.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                payment.truncatedNotes,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: kMuted,
+                  height: 1.4,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
             const SizedBox(height: 12),
@@ -436,6 +517,42 @@ class _PaymentCard extends StatelessWidget {
             style: GoogleFonts.inter(
                 fontSize: 10, fontWeight: FontWeight.w600, color: kPrimaryLight)),
       );
+
+  Widget _methodBadge(String label) {
+    final Color badgeColor;
+    final IconData badgeIcon;
+    switch (label) {
+      case 'UPI':
+        badgeColor = const Color(0xFF4ADE80);
+        badgeIcon = Icons.account_balance_rounded;
+        break;
+      case 'Cash':
+        badgeColor = const Color(0xFFFBBF24);
+        badgeIcon = Icons.payments_rounded;
+        break;
+      default:
+        badgeColor = kPrimaryLight;
+        badgeIcon = Icons.language_rounded;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: badgeColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(badgeIcon, size: 10, color: badgeColor),
+          const SizedBox(width: 4),
+          Text(label,
+              style: GoogleFonts.inter(
+                  fontSize: 10, fontWeight: FontWeight.w700, color: badgeColor)),
+        ],
+      ),
+    );
+  }
 
   Widget _actionBtn({
     required String label,

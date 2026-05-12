@@ -365,6 +365,8 @@ class ApiClient {
             reference: (map['reference'] ?? '').toString(),
             viewUrl: (map['viewUrl'] ?? '').toString(),
             pdfUrl: (map['pdfUrl'] ?? '').toString(),
+            method: (map['method'] ?? '').toString(),
+            notes: (map['notes'] ?? '').toString(),
           );
         }).toList(),
         (item) => item.paidAt);
@@ -1596,6 +1598,24 @@ class ApiClient {
       invoices: invoices,
       paymentLink: paymentLink,
     );
+  }
+
+  /// Requests a fresh Jaze UPI payment link for the authenticated customer.
+  /// Returns the payment link URL on success, or null if unavailable.
+  Future<String?> requestPaymentLink(CustomerSession session) async {
+    try {
+      final data = _asMap(
+        await _request(
+          '/api/v1/customer/billing/jaze/payment-link',
+          method: 'POST',
+          token: session.accessToken,
+        ),
+      );
+      final link = (data['paymentLink'] ?? '').toString();
+      return link.isNotEmpty ? link : null;
+    } on Exception {
+      rethrow;
+    }
   }
 }
 

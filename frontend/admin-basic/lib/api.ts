@@ -3437,4 +3437,21 @@ export const adminAPI = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  collectCashPayment: async (payload: {
+    customerId: string
+    amount: number
+    method: 'cash' | 'onlinePayment' | 'manualCollection'
+    notes?: string
+  }) =>
+    request<{
+      transactionId: string | null
+      customerId: string
+      amount: number
+      method: string
+      notes: string
+      recordedAt: string
+    }>('/api/v1/admin/payments/collect-cash', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
 }

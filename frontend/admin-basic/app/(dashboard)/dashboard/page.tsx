@@ -7,13 +7,11 @@ import {
   ArrowUpRight,
   Briefcase,
   CreditCard,
-  Download,
   Eye,
   RefreshCw,
   Router,
   ShieldCheck,
   Ticket,
-  TrendingUp,
   UserPlus,
   Users,
   Wallet,
@@ -27,9 +25,8 @@ import { Avatar } from '@/components/ui/avatar'
 import { Badge, StatusBadge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
-import { CategoryBarChart, DonutChart, RevenueAreaChart } from '@/components/ui/charts'
+import { CategoryBarChart, DonutChart } from '@/components/ui/charts'
 import { EmptyState } from '@/components/ui/empty-state'
-import { Input } from '@/components/ui/input'
 import { PageHeader } from '@/components/ui/page-header'
 import { SkeletonCard, SkeletonTable } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/ui/stat-card'
@@ -76,10 +73,6 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState('')
-  const [otpLookup, setOtpLookup] = useState('')
-  const [otpValue, setOtpValue] = useState('')
-  const [otpLoading, setOtpLoading] = useState(false)
-  const [otpError, setOtpError] = useState('')
   const [currentZoneLabel, setCurrentZoneLabel] = useState('Admin')
   const [currentZoneCode, setCurrentZoneCode] = useState('default')
 
@@ -135,18 +128,6 @@ export default function DashboardPage() {
     }
   }
 
-  async function fetchDemoOtp() {
-    if (!otpLookup.trim()) { setOtpError('Enter mobile number first'); setOtpValue(''); return }
-    setOtpLoading(true); setOtpError(''); setOtpValue('')
-    try {
-      const res = await adminAPI.getCustomerDemoOtp(otpLookup.trim())
-      if (res.success && res.data?.otp) setOtpValue(res.data.otp)
-      else setOtpError(typeof res.error === 'string' ? res.error : (res.error as any)?.message || 'OTP not found')
-    } catch (err) {
-      setOtpError(err instanceof Error ? err.message : 'OTP lookup failed')
-    } finally { setOtpLoading(false) }
-  }
-
   const userCountSummary = useMemo(() => {
     const onlineUsers = typeof stats?.onlineUsers === 'number' ? stats.onlineUsers : customers.filter((c) => hasLivePppoeSession(c)).length
     const activeUsers = typeof stats?.activeUsers === 'number' ? stats.activeUsers : customers.filter((c) => c.status === 'active').length
@@ -197,13 +178,6 @@ export default function DashboardPage() {
       .slice(0, 8)
   }, [salesBookings, salesLeads])
 
-  // Mock revenue trend (last 7 days) - real data ko backend se laana hai
-  const revenueTrend = useMemo(() => {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-    const baseRevenue = (stats?.monthlyRevenue || 100000) / 30
-    return days.map((d, i) => ({ name: d, value: Math.round(baseRevenue * (0.7 + Math.random() * 0.6)) }))
-  }, [stats])
-
   const customerStatusData = useMemo(() => [
     { name: 'Active', value: userCountSummary.activeUsers },
     { name: 'Suspended', value: userCountSummary.suspendedUsers },
@@ -238,7 +212,6 @@ export default function DashboardPage() {
         description="Real-time business snapshot — customers, sessions, revenue, and field operations."
         actions={
           <>
-            <Button variant="secondary" size="sm" icon={<Download className="h-4 w-4" />}>Export</Button>
             <Button
               variant="secondary"
               size="sm"
@@ -267,7 +240,6 @@ export default function DashboardPage() {
           detail="Across all zones"
           icon={Users}
           iconColor="purple"
-          trend={{ value: 12.5, label: 'vs last month', positive: true }}
         />
         <StatCard
           label="Online Now"
@@ -275,7 +247,6 @@ export default function DashboardPage() {
           detail={`${((userCountSummary.onlineUsers / Math.max(1, userCountSummary.totalUsers)) * 100).toFixed(1)}% live sessions`}
           icon={Wifi}
           iconColor="emerald"
-          trend={{ value: 4.2, label: 'this hour', positive: true }}
         />
         <StatCard
           label="Monthly Revenue"
@@ -284,7 +255,6 @@ export default function DashboardPage() {
           icon={Wallet}
           iconColor="amber"
           format="raw"
-          trend={{ value: 8.3, label: 'vs last month', positive: true }}
         />
         <StatCard
           label="System Health"
@@ -307,21 +277,6 @@ export default function DashboardPage() {
 
       {/* Charts row */}
       <div className="grid gap-5 lg:grid-cols-3">
-        <Card padding="none" className="lg:col-span-2">
-          <CardHeader>
-            <div>
-              <CardTitle>Revenue Trend</CardTitle>
-              <p className="mt-1 text-sm text-slate-500">Last 7 days revenue</p>
-            </div>
-            <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
-              <TrendingUp className="h-3.5 w-3.5" /> +8.3%
-            </div>
-          </CardHeader>
-          <CardBody>
-            <RevenueAreaChart data={revenueTrend} />
-          </CardBody>
-        </Card>
-
         <Card padding="none">
           <CardHeader>
             <CardTitle>Customer Status</CardTitle>
@@ -436,52 +391,19 @@ export default function DashboardPage() {
         </div>
       </Card>
 
-      {/* OTP Lookup tool */}
-      <div className="grid gap-5 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-700">
-              <ShieldCheck className="h-6 w-6" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-base font-bold text-slate-900">Customer OTP Lookup</h3>
-              <p className="mt-1 text-sm text-slate-500">Fetch the active demo OTP for a customer mobile number.</p>
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                <Input
-                  className="flex-1"
-                  placeholder="Enter customer mobile (e.g. 9876543210)"
-                  value={otpLookup}
-                  onChange={(e) => setOtpLookup(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') void fetchDemoOtp() }}
-                />
-                <Button onClick={() => void fetchDemoOtp()} loading={otpLoading}>Fetch OTP</Button>
-              </div>
-              {otpValue ? (
-                <div className="mt-4 rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 p-4">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-purple-700">Active OTP</div>
-                  <div className="mt-1 font-mono text-3xl font-bold tracking-[0.4em] text-purple-900">{otpValue}</div>
-                </div>
-              ) : null}
-              {otpError ? (
-                <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{otpError}</div>
-              ) : null}
-            </div>
-          </div>
-        </Card>
-
-        <Card>
-          <h3 className="text-base font-bold text-slate-900">Network Status</h3>
-          <p className="mt-1 text-sm text-slate-500">Live PPPoE & router health.</p>
-          <div className="mt-4 space-y-3">
-            <StatusRow label="PPPoE Sessions" value={`${userCountSummary.onlineUsers} online`} status="success" />
-            <StatusRow label="Routers Operational" value={`${routerSummary.ready}/${routerSummary.total}`} status={routerSummary.ready === routerSummary.total ? 'success' : 'warning'} />
-            <StatusRow label="System Health" value={`${stats?.systemHealth ?? 0}%`} status={(stats?.systemHealth || 0) > 80 ? 'success' : 'warning'} />
-            <Link href="/network-map" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-purple-700 hover:underline">
-              View network map <ArrowUpRight className="h-3 w-3" />
-            </Link>
-          </div>
-        </Card>
-      </div>
+      {/* Network Status */}
+      <Card>
+        <h3 className="text-base font-bold text-slate-900">Network Status</h3>
+        <p className="mt-1 text-sm text-slate-500">Live PPPoE & router health.</p>
+        <div className="mt-4 space-y-3">
+          <StatusRow label="PPPoE Sessions" value={`${userCountSummary.onlineUsers} online`} status="success" />
+          <StatusRow label="Routers Operational" value={`${routerSummary.ready}/${routerSummary.total}`} status={routerSummary.ready === routerSummary.total ? 'success' : 'warning'} />
+          <StatusRow label="System Health" value={`${stats?.systemHealth ?? 0}%`} status={(stats?.systemHealth || 0) > 80 ? 'success' : 'warning'} />
+          <Link href="/network-map" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-purple-700 hover:underline">
+            View network map <ArrowUpRight className="h-3 w-3" />
+          </Link>
+        </div>
+      </Card>
     </div>
   )
 }
