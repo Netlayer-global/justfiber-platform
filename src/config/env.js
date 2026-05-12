@@ -84,7 +84,11 @@ const schema = z.object({
   NOC_DOMAIN: z.string().optional(),
   USER_DOMAIN: z.string().optional(),
   API_DOMAIN: z.string().optional(),
-  ACS_DOMAIN: z.string().optional()
+  ACS_DOMAIN: z.string().optional(),
+  SMARTFLO_SALES_NUMBER: z.string().optional(),
+  SMARTFLO_COMPLAINT_NUMBER: z.string().optional(),
+  SMARTFLO_WEBHOOK_SECRET: z.string().optional(),
+  SMARTFLO_API_TOKEN: z.string().optional()
 });
 
 const parsed = schema.parse(process.env);
