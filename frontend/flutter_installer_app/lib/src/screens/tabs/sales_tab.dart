@@ -370,30 +370,35 @@ class _LeadCardState extends State<_LeadCard> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
-                OutlinedButton.icon(
-                  onPressed: _busy
-                      ? null
-                      : () => _deleteBooking(appState),
-                  icon: const Icon(Icons.delete_outline_rounded, size: 16),
-                  label: Text(
-                    'Delete',
-                    style: GoogleFonts.inter(
-                        fontSize: 12, fontWeight: FontWeight.w700),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFEF4444),
-                    side: BorderSide(
-                        color: const Color(0xFFEF4444).withValues(alpha: 0.4)),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 10, horizontal: 16),
-                  ),
-                ),
               ],
             ),
           ],
+          const SizedBox(height: 12),
+          Container(height: 1, color: kDivider),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton.icon(
+              onPressed: _busy
+                  ? null
+                  : () => _deleteBooking(appState),
+              icon: const Icon(Icons.delete_outline_rounded, size: 16),
+              label: Text(
+                'Delete',
+                style: GoogleFonts.inter(
+                    fontSize: 12, fontWeight: FontWeight.w700),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFEF4444),
+                side: BorderSide(
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.4)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(
+                    vertical: 10, horizontal: 16),
+              ),
+            ),
+          ),
         ],
       ),
     );

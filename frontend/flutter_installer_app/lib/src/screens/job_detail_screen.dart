@@ -260,9 +260,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       if (!mounted) return;
       _show('Installation completed');
       await _showInstallCompletionSheet(result);
-      if (mounted) {
-        Navigator.of(context).pop(true);
-      }
     } catch (e) {
       _show(e.toString());
     } finally {
@@ -4232,7 +4229,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             _row('Serial', serial.isEmpty ? '(not scanned)' : serial),
           ])),
           // Countdown
-          if (_activationCountdown > 0) ...[
+          if (_activationCountdown > 0 || configStatus == 'pending' || configStatus == 'retried') ...[
             const SizedBox(height: 12),
             _wCard(
               borderColor: kPrimary.withValues(alpha: 0.35),
@@ -4240,26 +4237,36 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 Row(children: [
                   const Icon(Icons.settings_rounded, color: kPrimaryLight, size: 18),
                   const SizedBox(width: 10),
-                  Expanded(child: Text('Configuring router…',
+                  Expanded(child: Text(_activationCountdown > 0 ? 'Configuring router…' : 'Still configuring…',
                       style: GoogleFonts.inter(
                           color: kText, fontSize: 14, fontWeight: FontWeight.w800))),
-                  Text('${_activationCountdown}s',
-                      style: GoogleFonts.inter(
-                          color: kPrimaryLight, fontSize: 14, fontWeight: FontWeight.w900)),
+                  if (_activationCountdown > 0)
+                    Text('${_activationCountdown}s',
+                        style: GoogleFonts.inter(
+                            color: kPrimaryLight, fontSize: 14, fontWeight: FontWeight.w900))
+                  else
+                    const SizedBox(
+                      width: 16, height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: kPrimaryLight),
+                    ),
                 ]),
                 const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: (180 - _activationCountdown) / 180,
-                    minHeight: 8,
-                    backgroundColor: kSurface2,
-                    valueColor: const AlwaysStoppedAnimation(kPrimaryLight),
+                if (_activationCountdown > 0) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: (180 - _activationCountdown) / 180,
+                      minHeight: 8,
+                      backgroundColor: kSurface2,
+                      valueColor: const AlwaysStoppedAnimation(kPrimaryLight),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
+                  const SizedBox(height: 8),
+                ],
                 Text(
-                  'Applying Wi-Fi settings, pushing PPPoE config. Please wait.',
+                  _activationCountdown > 0
+                      ? 'Applying Wi-Fi settings, pushing PPPoE config. Please wait.'
+                      : 'Configuration is still being applied to the router. Please wait.',
                   style: GoogleFonts.inter(color: kMuted, fontSize: 12, height: 1.4),
                 ),
               ]),

@@ -883,6 +883,33 @@ class InstallerApiClient {
     );
   }
 
+  /// Fetches optical power data for a customer's device.
+  /// Uses the admin devices API to get optical info.
+  Future<Map<String, dynamic>> checkCustomerOptical(
+    InstallerSession session, {
+    required String customerId,
+  }) async {
+    return _asMap(await _request(
+      '/api/v1/installer/customers/$customerId/optical',
+      method: 'GET',
+      token: session.accessToken,
+    ));
+  }
+
+  /// Searches customers by query (name, phone, or customer ID).
+  Future<List<Map<String, dynamic>>> searchCustomers(
+    InstallerSession session, {
+    required String query,
+  }) async {
+    final list = _asList(await _request(
+      '/api/v1/installer/customers?search=$query',
+      token: session.accessToken,
+    ));
+    return list
+        .whereType<Map<String, dynamic>>()
+        .toList();
+  }
+
   /// Records a cash payment collected from a customer via the Jaze makePayment API.
   /// Returns the transaction details on success.
   Future<Map<String, dynamic>> collectCashPayment(

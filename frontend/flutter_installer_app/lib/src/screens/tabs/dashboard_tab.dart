@@ -5,6 +5,7 @@ import '../../core/app_state.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../fault_alert_detail_screen.dart';
+import '../optical_check_screen.dart';
 
 class DashboardTab extends StatelessWidget {
   const DashboardTab({super.key});
@@ -478,6 +479,69 @@ class DashboardTab extends StatelessWidget {
                             );
                           }).toList(),
                         ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // ── Quick Actions ──────────────────────────────────
+                _sectionLabel('QUICK ACTIONS'),
+                const SizedBox(height: 12),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const OpticalCheckScreen(),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: kSurface,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: kBorder),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0EA5E9).withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(
+                            Icons.network_check_rounded,
+                            color: Color(0xFF0EA5E9),
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Optical Check',
+                                style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              Text(
+                                'Check any customer\'s ONT optical power',
+                                style: GoogleFonts.inter(
+                                    color: kMuted, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right_rounded,
+                            color: kSubtle, size: 20),
+                      ],
+                    ),
+                  ),
                 ),
               ]),
             ),
