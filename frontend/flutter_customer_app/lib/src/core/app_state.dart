@@ -1351,7 +1351,7 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       bookingError = e.toString();
       error = bookingError;
-      rethrow;
+      return null;
     } finally {
       bookingBusy = false;
       notifyListeners();
@@ -1367,7 +1367,7 @@ class AppState extends ChangeNotifier {
     required String pinCode,
     required double lat,
     required double lng,
-    String paymentMode = 'cash',
+    String paymentMode = 'razorpay',
     int? durationMonths,
     String? durationLabel,
   }) async {

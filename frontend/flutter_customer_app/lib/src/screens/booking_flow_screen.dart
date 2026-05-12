@@ -31,7 +31,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   String _selectedDurationLabel = '1 month';
   static const String _selectedPaymentMode = 'razorpay';
   String? _selectedSlotCode = 'morning';
-  String? _selectedSlotLabel = '10 AM â€“ 1 PM';
+  String? _selectedSlotLabel = '10 AM - 1 PM';
   DateTime _preferredDate = DateTime.now().add(const Duration(days: 1));
   final MapController _mapController = MapController();
   LatLng _selectedLocation = const LatLng(28.6139, 77.2090);
@@ -81,7 +81,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       _selectedSlotCode =
           draft.selectedSlotCode.isEmpty ? 'morning' : draft.selectedSlotCode;
       _selectedSlotLabel = draft.selectedSlotLabel.isEmpty
-          ? '10 AM â€“ 1 PM'
+          ? '10 AM - 1 PM'
           : draft.selectedSlotLabel;
       _preferredDate = DateTime.tryParse(draft.preferredDateIso) ??
           DateTime.now().add(const Duration(days: 1));
@@ -113,7 +113,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     super.dispose();
   }
 
-  // â”€â”€â”€ Build â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ——— Build —————————————————————————————————————————————————————————————————
 
   @override
   Widget build(BuildContext context) {
@@ -171,7 +171,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     );
   }
 
-  // â”€â”€â”€ Steps â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ——— Steps —————————————————————————————————————————————————————————————————
 
   Widget _addressStep(AppState appState) {
     final feasibility = appState.feasibility;
@@ -199,7 +199,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Draft restored â€” continue where you left off.',
+                      'Draft restored - continue where you left off.',
                       style: GoogleFonts.inter(
                           color: kPrimary,
                           fontSize: 13,
@@ -262,7 +262,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                     )
                   : const Icon(Icons.my_location_rounded, size: 18),
               label: Text(
-                _locationBusy ? 'Fetching locationâ€¦' : 'Use Current Location',
+                _locationBusy ? 'Fetching location...' : 'Use Current Location',
                 style: GoogleFonts.inter(fontWeight: FontWeight.w700),
               ),
               style: FilledButton.styleFrom(
@@ -517,7 +517,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
 
           const SizedBox(height: 18),
           _primaryBtn(
-            label: appState.bookingBusy ? 'Checkingâ€¦' : 'Confirm & View Plans',
+            label: appState.bookingBusy ? 'Checking...' : 'Confirm & View Plans',
             onPressed: appState.bookingBusy
                 ? null
                 : () async {
@@ -693,7 +693,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Plans are loadingâ€¦',
+                  Text('Plans are loading...',
                       style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
@@ -702,7 +702,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                   Text(
                     (appState.error ?? '').isNotEmpty
                         ? appState.error!
-                        : 'Serviceability check passed. Retrying plan catalogâ€¦',
+                        : 'Serviceability check passed. Retrying plan catalog...',
                     style: GoogleFonts.inter(
                         color: kMuted, height: 1.45, fontSize: 13),
                   ),
@@ -849,38 +849,38 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             (
               'Customer',
               nameController.text.trim().isEmpty
-                  ? 'â€”'
+                  ? '-'
                   : nameController.text.trim()
             ),
             (
               'Mobile',
               mobileController.text.trim().isEmpty
-                  ? 'â€”'
+                  ? '-'
                   : mobileController.text.trim()
             ),
             (
               'Email',
               emailController.text.trim().isEmpty
-                  ? 'â€”'
+                  ? '-'
                   : emailController.text.trim()
             ),
             (
               'Address',
               addressController.text.trim().isEmpty
-                  ? 'â€”'
+                  ? '-'
                   : addressController.text.trim()
             ),
             (
               'Pin code',
               pinController.text.trim().isEmpty
-                  ? 'â€”'
+                  ? '-'
                   : pinController.text.trim()
             ),
-            ('Plan', selected?.name ?? 'â€”'),
+            ('Plan', selected?.name ?? '-'),
             (
               'Speed',
               selected == null
-                  ? 'â€”'
+                  ? '-'
                   : '${selected.speedMbps.toStringAsFixed(0)} Mbps'
             ),
             ('Duration', _selectedDurationLabel),
@@ -1019,6 +1019,10 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                 ? null
                 : manualEnquiry
                     ? () async {
+                        if (!_hasPickedLocation) {
+                          setState(() => _locationError = 'Please pin your location on the map');
+                          return;
+                        }
                         final leadNumber = await appState.submitConnectionLead(
                           fullName: nameController.text.trim(),
                           mobile: mobileController.text.trim(),
@@ -1056,6 +1060,10 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                     : appState.session == null
                         ? null
                         : () async {
+                            if (!_hasPickedLocation) {
+                              setState(() => _locationError = 'Please pin your location on the map');
+                              return;
+                            }
                             final ok = await appState.createBooking(
                               planCode: selectedPlanCode!,
                               fullName: nameController.text.trim(),
@@ -1174,7 +1182,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Booking ${latestBooking.bookingNumber} Â· ${latestBooking.status}',
+                        'Booking ${latestBooking.bookingNumber} · ${latestBooking.status}',
                         style: GoogleFonts.inter(
                             color: Colors.white70, fontSize: 13),
                       ),
@@ -1206,13 +1214,13 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             (
               'Install address',
               addressController.text.trim().isEmpty
-                  ? 'â€”'
+                  ? '-'
                   : addressController.text.trim()
             ),
             (
               'Pin code',
               pinController.text.trim().isEmpty
-                  ? 'â€”'
+                  ? '-'
                   : pinController.text.trim()
             ),
           ]),
@@ -1362,7 +1370,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
 
           _summaryBox([
             ('Preferred date', _formatDate(_preferredDate)),
-            ('Preferred slot', _selectedSlotLabel ?? 'â€”'),
+            ('Preferred slot', _selectedSlotLabel ?? '-'),
           ]),
 
           const SizedBox(height: 14),
@@ -1519,7 +1527,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Lead ${_manualLeadNumber ?? 'â€”'} created',
+                        'Lead ${_manualLeadNumber ?? '-'} created',
                         style: GoogleFonts.inter(
                             color: Colors.white,
                             fontWeight: FontWeight.w900,
@@ -1539,20 +1547,20 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           ),
           const SizedBox(height: 16),
           _summaryBox([
-            ('Lead Number', _manualLeadNumber ?? 'â€”'),
-            ('Plan', selected?.name ?? 'â€”'),
+            ('Lead Number', _manualLeadNumber ?? '-'),
+            ('Plan', selected?.name ?? '-'),
             ('Duration', _selectedDurationLabel),
             ('Preferred slot', _selectedSlotLabel ?? '—'),
             (
               'Install address',
               addressController.text.trim().isEmpty
-                  ? 'â€”'
+                  ? '-'
                   : addressController.text.trim()
             ),
             (
               'Pin code',
               pinController.text.trim().isEmpty
-                  ? 'â€”'
+                  ? '-'
                   : pinController.text.trim()
             ),
           ]),
@@ -1567,7 +1575,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     );
   }
 
-  // â”€â”€â”€ Stepper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ——— Stepper ———————————————————————————————————————————————————————————————
 
   Widget _stepper() {
     const labels = ['Address', 'Plan', 'Duration', 'Checkout', 'Confirm'];
@@ -1678,7 +1686,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     );
   }
 
-  // â”€â”€â”€ UI helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ——— UI helpers ————————————————————————————————————————————————————————————
 
   Widget _sectionCard({
     required String title,
@@ -1814,7 +1822,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                     ),
                   ),
                   child: Text(
-                    selected ? 'Selected âœ“' : 'Select',
+                    selected ? 'Selected ✓' : 'Select',
                     style: GoogleFonts.inter(
                       color: selected ? Colors.white : kPrimary,
                       fontSize: 11,
@@ -2181,7 +2189,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       );
 
-  // â”€â”€â”€ Logic helpers (unchanged) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ——— Logic helpers (unchanged) —————————————————————————————————————————————
 
   bool _validateAddressStep() {
     final messenger = ScaffoldMessenger.of(context);
@@ -2309,7 +2317,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       selectedDurationMonths: _selectedDurationMonths,
       selectedDurationLabel: _selectedDurationLabel,
       selectedSlotCode: _selectedSlotCode ?? 'morning',
-      selectedSlotLabel: _selectedSlotLabel ?? '10 AM â€“ 1 PM',
+      selectedSlotLabel: _selectedSlotLabel ?? '10 AM - 1 PM',
       preferredDateIso: _preferredDate.toIso8601String(),
       name: nameController.text.trim(),
       mobile: mobileController.text.trim(),
@@ -2331,7 +2339,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       _selectedDurationMonths = 1;
       _selectedDurationLabel = '1 month';
       _selectedSlotCode = 'morning';
-      _selectedSlotLabel = '10 AM â€“ 1 PM';
+      _selectedSlotLabel = '10 AM - 1 PM';
       _preferredDate = DateTime.now().add(const Duration(days: 1));
       _selectedLocation = const LatLng(28.6139, 77.2090);
       _hasPickedLocation = false;
@@ -2417,7 +2425,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   }
 }
 
-// â”€â”€â”€ Booking Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— Booking Header ————————————————————————————————————————————————————————————
 
 class _BookingHeader extends StatelessWidget {
   const _BookingHeader({
@@ -2478,7 +2486,7 @@ class _BookingHeader extends StatelessWidget {
                         const SizedBox(height: 3),
                         Text(
                           step < _stepNames.length
-                              ? 'Step ${step + 1} of ${_stepNames.length} Â· ${_stepNames[step]}'
+                              ? 'Step ${step + 1} of ${_stepNames.length} · ${_stepNames[step]}'
                               : 'Booking flow',
                           style: GoogleFonts.inter(
                               color: Colors.white60, fontSize: 13),
