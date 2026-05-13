@@ -232,8 +232,44 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
                             ),
                           ));
                         },
-                      )
-                    else if (latestInvoice != null)
+                      ),
+                    if (useJaze && jazeInvoices.length > 1) ...[
+                      const SizedBox(height: 12),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 18),
+                        child: GestureDetector(
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => _AllJazeInvoicesScreen(
+                              invoices: jazeInvoices,
+                              apiBaseUrl: appState.api.baseUrl,
+                              accessToken: appState.session?.accessToken ?? '',
+                            ),
+                          )),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            decoration: BoxDecoration(
+                              color: kSurface,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: kBorder),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.receipt_long_rounded, color: kPrimaryLight, size: 16),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'View All ${jazeInvoices.length} Invoices',
+                                  style: GoogleFonts.inter(color: kPrimaryLight, fontWeight: FontWeight.w700, fontSize: 13),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.chevron_right_rounded, color: kPrimaryLight, size: 18),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (!useJaze && latestInvoice != null)
                       _ReceiptCard(
                         invoice: latestInvoice,
                         onOpen: (latestInvoice.pdfUrl.isNotEmpty ||
@@ -2122,5 +2158,103 @@ class _InvoiceViewerScreenState extends State<_InvoiceViewerScreen> {
         ],
       ),
     );
+  }
+}
+
+
+// ── All Jaze Invoices Screen ──────────────────────────────────────────────────
+
+class _AllJazeInvoicesScreen extends StatelessWidget {
+  const _AllJazeInvoicesScreen({
+    required this.invoices,
+    required this.apiBaseUrl,
+    required this.accessToken,
+  });
+
+  final List<JazeInvoice> invoices;
+  final String apiBaseUrl;
+  final String accessToken;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kBg,
+      appBar: AppBar(
+        title: Text('All Invoices (${invoices.length})',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+      ),
+      body: ListView.separated(
+        padding: const EdgeInsets.all(18),
+        itemCount: invoices.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          final inv = invoices[index];
+          return GestureDetector(
+            onTap: () {
+              final base = apiBaseUrl.replaceAll(RegExp(r'/$'), '');
+              final url = '$base/api/v1/customer/billing/jaze/invoice-pdf?invoiceId=${inv.invoiceId}';
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => _InvoiceViewerScreen(
+                  title: 'Invoice #${inv.invoiceId}',
+                  url: url,
+                  accessToken: accessToken,
+                ),
+              ));
+            },
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: kSurface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: kBorder),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: kPrimary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.receipt_rounded, color: kPrimaryLight, size: 18),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          inv.planGroupName.isNotEmpty ? inv.planGroupName : 'Internet Service',
+                          style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '${inv.durationLabel} • ${_fmtShort(inv.issuedAt)}',
+                          style: GoogleFonts.inter(color: kMuted, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    'Rs ${inv.amount.toStringAsFixed(0)}',
+                    style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(Icons.chevron_right_rounded, color: kMuted, size: 18),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  static String _fmtShort(String raw) {
+    if (raw.isEmpty) return '-';
+    final dt = DateTime.tryParse(raw);
+    if (dt == null) return raw;
+    return '${dt.day}/${dt.month}/${dt.year}';
   }
 }
