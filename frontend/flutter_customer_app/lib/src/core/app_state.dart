@@ -304,9 +304,12 @@ class AppState extends ChangeNotifier {
                   customerId: selectedCustomerId)),
         runRefreshTask(
             'jaze billing',
-            () async => jazeBilling = await api.fetchJazeBilling(
-                current,
-                customerId: selectedCustomerId)),
+            () async {
+              jazeBilling = await api.fetchJazeBilling(
+                  current,
+                  customerId: selectedCustomerId);
+              debugPrint('[refresh] jazeBilling: summary=${jazeBilling?.summary != null}, invoices=${jazeBilling?.invoices.length ?? 0}, selectedCustomerId=$selectedCustomerId');
+            }),
         runRefreshTask('notifications',
             () async => notifications = await api.fetchNotifications(current)),
         runRefreshTask(
@@ -1042,7 +1045,9 @@ class AppState extends ChangeNotifier {
         current,
         customerId: selectedCustomerId,
       );
+      debugPrint('[AppState] jazeBilling loaded: summary=${jazeBilling?.summary != null}, invoices=${jazeBilling?.invoices.length ?? 0}');
     } catch (e) {
+      debugPrint('[AppState] jazeBilling FAILED: $e');
       error = e.toString();
       jazeBilling = null;
     } finally {

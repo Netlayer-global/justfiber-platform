@@ -1,6 +1,8 @@
 -keep class io.flutter.** { *; }
 -keep class com.justfiber.** { *; }
 -dontwarn com.google.firebase.**
+-dontwarn com.google.android.play.**
+-keep class com.google.android.play.** { *; }
 
 -keepattributes *Annotation*
 -dontwarn com.razorpay.**

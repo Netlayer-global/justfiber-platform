@@ -161,20 +161,16 @@ async function autoLinkDevices() {
 
     let linked = 0;
     for (const customer of customers) {
+      // Find device matching this customer's PPPoE username that is NOT already linked to them
       const device = await DeviceOperationalCache.findOne({
         $or: [
           { "wanInfo.pppoeUsername": customer.pppoeUsername },
           { "wanInfo.pppoeUsernameMasked": customer.pppoeUsername },
         ],
-        $or: [
-          { customerId: { $exists: false } },
-          { customerId: null },
-          { customerId: "" },
-          { customerId: { $ne: customer.customerId } },
-        ]
+        customerId: { $in: [null, "", undefined] }
       });
 
-      if (device && (!device.customerId || device.customerId !== customer.customerId)) {
+      if (device) {
         await DeviceOperationalCache.updateOne(
           { _id: device._id },
           { $set: { customerId: customer.customerId, serviceId: customer.pppoeUsername } }

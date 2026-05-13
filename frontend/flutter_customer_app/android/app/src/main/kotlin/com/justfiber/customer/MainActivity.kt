@@ -1,4 +1,4 @@
-package com.example.justfiber_customer_app
+package com.justfiber.customer
 
 import io.flutter.embedding.android.FlutterActivity
 
