@@ -1,4 +1,5 @@
 import { Customer } from "../models/Customer.js";
+import { DeviceOperationalCache } from "../models/DeviceOperationalCache.js";
 import { jazeClient } from "../integrations/jazeClient.js";
 
 const BATCH_SIZE = 20;
@@ -146,5 +147,46 @@ export async function runJazeSyncJob() {
     `[jaze-sync] Sync complete in ${duration}s — processed: ${totalProcessed}, updated: ${totalUpdated}, skipped: ${totalSkipped}, failed: ${totalFailed}`
   );
 
+  // Auto-link devices to customers by pppoeUsername
+  await autoLinkDevices();
+
   return { totalProcessed, totalUpdated, totalSkipped, totalFailed, durationSeconds: Number(duration) };
+}
+
+async function autoLinkDevices() {
+  try {
+    const customers = await Customer.find({
+      pppoeUsername: { $exists: true, $ne: null, $ne: "" }
+    }).lean();
+
+    let linked = 0;
+    for (const customer of customers) {
+      const device = await DeviceOperationalCache.findOne({
+        $or: [
+          { "wanInfo.pppoeUsername": customer.pppoeUsername },
+          { "wanInfo.pppoeUsernameMasked": customer.pppoeUsername },
+        ],
+        $or: [
+          { customerId: { $exists: false } },
+          { customerId: null },
+          { customerId: "" },
+          { customerId: { $ne: customer.customerId } },
+        ]
+      });
+
+      if (device && (!device.customerId || device.customerId !== customer.customerId)) {
+        await DeviceOperationalCache.updateOne(
+          { _id: device._id },
+          { $set: { customerId: customer.customerId, serviceId: customer.pppoeUsername } }
+        );
+        linked++;
+      }
+    }
+
+    if (linked > 0) {
+      console.log(`[jaze-sync] Auto-linked ${linked} devices to customers`);
+    }
+  } catch (error) {
+    console.error("[jaze-sync] Device auto-link failed:", error.message);
+  }
 }
