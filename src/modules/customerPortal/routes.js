@@ -3860,15 +3860,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .balance-label { font-size: 9px; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 1px; }
 .balance-amount { font-size: 18px; font-weight: 900; color: #fff; margin-top: 1px; }
 .divider { height: 1px; background: #f0f0f0; margin: 14px 0; }
-.company-info { font-size: 10px; color: #6b7280; line-height: 1.6; }
-.company-info strong { color: #1a1a1a; font-size: 11px; }
+.company-info { font-size: 10px; color: #374151; line-height: 1.6; }
+.company-info strong { color: #111827; font-size: 11px; }
 .bill-section { display: flex; flex-direction: column; gap: 12px; margin: 14px 0; }
 .bill-to h3 { font-size: 9px; color: #7c3aed; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; }
 .bill-to .name { font-size: 14px; font-weight: 700; color: #1a1a1a; margin-bottom: 3px; }
-.bill-to p { font-size: 11px; color: #4b5563; line-height: 1.5; }
+.bill-to p { font-size: 11px; color: #374151; line-height: 1.5; }
 .meta-table { background: #f9fafb; border-radius: 10px; padding: 10px 12px; border: 1px solid #f0f0f0; }
 .meta-table .row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 11px; }
-.meta-table .row .l { color: #6b7280; }
+.meta-table .row .l { color: #374151; }
 .meta-table .row .v { color: #1a1a1a; font-weight: 600; }
 table.items { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 11px; }
 table.items th { background: #f9fafb; padding: 8px 6px; font-size: 9px; font-weight: 700; color: #6b7280; text-align: left; text-transform: uppercase; letter-spacing: 0.3px; border-bottom: 2px solid #e5e7eb; }
@@ -3876,19 +3876,19 @@ table.items th:last-child { text-align: right; }
 table.items td { border-bottom: 1px solid #f3f4f6; padding: 10px 6px; color: #374151; vertical-align: top; }
 table.items td:last-child { text-align: right; font-weight: 700; color: #1a1a1a; }
 table.items .item-name { font-weight: 700; color: #1a1a1a; font-size: 11px; }
-table.items .item-sub { font-size: 9px; color: #9ca3af; margin-top: 2px; }
+table.items .item-sub { font-size: 9px; color: #6b7280; margin-top: 2px; }
 .summary { margin-top: 14px; }
 .totals { background: #f9fafb; border-radius: 12px; padding: 12px; border: 1px solid #f0f0f0; }
 .totals .row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 11px; }
-.totals .row .l { color: #6b7280; }
+.totals .row .l { color: #374151; }
 .totals .row .v { color: #1a1a1a; font-weight: 600; }
 .totals .row.total { border-top: 2px solid #7c3aed; padding-top: 8px; margin-top: 6px; }
 .totals .row.total .l, .totals .row.total .v { color: #1a1a1a; font-weight: 800; font-size: 13px; }
 .totals .row.balance .l, .totals .row.balance .v { color: #7c3aed; font-weight: 800; }
-.notes { font-size: 10px; color: #6b7280; margin-top: 14px; }
-.notes strong { color: #374151; display: block; margin-bottom: 3px; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; }
-.payment-info { font-size: 10px; color: #6b7280; margin-top: 10px; }
-.payment-info strong { color: #374151; display: block; margin-bottom: 3px; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; }
+.notes { font-size: 10px; color: #374151; margin-top: 14px; }
+.notes strong { color: #111827; display: block; margin-bottom: 3px; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; }
+.payment-info { font-size: 10px; color: #374151; margin-top: 10px; }
+.payment-info strong { color: #111827; display: block; margin-bottom: 3px; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; }
 .footer { margin-top: 18px; padding-top: 12px; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: flex-end; font-size: 9px; color: #9ca3af; }
 .footer .sign { text-align: right; border-top: 1px solid #1a1a1a; padding-top: 4px; font-weight: 600; color: #1a1a1a; font-size: 10px; }
 </style>
@@ -3977,6 +3977,10 @@ table.items .item-sub { font-size: 9px; color: #9ca3af; margin-top: 2px; }
   <div class="footer">
     <div>+919240204444 | justfiber.in</div>
     <div class="sign">Authorised Signatory</div>
+  </div>
+
+  <div style="margin-top:16px;text-align:center">
+    <button onclick="window.print()" style="background:#7c3aed;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Download / Print Invoice</button>
   </div>
 </div>
 </body>
