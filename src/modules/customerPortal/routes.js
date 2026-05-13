@@ -31,6 +31,7 @@ import { SupportTicket } from "../../models/SupportTicket.js";
 import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { AccessProfile } from "../../models/AccessProfile.js";
 import { SubscriberService } from "../../models/SubscriberService.js";
+import { JazeUserCache } from "../../models/JazeUserCache.js";
 import { buildPagination } from "../../common/pagination.js";
 import { razorpayClient } from "../../integrations/razorpayClient.js";
 import {
@@ -2412,6 +2413,34 @@ customerPortalRouter.post(
     ];
     let user = identityClauses.length ? await CustomerUser.findOne({ $or: identityClauses }) : null;
     if (!user) {
+      // Auto-link: check JazeUserCache for matching phone before creating a new user
+      let autoLinkedCustomerId = null;
+      if (identity.mobile) {
+        const normalizedPhone = identity.mobile.replace(/\D/g, "").slice(-10);
+        const jazeCache = await JazeUserCache.findOne({ phone: normalizedPhone });
+        if (jazeCache && jazeCache.jazeUserId) {
+          // Check if a Customer already exists for this Jaze user
+          const existingCustomer = await Customer.findOne({ jazeUserId: jazeCache.jazeUserId });
+          if (existingCustomer) {
+            autoLinkedCustomerId = existingCustomer.customerId;
+          } else {
+            const customerId = `JF${Math.floor(100000 + Math.random() * 900000)}`;
+            await Customer.create({
+              customerId,
+              fullName: jazeCache.name || "JustFiber Customer",
+              mobile: identity.mobile,
+              email: jazeCache.email || "",
+              serviceId: jazeCache.username || customerId,
+              jazeUserId: jazeCache.jazeUserId,
+              jazeStatus: jazeCache.status || "active",
+              operationalStatus: jazeCache.status === "active" ? "active" : "suspended",
+              planCode: "",
+              zoneCode: "",
+            });
+            autoLinkedCustomerId = customerId;
+          }
+        }
+      }
       user = await CustomerUser.create({
         mobile: identity.mobile || undefined,
         email: identity.email || undefined,
@@ -2420,9 +2449,11 @@ customerPortalRouter.post(
         linkedCustomerIds: Array.from(
           new Set([
             ...linkedCustomerIds,
-            ...(identity.linkedCustomerId ? [identity.linkedCustomerId] : [])
+            ...(identity.linkedCustomerId ? [identity.linkedCustomerId] : []),
+            ...(autoLinkedCustomerId ? [autoLinkedCustomerId] : [])
           ])
-        )
+        ),
+        state: autoLinkedCustomerId ? "active_customer" : undefined,
       });
     } else {
       user.linkedCustomerIds = Array.from(

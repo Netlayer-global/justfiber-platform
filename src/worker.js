@@ -43,6 +43,7 @@ import {
 } from "./common/billingAccounting.js";
 import { applyCustomerWaiverResolution, applyCustomerWriteoffResolution } from "./common/billingResolutions.js";
 import { runJazeSyncJob } from "./jobs/jazeSyncJob.js";
+import { runJazeUserCacheSync } from "./jobs/jazeUserCacheSyncJob.js";
 
 await connectMongo();
 await seedSystemData();
@@ -1871,3 +1872,9 @@ setInterval(() => {
 }, 10 * 60 * 1000);
 
 void runJazeSync();
+
+setInterval(() => {
+  void runJazeUserCacheSync();
+}, 60 * 60 * 1000);
+
+void runJazeUserCacheSync();
