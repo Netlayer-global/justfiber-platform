@@ -3788,13 +3788,12 @@ customerPortalRouter.get(
       throw new ApiError(404, "No invoices found");
     }
 
-    // Use first (latest) invoice or specific one by query param
     const invoiceId = req.query.invoiceId;
     const invoice = invoiceId 
       ? invoices.find(i => i.invoiceId === invoiceId) || invoices[0]
       : invoices[0];
 
-    // Fetch full user details from Jaze for address info
+    // Fetch full user details from Jaze
     let jazeUser = {};
     try {
       const details = await jazeClient.getSingleUserDetails(customer.jazeUserId);
@@ -3805,7 +3804,7 @@ customerPortalRouter.get(
       if (!raw) return "-";
       const d = new Date(raw);
       if (isNaN(d.getTime())) return raw;
-      return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+      return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
     };
 
     const customerName = customer.fullName || jazeUser.name || "Customer";
@@ -3813,18 +3812,35 @@ customerPortalRouter.get(
     const customerEmail = customer.email || jazeUser.email || "";
     const customerAddress = jazeUser.address_line1 || customer.address?.fullAddress || "";
     const customerCity = jazeUser.address_city || "";
-    const customerState = jazeUser.address_state || "Haryana";
     const customerPin = jazeUser.address_pin || "";
+    const customerId = customer.customerId || "";
+    const planName = invoice.planGroupName || customer.planName || "Internet Service";
     const circuitId = customer.jazeUserId || "";
-    const sgst = (invoice.taxAmount / 2).toFixed(2);
-    const cgst = (invoice.taxAmount / 2).toFixed(2);
 
-    // Generate invoice number in JFB format
+    // Invoice number from order_id
     const issueDate = new Date(invoice.issuedAt || Date.now());
     const fy = issueDate.getMonth() >= 3 
       ? `${String(issueDate.getFullYear()).slice(2)}-${String(issueDate.getFullYear() + 1).slice(2)}`
       : `${String(issueDate.getFullYear() - 1).slice(2)}-${String(issueDate.getFullYear()).slice(2)}`;
-    const invoiceNumber = `JFB/${fy}/${invoice.invoiceId}`;
+    const invoiceNumber = `JF-${fy}-${invoice.orderId || invoice.invoiceId}`;
+
+    // Due date = issue date + 30 days
+    const dueDate = new Date(issueDate);
+    dueDate.setDate(dueDate.getDate() + 30);
+
+    // Split into 2 line items: Internet service (25%) + Platform fee (75%)
+    const internetRate = Math.round(invoice.baseAmount * 0.25 * 100) / 100;
+    const platformRate = Math.round((invoice.baseAmount - internetRate) * 100) / 100;
+    const internetCgst = Math.round(internetRate * 0.09 * 100) / 100;
+    const internetSgst = internetCgst;
+    const platformCgst = Math.round(platformRate * 0.09 * 100) / 100;
+    const platformSgst = platformCgst;
+    const subTotal = invoice.baseAmount;
+    const totalCgst = Math.round((internetCgst + platformCgst) * 100) / 100;
+    const totalSgst = Math.round((internetSgst + platformSgst) * 100) / 100;
+    const total = invoice.amount;
+    const durationLabel = invoice.durationLabel || "Monthly";
+    const balanceDue = total;
 
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(`<!DOCTYPE html>
@@ -3832,124 +3848,152 @@ customerPortalRouter.get(
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; padding: 16px; }
-  .invoice { max-width: 640px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 28px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
-  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
-  .brand { font-size: 26px; font-weight: 900; background: linear-gradient(135deg, #7c3aed, #2563eb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .inv-badge { background: #1e40af; color: #fff; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px; display: inline-block; margin-top: 4px; }
-  .inv-num { font-size: 18px; font-weight: 800; color: #1e293b; text-align: right; }
-  .inv-label { font-size: 16px; font-weight: 700; color: #1e40af; text-align: right; }
-  .amount-due { background: #1e40af; color: #fff; border-radius: 6px; padding: 8px 14px; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; margin-top: 8px; }
-  .divider { height: 1px; background: #e2e8f0; margin: 16px 0; }
-  .company-info { font-size: 12px; color: #475569; line-height: 1.7; margin-bottom: 16px; }
-  .company-info strong { color: #1e293b; font-size: 13px; }
-  .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
-  .meta-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
-  .meta-row .label { color: #64748b; font-weight: 600; }
-  .meta-row .value { color: #1e293b; font-weight: 700; }
-  .section-title { font-size: 13px; font-weight: 700; color: #1e40af; margin: 16px 0 8px; }
-  .addr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-  .addr-block { font-size: 12px; color: #475569; line-height: 1.6; }
-  .addr-block strong { color: #1e293b; display: block; margin-bottom: 4px; font-size: 13px; }
-  .table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12px; }
-  .table th { background: #1e40af; color: #fff; padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 700; }
-  .table th:last-child { text-align: right; }
-  .table td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; color: #334155; }
-  .table td:last-child { text-align: right; font-weight: 600; }
-  .table .desc { font-size: 11px; color: #64748b; }
-  .totals { margin-top: 8px; }
-  .totals .row { display: flex; justify-content: space-between; padding: 6px 12px; font-size: 12px; }
-  .totals .row.final { background: #f1f5f9; border-radius: 6px; font-weight: 800; font-size: 14px; color: #1e293b; padding: 10px 12px; }
-  .bank-info { margin-top: 16px; font-size: 11px; color: #475569; line-height: 1.8; }
-  .bank-info strong { color: #1e293b; }
-  .footer { margin-top: 20px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 12px; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #fff; color: #1a1a1a; padding: 20px; font-size: 13px; }
+.invoice { max-width: 680px; margin: 0 auto; }
+.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+.brand { font-size: 32px; font-weight: 900; background: linear-gradient(135deg, #7c3aed, #2563eb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-style: italic; }
+.header-right { text-align: right; }
+.header-right h1 { font-size: 22px; color: #475569; font-weight: 600; margin-bottom: 4px; }
+.header-right .inv-num { font-size: 16px; font-weight: 800; color: #1e293b; }
+.balance-box { text-align: right; margin-top: 8px; }
+.balance-label { font-size: 12px; color: #64748b; }
+.balance-amount { font-size: 22px; font-weight: 800; color: #1e293b; }
+.company-info { font-size: 12px; color: #475569; line-height: 1.7; margin-bottom: 20px; }
+.company-info strong { color: #1e293b; font-size: 13px; }
+.bill-section { display: flex; justify-content: space-between; margin-bottom: 20px; gap: 20px; }
+.bill-to { flex: 1; }
+.bill-to h3 { font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.bill-to .name { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+.bill-to p { font-size: 12px; color: #475569; line-height: 1.6; }
+.meta-table { flex: 0 0 200px; }
+.meta-table .row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
+.meta-table .row .l { color: #64748b; font-weight: 600; }
+.meta-table .row .v { color: #1e293b; font-weight: 600; text-align: right; }
+table.items { width: 100%; border-collapse: collapse; margin: 16px 0; }
+table.items th { background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 8px; font-size: 11px; font-weight: 700; color: #475569; text-align: center; }
+table.items th:nth-child(2) { text-align: left; }
+table.items td { border: 1px solid #e2e8f0; padding: 10px 8px; font-size: 12px; color: #334155; text-align: center; vertical-align: top; }
+table.items td:nth-child(2) { text-align: left; }
+table.items .item-name { font-weight: 700; color: #1e293b; }
+table.items .item-sub { font-size: 11px; color: #64748b; }
+table.items .tax-rate { font-size: 10px; color: #64748b; }
+.summary { display: flex; justify-content: space-between; margin-top: 16px; gap: 20px; }
+.notes { flex: 1; font-size: 11px; color: #475569; }
+.notes strong { color: #1e293b; display: block; margin-bottom: 4px; }
+.payment-info { font-size: 11px; color: #475569; margin-top: 12px; }
+.payment-info strong { color: #1e293b; display: block; margin-bottom: 4px; }
+.totals { flex: 0 0 220px; }
+.totals .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 12px; border-bottom: 1px solid #f1f5f9; }
+.totals .row .l { color: #475569; }
+.totals .row .v { color: #1e293b; font-weight: 600; }
+.totals .row.total { border-top: 2px solid #1e293b; border-bottom: none; padding-top: 10px; margin-top: 4px; }
+.totals .row.total .l { font-weight: 800; color: #1e293b; font-size: 13px; }
+.totals .row.total .v { font-weight: 800; font-size: 14px; }
+.totals .row.balance { color: #7c3aed; }
+.totals .row.balance .l, .totals .row.balance .v { color: #7c3aed; font-weight: 800; }
+.footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: flex-end; font-size: 11px; color: #94a3b8; }
+.footer .sign { text-align: right; border-top: 1px solid #1e293b; padding-top: 6px; font-weight: 600; color: #1e293b; font-size: 12px; }
 </style>
 </head>
 <body>
 <div class="invoice">
   <div class="header">
-    <div>
-      <div class="brand">JustFiber</div>
-      <div class="inv-badge">Original Copy</div>
-    </div>
-    <div style="text-align:right">
-      <div class="inv-label">TAX INVOICE</div>
-      <div class="inv-num">${invoiceNumber}</div>
-      <div class="amount-due">Amount Due: ₹${invoice.amount.toFixed(2)}</div>
+    <div class="brand">JustFiber</div>
+    <div class="header-right">
+      <h1>TAX INVOICE</h1>
+      <div class="inv-num"># ${invoiceNumber}</div>
+      <div class="balance-box">
+        <div class="balance-label">Balance Due</div>
+        <div class="balance-amount">Rs ${balanceDue.toFixed(2)}</div>
+      </div>
     </div>
   </div>
 
   <div class="company-info">
-    <strong>JustFiber Netlayer India Private Limited</strong><br>
-    PLOT NO. 76D, SECTOR 18, Udyog Vihar Phase 4, Gurugram, Haryana (06) 122015<br>
-    9240204444 | hariom@netlayer.net<br>
-    GSTIN: 06AAICN3717E1ZN | Website: justfiber.in
+    <strong>Netlayer India Private Limited</strong><br>
+    76D Udhyog Vihar Phase 4 Sector 18 Gurgram 122015<br>
+    GSTIN 06AAICN3717E1ZN<br>
+    Phone +919240204444<br>
+    Email accounts@netlayer.net
   </div>
 
-  <div class="meta-grid">
-    <div>
-      <div class="meta-row"><span class="label">Issue Date:</span><span class="value">${fmtDate(invoice.issuedAt)}</span></div>
-      <div class="meta-row"><span class="label">Due Date:</span><span class="value">${fmtDate(invoice.issuedAt)}</span></div>
-      <div class="meta-row"><span class="label">Place of Supply:</span><span class="value">${customerState} (06)</span></div>
+  <div class="bill-section">
+    <div class="bill-to">
+      <h3>Bill To</h3>
+      <div class="name">${customerName}</div>
+      <p>
+        ${customerAddress}${customerCity ? ', ' + customerCity : ''}<br>
+        HARYANA<br>
+        ${customerPin || ''}<br>
+        Phone: ${customerPhone}<br>
+        ${customerEmail ? 'Email: ' + customerEmail + '<br>' : ''}
+        Customer ID: ${customerId}<br>
+        Plan: ${planName}
+      </p>
+      <p style="margin-top:8px;font-weight:600">Place Of Supply: HARYANA</p>
     </div>
-    <div>
-      <div class="meta-row"><span class="label">User ID:</span><span class="value">${circuitId}</span></div>
-      <div class="meta-row"><span class="label">Username:</span><span class="value">${customer.pppoeUsername || jazeUser.username || ""}</span></div>
-    </div>
-  </div>
-
-  <div class="divider"></div>
-
-  <div class="addr-grid">
-    <div class="addr-block">
-      <strong>Billing Address:</strong>
-      ${customerName}<br>
-      ${customerAddress}${customerCity ? ', ' + customerCity : ''}${customerPin ? ' ' + customerPin : ''}<br>
-      ${customerState} (06)<br>
-      ${customerPhone}
-    </div>
-    <div class="addr-block">
-      <strong>Installation Address:</strong>
-      ${customerAddress}${customerCity ? ', ' + customerCity : ''}${customerPin ? ' ' + customerPin : ''}<br>
-      ${customerState} (06)
+    <div class="meta-table">
+      <div class="row"><span class="l">Invoice Date :</span><span class="v">${fmtDate(invoice.issuedAt)}</span></div>
+      <div class="row"><span class="l">Terms :</span><span class="v">${durationLabel}</span></div>
+      <div class="row"><span class="l">Due Date :</span><span class="v">${fmtDate(dueDate.toISOString())}</span></div>
+      <div class="row"><span class="l">Status :</span><span class="v">unpaid</span></div>
     </div>
   </div>
 
-  <div class="divider"></div>
-
-  <table class="table">
+  <table class="items">
     <thead>
-      <tr><th>S.No</th><th>Item Description</th><th>HSN/SAC</th><th>QTY</th><th>Price</th><th>Taxable Value</th></tr>
+      <tr><th>#</th><th>Item & Description</th><th>HSN/SAC</th><th>Qty</th><th>Rate</th><th>CGST</th><th>SGST</th><th>Amount</th></tr>
     </thead>
     <tbody>
       <tr>
         <td>1</td>
-        <td>Rental<br><span class="desc">${invoice.planGroupName || "Internet Service"} period from ${fmtDate(invoice.periodStart)} to ${fmtDate(invoice.periodEnd)}</span></td>
-        <td></td>
-        <td>1.0</td>
-        <td>₹${invoice.baseAmount.toFixed(2)}</td>
-        <td>₹${invoice.baseAmount.toFixed(2)}</td>
+        <td><span class="item-name">Internet service charge - ${durationLabel}</span><br><span class="item-sub">Internet</span></td>
+        <td>9984</td>
+        <td>1.00</td>
+        <td>Rs ${internetRate.toFixed(2)}</td>
+        <td>Rs ${internetCgst.toFixed(2)}<br><span class="tax-rate">9%</span></td>
+        <td>Rs ${internetSgst.toFixed(2)}<br><span class="tax-rate">9%</span></td>
+        <td style="font-weight:700">Rs ${internetRate.toFixed(2)}</td>
       </tr>
-      <tr><td colspan="5" style="text-align:right;color:#64748b">SGST @ 9.00%</td><td>₹${sgst}</td></tr>
-      <tr><td colspan="5" style="text-align:right;color:#64748b">CGST @ 9.00%</td><td>₹${cgst}</td></tr>
+      <tr>
+        <td>2</td>
+        <td><span class="item-name">Platform fee - ${durationLabel}</span><br><span class="item-sub">Platform</span></td>
+        <td>9984</td>
+        <td>1.00</td>
+        <td>Rs ${platformRate.toFixed(2)}</td>
+        <td>Rs ${platformCgst.toFixed(2)}<br><span class="tax-rate">9%</span></td>
+        <td>Rs ${platformSgst.toFixed(2)}<br><span class="tax-rate">9%</span></td>
+        <td style="font-weight:700">Rs ${platformRate.toFixed(2)}</td>
+      </tr>
     </tbody>
   </table>
 
-  <div class="totals">
-    <div class="row"><span>Total Taxable Value</span><span>₹${invoice.baseAmount.toFixed(2)}</span></div>
-    <div class="row final"><span>Total Value (in figure)</span><span>₹${invoice.amount.toFixed(2)}</span></div>
-  </div>
-
-  <div class="bank-info">
-    <strong>Bank Details:</strong><br>
-    Bank Name: HDFC Bank | Account: 50200070934647<br>
-    Branch: HDFC Bank, Model Town | IFSC: HDFC0000250
+  <div class="summary">
+    <div>
+      <div class="notes">
+        <strong>Notes</strong>
+        Please pay before the due date to avoid service interruption.
+      </div>
+      <div class="payment-info">
+        <strong>Payment Info</strong>
+        Bank: Hdfc Bank<br>
+        A/C Name: Netlayer India Private Limited<br>
+        IFSC: HDFC0000250
+      </div>
+    </div>
+    <div class="totals">
+      <div class="row"><span class="l">Sub Total</span><span class="v">Rs ${subTotal.toFixed(2)}</span></div>
+      <div class="row"><span class="l">CGST (9%)</span><span class="v">Rs ${totalCgst.toFixed(2)}</span></div>
+      <div class="row"><span class="l">SGST (9%)</span><span class="v">Rs ${totalSgst.toFixed(2)}</span></div>
+      <div class="row total"><span class="l">Total</span><span class="v">Rs ${total.toFixed(2)}</span></div>
+      <div class="row balance"><span class="l">Balance Due</span><span class="v">Rs ${balanceDue.toFixed(2)}</span></div>
+    </div>
   </div>
 
   <div class="footer">
-    This is a computer-generated invoice and does not require a signature.<br>
-    JustFiber Netlayer India Private Limited | justfiber.in | support@justfiber.in
+    <div>+919240204444 | justfiber.in</div>
+    <div class="sign">Authorised Signatory</div>
   </div>
 </div>
 </body>
