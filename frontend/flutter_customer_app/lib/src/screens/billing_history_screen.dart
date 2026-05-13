@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/app_state.dart';
 import '../core/models.dart';
@@ -215,12 +216,14 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
                     if (useJaze && jazeInvoices.isNotEmpty)
                       _JazeInvoiceCard(
                         invoice: jazeInvoices.first,
-                        onDownloadPdf: () => _openDocument(
-                          context,
-                          appState,
-                          'Invoice ${jazeInvoices.first.invoiceId}',
-                          '/api/v1/customer/billing/jaze/invoice-pdf?invoiceId=${jazeInvoices.first.invoiceId}',
-                        ),
+                        onDownloadPdf: () async {
+                          final session = appState.session;
+                          if (session == null) return;
+                          final base = appState.api.baseUrl.replaceAll(RegExp(r'/$'), '');
+                          final url = Uri.parse(
+                            '$base/api/v1/customer/billing/jaze/invoice-pdf?invoiceId=${jazeInvoices.first.invoiceId}&token=${session.accessToken}');
+                          await launchUrl(url, mode: LaunchMode.externalApplication);
+                        },
                       )
                     else if (latestInvoice != null)
                       _ReceiptCard(

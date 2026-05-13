@@ -60,12 +60,14 @@ export async function persistCustomerSession({ user, refreshToken }) {
 
 export async function requireCustomerAuth(req, _res, next) {
   const header = req.headers.authorization;
-  if (!header?.startsWith("Bearer ")) {
+  const queryToken = req.query?.token;
+  const bearerToken = header?.startsWith("Bearer ") ? header.slice(7) : queryToken;
+  if (!bearerToken) {
     return next(new ApiError(401, "Customer authentication required"));
   }
 
   try {
-    const payload = jwt.verify(header.slice(7), env.JWT_ACCESS_SECRET);
+    const payload = jwt.verify(bearerToken, env.JWT_ACCESS_SECRET);
     if (payload.scope !== "customer") {
       throw new ApiError(401, "Invalid customer scope");
     }
