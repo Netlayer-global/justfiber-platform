@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 import '../core/app_state.dart';
 import '../core/models.dart';
@@ -216,12 +218,20 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
                     if (useJaze && jazeInvoices.isNotEmpty)
                       _JazeInvoiceCard(
                         invoice: jazeInvoices.first,
-                        onDownloadPdf: () => _openDocument(
-                          context,
-                          appState,
-                          'Invoice #${jazeInvoices.first.invoiceId}',
-                          '/api/v1/customer/billing/jaze/invoice-pdf?invoiceId=${jazeInvoices.first.invoiceId}',
-                        ),
+                        onDownloadPdf: () async {
+                          final session = appState.session;
+                          if (session == null) return;
+                          final base = appState.api.baseUrl.replaceAll(RegExp(r'/$'), '');
+                          final url = '$base/api/v1/customer/billing/jaze/invoice-pdf?invoiceId=${jazeInvoices.first.invoiceId}';
+                          if (!context.mounted) return;
+                          await Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => _InvoiceViewerScreen(
+                              title: 'Invoice #${jazeInvoices.first.invoiceId}',
+                              url: url,
+                              accessToken: session.accessToken,
+                            ),
+                          ));
+                        },
                       )
                     else if (latestInvoice != null)
                       _ReceiptCard(
@@ -2018,5 +2028,87 @@ class _JazeInvoiceCard extends StatelessWidget {
     final dt = DateTime.tryParse(raw);
     if (dt == null) return raw;
     return '${dt.day}/${dt.month}/${dt.year}';
+  }
+}
+
+
+// ── Invoice HTML Viewer ───────────────────────────────────────────────────────
+
+class _InvoiceViewerScreen extends StatefulWidget {
+  const _InvoiceViewerScreen({
+    required this.title,
+    required this.url,
+    required this.accessToken,
+  });
+
+  final String title;
+  final String url;
+  final String accessToken;
+
+  @override
+  State<_InvoiceViewerScreen> createState() => _InvoiceViewerScreenState();
+}
+
+class _InvoiceViewerScreenState extends State<_InvoiceViewerScreen> {
+  late final WebViewController _controller;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0xFF0f0f1a))
+      ..setNavigationDelegate(NavigationDelegate(
+        onPageFinished: (_) => setState(() => _loading = false),
+        onWebResourceError: (_) => setState(() {
+          _loading = false;
+          _error = 'Failed to load invoice';
+        }),
+      ));
+    _loadInvoice();
+  }
+
+  Future<void> _loadInvoice() async {
+    try {
+      final response = await http.get(
+        Uri.parse(widget.url),
+        headers: {'Authorization': 'Bearer ${widget.accessToken}'},
+      ).timeout(const Duration(seconds: 20));
+
+      if (response.statusCode != 200) {
+        setState(() { _error = 'Failed to load (${response.statusCode})'; _loading = false; });
+        return;
+      }
+
+      // Load HTML directly into WebView
+      await _controller.loadHtmlString(response.body);
+    } catch (e) {
+      setState(() { _error = 'Could not load invoice.'; _loading = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0f0f1a),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF1a1a2e),
+        title: Text(widget.title, style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16)),
+      ),
+      body: Stack(
+        children: [
+          if (_error != null)
+            Center(
+              child: Text(_error!, style: GoogleFonts.inter(color: kMuted, fontSize: 14)),
+            )
+          else
+            WebViewWidget(controller: _controller),
+          if (_loading)
+            const Center(child: CircularProgressIndicator(color: kPrimaryLight)),
+        ],
+      ),
+    );
   }
 }
