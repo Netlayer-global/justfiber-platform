@@ -1,4 +1,4 @@
-import { Router } from "express";
+﻿import { Router } from "express";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import { asyncHandler } from "../../common/asyncHandler.js";
@@ -3669,7 +3669,7 @@ customerPortalRouter.get(
   })
 );
 
-// ─── Jaze-direct billing endpoints ───────────────────────────────────────────
+// â”€â”€â”€ Jaze-direct billing endpoints â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Source of truth: Jaze. JustFiber acts as a thin proxy/adapter so customer apps
 // see real renewals, outstanding amounts, and payment links from Jaze.
 
@@ -3775,7 +3775,7 @@ customerPortalRouter.get(
   })
 );
 
-// ─── Invoice PDF Generation ──────────────────────────────────────────────────
+// â”€â”€â”€ Invoice PDF Generation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 customerPortalRouter.get(
   "/billing/jaze/invoice-pdf",
@@ -3844,53 +3844,51 @@ customerPortalRouter.get(
     res.send(`<!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f0f1a; color: #e2e8f0; padding: 20px; font-size: 13px; }
-.invoice { max-width: 640px; margin: 0 auto; background: #1a1a2e; border-radius: 20px; padding: 28px; border: 1px solid #2a2a4a; }
-.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
-.brand { font-size: 28px; font-weight: 900; color: #8b5cf6; letter-spacing: -1px; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f0f1a; color: #e2e8f0; padding: 16px; font-size: 12px; }
+.invoice { max-width: 100%; margin: 0 auto; background: #1a1a2e; border-radius: 20px; padding: 20px; border: 1px solid #2a2a4a; }
+.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+.brand { font-size: 24px; font-weight: 900; color: #8b5cf6; letter-spacing: -1px; }
 .header-right { text-align: right; }
-.header-right h1 { font-size: 13px; color: #8b5cf6; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
-.header-right .inv-num { font-size: 14px; font-weight: 700; color: #94a3b8; margin-top: 4px; }
-.balance-box { margin-top: 10px; background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-radius: 12px; padding: 12px 16px; }
-.balance-label { font-size: 10px; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 1px; }
-.balance-amount { font-size: 22px; font-weight: 900; color: #fff; margin-top: 2px; }
-.divider { height: 1px; background: #2a2a4a; margin: 18px 0; }
-.company-info { font-size: 11px; color: #64748b; line-height: 1.7; }
-.company-info strong { color: #e2e8f0; font-size: 12px; }
-.bill-section { display: flex; justify-content: space-between; gap: 16px; margin: 18px 0; }
-.bill-to { flex: 1; }
-.bill-to h3 { font-size: 10px; color: #8b5cf6; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
-.bill-to .name { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px; }
-.bill-to p { font-size: 12px; color: #94a3b8; line-height: 1.6; }
-.meta-table { flex: 0 0 180px; }
-.meta-table .row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #1f1f3a; font-size: 11px; }
+.header-right h1 { font-size: 11px; color: #8b5cf6; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+.header-right .inv-num { font-size: 11px; font-weight: 600; color: #94a3b8; margin-top: 3px; }
+.balance-box { margin-top: 8px; background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-radius: 10px; padding: 10px 14px; text-align: center; }
+.balance-label { font-size: 9px; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 1px; }
+.balance-amount { font-size: 20px; font-weight: 900; color: #fff; margin-top: 2px; }
+.divider { height: 1px; background: #2a2a4a; margin: 14px 0; }
+.company-info { font-size: 10px; color: #64748b; line-height: 1.6; }
+.company-info strong { color: #e2e8f0; font-size: 11px; }
+.bill-section { display: flex; flex-direction: column; gap: 12px; margin: 14px 0; }
+.bill-to h3 { font-size: 9px; color: #8b5cf6; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; }
+.bill-to .name { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 3px; }
+.bill-to p { font-size: 11px; color: #94a3b8; line-height: 1.5; }
+.meta-table { background: #12122a; border-radius: 10px; padding: 10px 12px; }
+.meta-table .row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 11px; }
 .meta-table .row .l { color: #64748b; }
 .meta-table .row .v { color: #e2e8f0; font-weight: 600; }
-table.items { width: 100%; border-collapse: collapse; margin: 16px 0; }
-table.items th { background: #12122a; padding: 10px 8px; font-size: 10px; font-weight: 700; color: #8b5cf6; text-align: center; text-transform: uppercase; letter-spacing: 0.5px; }
-table.items th:nth-child(2) { text-align: left; }
-table.items td { border-bottom: 1px solid #1f1f3a; padding: 10px 8px; font-size: 12px; color: #cbd5e1; text-align: center; vertical-align: top; }
-table.items td:nth-child(2) { text-align: left; }
-table.items .item-name { font-weight: 700; color: #fff; }
-table.items .item-sub { font-size: 10px; color: #64748b; }
-table.items .tax-rate { font-size: 9px; color: #64748b; }
-.summary { display: flex; justify-content: space-between; margin-top: 16px; gap: 16px; }
-.notes { flex: 1; font-size: 11px; color: #64748b; }
-.notes strong { color: #94a3b8; display: block; margin-bottom: 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
-.payment-info { font-size: 11px; color: #64748b; margin-top: 12px; }
-.payment-info strong { color: #94a3b8; display: block; margin-bottom: 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
-.totals { flex: 0 0 200px; }
-.totals .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 12px; border-bottom: 1px solid #1f1f3a; }
+table.items { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 11px; }
+table.items th { background: #12122a; padding: 8px 6px; font-size: 9px; font-weight: 700; color: #8b5cf6; text-align: left; text-transform: uppercase; letter-spacing: 0.3px; }
+table.items th:last-child { text-align: right; }
+table.items td { border-bottom: 1px solid #1f1f3a; padding: 8px 6px; color: #cbd5e1; vertical-align: top; }
+table.items td:last-child { text-align: right; font-weight: 700; color: #fff; }
+table.items .item-name { font-weight: 700; color: #fff; font-size: 11px; }
+table.items .item-sub { font-size: 9px; color: #64748b; }
+.summary { margin-top: 14px; }
+.notes { font-size: 10px; color: #64748b; margin-bottom: 12px; }
+.notes strong { color: #94a3b8; display: block; margin-bottom: 3px; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; }
+.payment-info { font-size: 10px; color: #64748b; margin-bottom: 12px; }
+.payment-info strong { color: #94a3b8; display: block; margin-bottom: 3px; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; }
+.totals { background: #12122a; border-radius: 12px; padding: 12px; }
+.totals .row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 11px; }
 .totals .row .l { color: #94a3b8; }
 .totals .row .v { color: #e2e8f0; font-weight: 600; }
-.totals .row.total { border-top: 1px solid #8b5cf6; border-bottom: none; padding-top: 10px; margin-top: 6px; }
-.totals .row.total .l, .totals .row.total .v { color: #fff; font-weight: 800; font-size: 14px; }
+.totals .row.total { border-top: 1px solid #8b5cf6; padding-top: 8px; margin-top: 4px; }
+.totals .row.total .l, .totals .row.total .v { color: #fff; font-weight: 800; font-size: 13px; }
 .totals .row.balance .l, .totals .row.balance .v { color: #8b5cf6; font-weight: 800; }
-.footer { margin-top: 24px; padding-top: 14px; border-top: 1px solid #2a2a4a; display: flex; justify-content: space-between; align-items: flex-end; font-size: 10px; color: #475569; }
-.footer .sign { text-align: right; border-top: 1px solid #64748b; padding-top: 6px; font-weight: 600; color: #94a3b8; font-size: 11px; }
+.footer { margin-top: 18px; padding-top: 12px; border-top: 1px solid #2a2a4a; display: flex; justify-content: space-between; align-items: flex-end; font-size: 9px; color: #475569; }
+.footer .sign { text-align: right; border-top: 1px solid #64748b; padding-top: 4px; font-weight: 600; color: #94a3b8; font-size: 10px; }
 </style>
 </head>
 <body>
@@ -3902,15 +3900,15 @@ table.items .tax-rate { font-size: 9px; color: #64748b; }
       <div class="inv-num"># ${invoiceNumber}</div>
       <div class="balance-box">
         <div class="balance-label">Balance Due</div>
-        <div class="balance-amount">Rs ${balanceDue.toFixed(2)}</div>
+        <div class="balance-amount">Rs ${balanceDue.toFixed(0)}</div>
       </div>
     </div>
   </div>
 
   <div class="company-info">
     <strong>Netlayer India Private Limited</strong><br>
-    76D Udhyog Vihar Phase 4 Sector 18 Gurgram 122015<br>
-    GSTIN 06AAICN3717E1ZN | Phone +919240204444 | accounts@netlayer.net
+    76D Udhyog Vihar Phase 4, Sector 18, Gurgram 122015<br>
+    GSTIN 06AAICN3717E1ZN | +919240204444
   </div>
 
   <div class="divider"></div>
@@ -3920,14 +3918,10 @@ table.items .tax-rate { font-size: 9px; color: #64748b; }
       <h3>Bill To</h3>
       <div class="name">${customerName}</div>
       <p>
-        ${customerAddress}${customerCity ? ', ' + customerCity : ''}<br>
-        HARYANA ${customerPin || ''}<br>
-        Phone: ${customerPhone}<br>
-        ${customerEmail ? 'Email: ' + customerEmail + '<br>' : ''}
-        Customer ID: ${customerId}<br>
-        Plan: ${planName}
+        ${customerAddress}${customerCity ? ', ' + customerCity : ''}, HARYANA ${customerPin || ''}<br>
+        Phone: ${customerPhone}${customerEmail ? ' | ' + customerEmail : ''}<br>
+        ID: ${customerId} | Plan: ${planName}
       </p>
-      <p style="margin-top:6px;color:#8b5cf6;font-weight:600;font-size:11px">Place Of Supply: HARYANA</p>
     </div>
     <div class="meta-table">
       <div class="row"><span class="l">Invoice Date</span><span class="v">${fmtDate(invoice.issuedAt)}</span></div>
@@ -3939,51 +3933,42 @@ table.items .tax-rate { font-size: 9px; color: #64748b; }
 
   <table class="items">
     <thead>
-      <tr><th>#</th><th>Item & Description</th><th>HSN</th><th>Qty</th><th>Rate</th><th>CGST</th><th>SGST</th><th>Amount</th></tr>
+      <tr><th>#</th><th>Description</th><th>HSN</th><th>Qty</th><th>Amount</th></tr>
     </thead>
     <tbody>
       <tr>
         <td>1</td>
-        <td><span class="item-name">Internet service - ${durationLabel}</span><br><span class="item-sub">Internet</span></td>
+        <td><span class="item-name">Internet service - ${durationLabel}</span><br><span class="item-sub">HSN 9984 | CGST ${internetCgst.toFixed(0)} + SGST ${internetSgst.toFixed(0)}</span></td>
         <td>9984</td>
-        <td>1.00</td>
-        <td>Rs ${internetRate.toFixed(2)}</td>
-        <td>Rs ${internetCgst.toFixed(2)}<br><span class="tax-rate">9%</span></td>
-        <td>Rs ${internetSgst.toFixed(2)}<br><span class="tax-rate">9%</span></td>
-        <td style="font-weight:700;color:#fff">Rs ${internetRate.toFixed(2)}</td>
+        <td>1</td>
+        <td>Rs ${internetRate.toFixed(0)}</td>
       </tr>
       <tr>
         <td>2</td>
-        <td><span class="item-name">Platform fee - ${durationLabel}</span><br><span class="item-sub">Platform</span></td>
+        <td><span class="item-name">Platform fee - ${durationLabel}</span><br><span class="item-sub">HSN 9984 | CGST ${platformCgst.toFixed(0)} + SGST ${platformSgst.toFixed(0)}</span></td>
         <td>9984</td>
-        <td>1.00</td>
-        <td>Rs ${platformRate.toFixed(2)}</td>
-        <td>Rs ${platformCgst.toFixed(2)}<br><span class="tax-rate">9%</span></td>
-        <td>Rs ${platformSgst.toFixed(2)}<br><span class="tax-rate">9%</span></td>
-        <td style="font-weight:700;color:#fff">Rs ${platformRate.toFixed(2)}</td>
+        <td>1</td>
+        <td>Rs ${platformRate.toFixed(0)}</td>
       </tr>
     </tbody>
   </table>
 
   <div class="summary">
-    <div>
-      <div class="notes">
-        <strong>Notes</strong>
-        Please pay before the due date to avoid service interruption.
-      </div>
-      <div class="payment-info">
-        <strong>Payment Info</strong>
-        Bank: HDFC Bank<br>
-        A/C: Netlayer India Private Limited<br>
-        IFSC: HDFC0000250
-      </div>
-    </div>
     <div class="totals">
       <div class="row"><span class="l">Sub Total</span><span class="v">Rs ${subTotal.toFixed(2)}</span></div>
       <div class="row"><span class="l">CGST (9%)</span><span class="v">Rs ${totalCgst.toFixed(2)}</span></div>
       <div class="row"><span class="l">SGST (9%)</span><span class="v">Rs ${totalSgst.toFixed(2)}</span></div>
       <div class="row total"><span class="l">Total</span><span class="v">Rs ${total.toFixed(2)}</span></div>
       <div class="row balance"><span class="l">Balance Due</span><span class="v">Rs ${balanceDue.toFixed(2)}</span></div>
+    </div>
+
+    <div class="notes">
+      <strong>Notes</strong>
+      Please pay before the due date to avoid service interruption.
+    </div>
+    <div class="payment-info">
+      <strong>Payment Info</strong>
+      Bank: HDFC Bank | A/C: Netlayer India Pvt Ltd | IFSC: HDFC0000250
     </div>
   </div>
 
@@ -3996,6 +3981,7 @@ table.items .tax-rate { font-size: 9px; color: #64748b; }
 </html>`);
   })
 );
+
 
 customerPortalRouter.get(
   "/wifi",
