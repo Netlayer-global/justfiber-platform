@@ -34,6 +34,7 @@ import { SubscriberService } from "../../models/SubscriberService.js";
 import { JazeUserCache } from "../../models/JazeUserCache.js";
 import { buildPagination } from "../../common/pagination.js";
 import { razorpayClient } from "../../integrations/razorpayClient.js";
+import { jazeClient } from "../../integrations/jazeClient.js";
 import {
   fetchBillingSummary,
   fetchInvoiceHistory,
@@ -3216,6 +3217,20 @@ customerPortalRouter.post(
       }
     );
 
+    // Record payment in Jaze so invoice gets marked paid + service resumes
+    if (customer.jazeUserId && amount > 0) {
+      try {
+        await jazeClient.makePayment({
+          userId: customer.jazeUserId,
+          amount,
+          method: "onlinePayment",
+          notes: `Paid via JustFiber app (Razorpay: ${payload.razorpayPaymentId})`
+        });
+      } catch (jazeErr) {
+        console.error(`[billing-verify] Jaze makePayment failed for ${customer.customerId}:`, jazeErr.message);
+      }
+    }
+
     return ok(res, {
       customerId: customer.customerId,
       ...result
@@ -3345,6 +3360,23 @@ customerPortalRouter.post(
           }
         }
       );
+    }
+
+    // Record payment in Jaze so invoice gets marked paid + service resumes
+    if (customer.jazeUserId) {
+      const paymentAmount = Number(payment.amount || 0) / 100;
+      if (paymentAmount > 0) {
+        try {
+          await jazeClient.makePayment({
+            userId: customer.jazeUserId,
+            amount: paymentAmount,
+            method: "onlinePayment",
+            notes: `Paid via JustFiber app (Razorpay webhook: ${payment.id})`
+          });
+        } catch (jazeErr) {
+          console.error(`[razorpay-webhook] Jaze makePayment failed for ${customerId}:`, jazeErr.message);
+        }
+      }
     }
 
     await IntegrationEventLog.create({
