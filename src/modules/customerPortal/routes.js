@@ -3775,6 +3775,108 @@ customerPortalRouter.get(
   })
 );
 
+// ─── Invoice PDF Generation ──────────────────────────────────────────────────
+
+customerPortalRouter.get(
+  "/billing/jaze/invoice-pdf",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const customer = await resolveJazeCustomer(req);
+    const invoices = await fetchInvoiceHistory(customer.jazeUserId);
+    
+    if (!invoices.length) {
+      throw new ApiError(404, "No invoices found");
+    }
+
+    // Use first (latest) invoice or specific one by query param
+    const invoiceId = req.query.invoiceId;
+    const invoice = invoiceId 
+      ? invoices.find(i => i.invoiceId === invoiceId) || invoices[0]
+      : invoices[0];
+
+    // Generate PDF
+    const PDFDocument = (await import("pdfkit")).default;
+    const pdf = new PDFDocument({ size: "A4", margin: 50 });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="Invoice-${invoice.invoiceId}.pdf"`);
+    pdf.pipe(res);
+
+    // Header
+    pdf.fontSize(24).font("Helvetica-Bold").text("JustFiber", 50, 50);
+    pdf.fontSize(10).font("Helvetica").fillColor("#666666").text("Internet Service Provider", 50, 78);
+    pdf.fontSize(10).text("Rewari, Haryana", 50, 92);
+    
+    // Invoice title
+    pdf.fillColor("#000000").fontSize(18).font("Helvetica-Bold").text("TAX INVOICE", 400, 50, { align: "right" });
+    pdf.fontSize(10).font("Helvetica").fillColor("#666666");
+    pdf.text(`Invoice #: ${invoice.invoiceId}`, 400, 75, { align: "right" });
+    pdf.text(`Date: ${formatPdfDate(invoice.issuedAt)}`, 400, 90, { align: "right" });
+
+    // Divider
+    pdf.moveTo(50, 120).lineTo(545, 120).strokeColor("#e0e0e0").stroke();
+
+    // Customer info
+    pdf.fillColor("#000000").fontSize(11).font("Helvetica-Bold").text("Bill To:", 50, 140);
+    pdf.fontSize(10).font("Helvetica").fillColor("#333333");
+    pdf.text(customer.fullName || "Customer", 50, 158);
+    pdf.text(customer.mobile || "", 50, 173);
+    pdf.text(customer.email || "", 50, 188);
+
+    // Invoice details box
+    pdf.fillColor("#000000").fontSize(11).font("Helvetica-Bold").text("Invoice Details:", 300, 140);
+    pdf.fontSize(10).font("Helvetica").fillColor("#333333");
+    pdf.text(`Period: ${formatPdfDate(invoice.periodStart)} to ${formatPdfDate(invoice.periodEnd)}`, 300, 158);
+    pdf.text(`Duration: ${invoice.durationLabel}`, 300, 173);
+    pdf.text(`Plan: ${invoice.planGroupName || "Internet Service"}`, 300, 188);
+
+    // Table header
+    const tableTop = 230;
+    pdf.fillColor("#f5f5f5").rect(50, tableTop, 495, 25).fill();
+    pdf.fillColor("#000000").fontSize(10).font("Helvetica-Bold");
+    pdf.text("Description", 60, tableTop + 8);
+    pdf.text("Amount", 450, tableTop + 8, { align: "right" });
+
+    // Table rows
+    let y = tableTop + 35;
+    pdf.font("Helvetica").fillColor("#333333");
+    
+    pdf.text(`Internet Service - ${invoice.planGroupName || "Broadband"}`, 60, y);
+    pdf.text(`Rs ${invoice.baseAmount.toFixed(2)}`, 450, y, { align: "right" });
+    y += 25;
+
+    pdf.text("GST (18%)", 60, y);
+    pdf.text(`Rs ${invoice.taxAmount.toFixed(2)}`, 450, y, { align: "right" });
+    y += 25;
+
+    // Divider before total
+    pdf.moveTo(50, y).lineTo(545, y).strokeColor("#e0e0e0").stroke();
+    y += 15;
+
+    // Total
+    pdf.fontSize(12).font("Helvetica-Bold").fillColor("#000000");
+    pdf.text("Total Amount", 60, y);
+    pdf.text(`Rs ${invoice.amount.toFixed(2)}`, 450, y, { align: "right" });
+    y += 35;
+
+    // Footer
+    pdf.moveTo(50, y).lineTo(545, y).strokeColor("#e0e0e0").stroke();
+    y += 20;
+    pdf.fontSize(9).font("Helvetica").fillColor("#999999");
+    pdf.text("This is a computer-generated invoice and does not require a signature.", 50, y);
+    pdf.text("For queries, contact support@justfiber.in", 50, y + 15);
+
+    pdf.end();
+  })
+);
+
+function formatPdfDate(raw) {
+  if (!raw) return "-";
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return raw;
+  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
+
 customerPortalRouter.get(
   "/wifi",
   requireCustomerAuth,

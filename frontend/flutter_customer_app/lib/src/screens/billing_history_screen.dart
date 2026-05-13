@@ -213,7 +213,15 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
                     _sectionLabel('LATEST INVOICE'),
                     const SizedBox(height: 8),
                     if (useJaze && jazeInvoices.isNotEmpty)
-                      _JazeInvoiceCard(invoice: jazeInvoices.first)
+                      _JazeInvoiceCard(
+                        invoice: jazeInvoices.first,
+                        onDownloadPdf: () => _openDocument(
+                          context,
+                          appState,
+                          'Invoice ${jazeInvoices.first.invoiceId}',
+                          '/api/v1/customer/billing/jaze/invoice-pdf?invoiceId=${jazeInvoices.first.invoiceId}',
+                        ),
+                      )
                     else if (latestInvoice != null)
                       _ReceiptCard(
                         invoice: latestInvoice,
@@ -1878,9 +1886,10 @@ class _UsageCard extends StatelessWidget {
 // ── Jaze Invoice Card ─────────────────────────────────────────────────────────
 
 class _JazeInvoiceCard extends StatelessWidget {
-  const _JazeInvoiceCard({required this.invoice});
+  const _JazeInvoiceCard({required this.invoice, this.onDownloadPdf});
 
   final JazeInvoice invoice;
+  final VoidCallback? onDownloadPdf;
 
   @override
   Widget build(BuildContext context) {
@@ -1965,6 +1974,24 @@ class _JazeInvoiceCard extends StatelessWidget {
               ),
             ],
           ),
+          if (onDownloadPdf != null) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: onDownloadPdf,
+                icon: const Icon(Icons.picture_as_pdf_rounded, size: 16),
+                label: Text('Download Invoice PDF',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 12)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF8224E3),
+                  side: const BorderSide(color: Color(0x448224E3)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
