@@ -3847,59 +3847,61 @@ customerPortalRouter.get(
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f0f1a; color: #e2e8f0; padding: 16px; font-size: 12px; }
-.invoice { max-width: 100%; margin: 0 auto; background: #1a1a2e; border-radius: 20px; padding: 20px; border: 1px solid #2a2a4a; }
-.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
-.brand { font-size: 26px; font-weight: 900; letter-spacing: -1px; font-style: italic; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8f9fa; color: #1a1a1a; padding: 16px; font-size: 12px; }
+.invoice { max-width: 100%; margin: 0 auto; background: #fff; border-radius: 16px; padding: 22px; box-shadow: 0 2px 16px rgba(0,0,0,0.06); }
+.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 2px solid #f0f0f0; }
+.brand { font-size: 28px; font-weight: 900; letter-spacing: -1px; }
+.brand .just { color: #1a1a1a; }
+.brand .fiber { color: #7c3aed; }
 .header-right { text-align: right; }
-.header-right h1 { font-size: 11px; color: #8b5cf6; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
-.header-right .inv-num { font-size: 11px; font-weight: 600; color: #94a3b8; margin-top: 3px; }
-.balance-box { margin-top: 8px; background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-radius: 10px; padding: 10px 14px; text-align: center; }
-.balance-label { font-size: 9px; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 1px; }
-.balance-amount { font-size: 20px; font-weight: 900; color: #fff; margin-top: 2px; }
-.divider { height: 1px; background: #2a2a4a; margin: 14px 0; }
-.company-info { font-size: 10px; color: #64748b; line-height: 1.6; }
-.company-info strong { color: #e2e8f0; font-size: 11px; }
+.header-right h1 { font-size: 12px; color: #7c3aed; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+.header-right .inv-num { font-size: 11px; font-weight: 600; color: #6b7280; margin-top: 3px; }
+.balance-box { margin-top: 8px; background: #7c3aed; border-radius: 8px; padding: 8px 12px; text-align: center; }
+.balance-label { font-size: 9px; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 1px; }
+.balance-amount { font-size: 18px; font-weight: 900; color: #fff; margin-top: 1px; }
+.divider { height: 1px; background: #f0f0f0; margin: 14px 0; }
+.company-info { font-size: 10px; color: #6b7280; line-height: 1.6; }
+.company-info strong { color: #1a1a1a; font-size: 11px; }
 .bill-section { display: flex; flex-direction: column; gap: 12px; margin: 14px 0; }
-.bill-to h3 { font-size: 9px; color: #8b5cf6; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; }
-.bill-to .name { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 3px; }
-.bill-to p { font-size: 11px; color: #94a3b8; line-height: 1.5; }
-.meta-table { background: #12122a; border-radius: 10px; padding: 10px 12px; }
+.bill-to h3 { font-size: 9px; color: #7c3aed; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; }
+.bill-to .name { font-size: 14px; font-weight: 700; color: #1a1a1a; margin-bottom: 3px; }
+.bill-to p { font-size: 11px; color: #4b5563; line-height: 1.5; }
+.meta-table { background: #f9fafb; border-radius: 10px; padding: 10px 12px; border: 1px solid #f0f0f0; }
 .meta-table .row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 11px; }
-.meta-table .row .l { color: #64748b; }
-.meta-table .row .v { color: #e2e8f0; font-weight: 600; }
+.meta-table .row .l { color: #6b7280; }
+.meta-table .row .v { color: #1a1a1a; font-weight: 600; }
 table.items { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 11px; }
-table.items th { background: #12122a; padding: 8px 6px; font-size: 9px; font-weight: 700; color: #8b5cf6; text-align: left; text-transform: uppercase; letter-spacing: 0.3px; }
+table.items th { background: #f9fafb; padding: 8px 6px; font-size: 9px; font-weight: 700; color: #6b7280; text-align: left; text-transform: uppercase; letter-spacing: 0.3px; border-bottom: 2px solid #e5e7eb; }
 table.items th:last-child { text-align: right; }
-table.items td { border-bottom: 1px solid #1f1f3a; padding: 8px 6px; color: #cbd5e1; vertical-align: top; }
-table.items td:last-child { text-align: right; font-weight: 700; color: #fff; }
-table.items .item-name { font-weight: 700; color: #fff; font-size: 11px; }
-table.items .item-sub { font-size: 9px; color: #64748b; }
+table.items td { border-bottom: 1px solid #f3f4f6; padding: 10px 6px; color: #374151; vertical-align: top; }
+table.items td:last-child { text-align: right; font-weight: 700; color: #1a1a1a; }
+table.items .item-name { font-weight: 700; color: #1a1a1a; font-size: 11px; }
+table.items .item-sub { font-size: 9px; color: #9ca3af; margin-top: 2px; }
 .summary { margin-top: 14px; }
-.notes { font-size: 10px; color: #64748b; margin-bottom: 12px; }
-.notes strong { color: #94a3b8; display: block; margin-bottom: 3px; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; }
-.payment-info { font-size: 10px; color: #64748b; margin-bottom: 12px; }
-.payment-info strong { color: #94a3b8; display: block; margin-bottom: 3px; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; }
-.totals { background: #12122a; border-radius: 12px; padding: 12px; }
+.totals { background: #f9fafb; border-radius: 12px; padding: 12px; border: 1px solid #f0f0f0; }
 .totals .row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 11px; }
-.totals .row .l { color: #94a3b8; }
-.totals .row .v { color: #e2e8f0; font-weight: 600; }
-.totals .row.total { border-top: 1px solid #8b5cf6; padding-top: 8px; margin-top: 4px; }
-.totals .row.total .l, .totals .row.total .v { color: #fff; font-weight: 800; font-size: 13px; }
-.totals .row.balance .l, .totals .row.balance .v { color: #8b5cf6; font-weight: 800; }
-.footer { margin-top: 18px; padding-top: 12px; border-top: 1px solid #2a2a4a; display: flex; justify-content: space-between; align-items: flex-end; font-size: 9px; color: #475569; }
-.footer .sign { text-align: right; border-top: 1px solid #64748b; padding-top: 4px; font-weight: 600; color: #94a3b8; font-size: 10px; }
+.totals .row .l { color: #6b7280; }
+.totals .row .v { color: #1a1a1a; font-weight: 600; }
+.totals .row.total { border-top: 2px solid #7c3aed; padding-top: 8px; margin-top: 6px; }
+.totals .row.total .l, .totals .row.total .v { color: #1a1a1a; font-weight: 800; font-size: 13px; }
+.totals .row.balance .l, .totals .row.balance .v { color: #7c3aed; font-weight: 800; }
+.notes { font-size: 10px; color: #6b7280; margin-top: 14px; }
+.notes strong { color: #374151; display: block; margin-bottom: 3px; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; }
+.payment-info { font-size: 10px; color: #6b7280; margin-top: 10px; }
+.payment-info strong { color: #374151; display: block; margin-bottom: 3px; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; }
+.footer { margin-top: 18px; padding-top: 12px; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: flex-end; font-size: 9px; color: #9ca3af; }
+.footer .sign { text-align: right; border-top: 1px solid #1a1a1a; padding-top: 4px; font-weight: 600; color: #1a1a1a; font-size: 10px; }
 </style>
 </head>
 <body>
 <div class="invoice">
   <div class="header">
-    <div class="brand"><span style="color:#fff">Just</span><span style="color:#8b5cf6">Fiber</span></div>
+    <div class="brand"><span class="just">Just</span><span class="fiber">Fiber</span></div>
     <div class="header-right">
       <h1>Tax Invoice</h1>
       <div class="inv-num"># ${invoiceNumber}</div>
       <div class="balance-box">
-        <div class="balance-label">Balance Due</div>
+        <div class="balance-label">Amount Due</div>
         <div class="balance-amount">Rs ${balanceDue.toFixed(0)}</div>
       </div>
     </div>
@@ -3908,7 +3910,7 @@ table.items .item-sub { font-size: 9px; color: #64748b; }
   <div class="company-info">
     <strong>Netlayer India Private Limited</strong><br>
     76D Udhyog Vihar Phase 4, Sector 18, Gurgram 122015<br>
-    GSTIN 06AAICN3717E1ZN | +919240204444
+    GSTIN 06AAICN3717E1ZN | +919240204444 | accounts@netlayer.net
   </div>
 
   <div class="divider"></div>
@@ -3920,14 +3922,14 @@ table.items .item-sub { font-size: 9px; color: #64748b; }
       <p>
         ${customerAddress}${customerCity ? ', ' + customerCity : ''}, HARYANA ${customerPin || ''}<br>
         Phone: ${customerPhone}${customerEmail ? ' | ' + customerEmail : ''}<br>
-        ID: ${customerId} | Plan: ${planName}
+        Customer ID: ${customerId} | Plan: ${planName}
       </p>
     </div>
     <div class="meta-table">
       <div class="row"><span class="l">Invoice Date</span><span class="v">${fmtDate(invoice.issuedAt)}</span></div>
       <div class="row"><span class="l">Terms</span><span class="v">${durationLabel}</span></div>
       <div class="row"><span class="l">Due Date</span><span class="v">${fmtDate(dueDate.toISOString())}</span></div>
-      <div class="row"><span class="l">Status</span><span class="v" style="color:#fbbf24">unpaid</span></div>
+      <div class="row"><span class="l">Place of Supply</span><span class="v">HARYANA</span></div>
     </div>
   </div>
 
@@ -3938,17 +3940,17 @@ table.items .item-sub { font-size: 9px; color: #64748b; }
     <tbody>
       <tr>
         <td>1</td>
-        <td><span class="item-name">Internet service - ${durationLabel}</span><br><span class="item-sub">HSN 9984 | CGST ${internetCgst.toFixed(0)} + SGST ${internetSgst.toFixed(0)}</span></td>
+        <td><span class="item-name">Internet service charge - ${durationLabel}</span><br><span class="item-sub">CGST @9%: Rs ${internetCgst.toFixed(2)} | SGST @9%: Rs ${internetSgst.toFixed(2)}</span></td>
         <td>9984</td>
         <td>1</td>
-        <td>Rs ${internetRate.toFixed(0)}</td>
+        <td>Rs ${internetRate.toFixed(2)}</td>
       </tr>
       <tr>
         <td>2</td>
-        <td><span class="item-name">Platform fee - ${durationLabel}</span><br><span class="item-sub">HSN 9984 | CGST ${platformCgst.toFixed(0)} + SGST ${platformSgst.toFixed(0)}</span></td>
+        <td><span class="item-name">Platform fee - ${durationLabel}</span><br><span class="item-sub">CGST @9%: Rs ${platformCgst.toFixed(2)} | SGST @9%: Rs ${platformSgst.toFixed(2)}</span></td>
         <td>9984</td>
         <td>1</td>
-        <td>Rs ${platformRate.toFixed(0)}</td>
+        <td>Rs ${platformRate.toFixed(2)}</td>
       </tr>
     </tbody>
   </table>
