@@ -3850,7 +3850,7 @@ customerPortalRouter.get(
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f0f1a; color: #e2e8f0; padding: 16px; font-size: 12px; }
 .invoice { max-width: 100%; margin: 0 auto; background: #1a1a2e; border-radius: 20px; padding: 20px; border: 1px solid #2a2a4a; }
 .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
-.brand { font-size: 24px; font-weight: 900; color: #8b5cf6; letter-spacing: -1px; }
+.brand { font-size: 26px; font-weight: 900; letter-spacing: -1px; font-style: italic; }
 .header-right { text-align: right; }
 .header-right h1 { font-size: 11px; color: #8b5cf6; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
 .header-right .inv-num { font-size: 11px; font-weight: 600; color: #94a3b8; margin-top: 3px; }
@@ -3894,7 +3894,7 @@ table.items .item-sub { font-size: 9px; color: #64748b; }
 <body>
 <div class="invoice">
   <div class="header">
-    <div class="brand">JustFiber</div>
+    <div class="brand"><span style="color:#fff">Just</span><span style="color:#8b5cf6">Fiber</span></div>
     <div class="header-right">
       <h1>Tax Invoice</h1>
       <div class="inv-num"># ${invoiceNumber}</div>
