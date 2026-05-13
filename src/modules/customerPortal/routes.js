@@ -2424,19 +2424,46 @@ customerPortalRouter.post(
           if (existingCustomer) {
             autoLinkedCustomerId = existingCustomer.customerId;
           } else {
+            // Match plan by jazeGroupId
+            const matchedPlan = jazeCache.groupId
+              ? await PlanCatalog.findOne({ "provisioning.jazeGroupId": jazeCache.groupId }).lean()
+              : null;
+
             const customerId = `JF${Math.floor(100000 + Math.random() * 900000)}`;
+            const pppoeUsername = jazeCache.username || "";
+
             await Customer.create({
               customerId,
               fullName: jazeCache.name || "JustFiber Customer",
               mobile: identity.mobile,
               email: jazeCache.email || "",
-              serviceId: jazeCache.username || customerId,
+              serviceId: pppoeUsername || customerId,
+              pppoeUsername: pppoeUsername,
               jazeUserId: jazeCache.jazeUserId,
               jazeStatus: jazeCache.status || "active",
               operationalStatus: jazeCache.status === "active" ? "active" : "suspended",
-              planCode: "",
+              status: jazeCache.status === "active" ? "active" : "suspended",
+              planCode: matchedPlan?.planCode || "",
+              planName: matchedPlan?.name || jazeCache.groupName || "",
               zoneCode: "",
             });
+
+            // Auto-attach device by pppoeUsername
+            if (pppoeUsername) {
+              const { DeviceOperationalCache } = await import("../../models/DeviceOperationalCache.js");
+              const device = await DeviceOperationalCache.findOne({
+                $or: [
+                  { "wanInfo.pppoeUsername": pppoeUsername },
+                  { "wanInfo.pppoeUsernameMasked": pppoeUsername },
+                ]
+              });
+              if (device && !device.customerId) {
+                device.customerId = customerId;
+                device.serviceId = pppoeUsername;
+                await device.save();
+              }
+            }
+
             autoLinkedCustomerId = customerId;
           }
         }
