@@ -65,7 +65,7 @@ export default function LoginPage() {
 
         <div className="relative rounded-[18px] border border-slate-200 bg-white p-8 shadow-[0_12px_40px_rgba(15,23,42,0.08)] md:p-10">
           <div className="flex items-center justify-center">
-            <img src="/logo.svg" alt="JustFiber" className="h-10 w-auto" />
+            <span className="text-2xl font-black tracking-tight text-slate-900">Just<span className="text-purple-600">Fiber</span></span>
           </div>
 
           <div className="mt-8 text-center">

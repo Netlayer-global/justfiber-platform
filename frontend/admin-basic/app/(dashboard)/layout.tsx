@@ -120,10 +120,10 @@ function SidebarContent({
         <Link href="/dashboard" className="flex items-center">
           {collapsed ? (
             <div className="flex h-10 w-10 shrink-0 items-center justify-center">
-              <img src="/logo.svg" alt="JustFiber" className="h-7 w-auto" />
+              <span className="text-lg font-black tracking-tight text-slate-900">J<span className="text-purple-600">F</span></span>
             </div>
           ) : (
-            <img src="/logo.svg" alt="JustFiber" className="h-9 w-auto" />
+            <span className="text-xl font-black tracking-tight text-slate-900">Just<span className="text-purple-600">Fiber</span></span>
           )}
         </Link>
         {!collapsed ? (
