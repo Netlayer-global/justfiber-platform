@@ -3817,12 +3817,24 @@ customerPortalRouter.get(
     const planName = invoice.planGroupName || customer.planName || "Internet Service";
     const circuitId = customer.jazeUserId || "";
 
-    // Invoice number from order_id
+    // Get or create sequential invoice number for this renewal
+    const { InvoiceCounter } = await import("../../models/InvoiceCounter.js");
+    const { GeneratedInvoice } = await import("../../models/GeneratedInvoice.js");
+
+    let generatedInv = await GeneratedInvoice.findOne({ jazeRenewalId: invoice.invoiceId });
+    if (!generatedInv) {
+      const invoiceNum = await InvoiceCounter.getNextInvoiceNumber();
+      generatedInv = await GeneratedInvoice.create({
+        invoiceNumber: invoiceNum,
+        jazeRenewalId: invoice.invoiceId,
+        jazeUserId: customer.jazeUserId,
+        customerId: customer.customerId,
+        amount: invoice.amount,
+      });
+    }
+    const invoiceNumber = generatedInv.invoiceNumber;
+
     const issueDate = new Date(invoice.issuedAt || Date.now());
-    const fy = issueDate.getMonth() >= 3 
-      ? `${String(issueDate.getFullYear()).slice(2)}-${String(issueDate.getFullYear() + 1).slice(2)}`
-      : `${String(issueDate.getFullYear() - 1).slice(2)}-${String(issueDate.getFullYear()).slice(2)}`;
-    const invoiceNumber = `JF-${fy}-${invoice.orderId || invoice.invoiceId}`;
 
     // Due date = issue date + 30 days
     const dueDate = new Date(issueDate);
