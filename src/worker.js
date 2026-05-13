@@ -15,6 +15,7 @@ import { KycVerificationRequest } from "./models/KycVerificationRequest.js";
 import { OttSubscription } from "./models/OttSubscription.js";
 import { PlanCatalog } from "./models/PlanCatalog.js";
 import { genieacsClient } from "./integrations/genieacsClient.js";
+import { jazeClient } from "./integrations/jazeClient.js";
 import { AutomationTrigger } from "./models/AutomationTrigger.js";
 import { ScheduledReport } from "./models/ScheduledReport.js";
 import { SupportTicket } from "./models/SupportTicket.js";
@@ -767,6 +768,54 @@ const worker = new Worker(
           }
         });
         console.log(`[worker] installer activation completed for ${jobRecord._id.toString()}`);
+
+        // Create Jaze user immediately after config push (don't wait for job complete)
+        if (env.SERVICE_CONTROL_PROVIDER === "jaze") {
+          const customer = await Customer.findOne({ customerId: jobRecord.customerId });
+          if (customer && !customer.jazeUserId) {
+            try {
+              const planCode = jobRecord.customerSnapshot?.planCode || customer.planCode;
+              const plan = planCode ? await PlanCatalog.findOne({ planCode }).lean() : null;
+              const jazeGroupId = plan?.provisioning?.jazeGroupId || null;
+              if (!jazeGroupId) {
+                console.warn(`[worker] Skipping Jaze createUser — no jazeGroupId for plan ${planCode}`);
+              } else {
+                const fullName = jobRecord.customerSnapshot?.fullName || customer.fullName || "Customer";
+                const nameParts = fullName.trim().split(/\s+/);
+                const jazeResponse = await jazeClient.createUser({
+                  userGroupId: jazeGroupId,
+                  userName: pppoe.username,
+                  password: pppoe.password,
+                  userState: "active",
+                  firstName: nameParts[0] || fullName,
+                  lastName: nameParts.slice(1).join(" ") || "",
+                  phoneNumber: jobRecord.customerSnapshot?.mobile || customer.mobile || "",
+                  emailId: customer.email || "",
+                  comments: `customerId:${jobRecord.customerId}`
+                });
+                const jazeUserId = jazeResponse?.message?.userId || jazeResponse?.data?.userId || jazeResponse?.userId || null;
+                if (jazeUserId) {
+                  await Customer.updateOne(
+                    { customerId: jobRecord.customerId },
+                    { $set: { jazeUserId: String(jazeUserId), jazeStatus: "active", pppoeUsername: pppoe.username } }
+                  );
+                  jobRecord.activation.jazeUserId = String(jazeUserId);
+                  jobRecord.activation.jazeProvisionedAt = new Date();
+                  await jobRecord.save();
+                  console.log(`[worker] Jaze user created for ${jobRecord.customerId}: ${jazeUserId}`);
+                } else {
+                  console.warn(`[worker] Jaze createUser returned no userId:`, JSON.stringify(jazeResponse));
+                }
+              }
+            } catch (jazeErr) {
+              console.error(`[worker] Jaze createUser failed for ${jobRecord.customerId}:`, jazeErr.message);
+              jobRecord.activation.jazeProvisioningError = jazeErr.message;
+              jobRecord.activation.jazeProvisionedAt = new Date();
+              await jobRecord.save();
+            }
+          }
+        }
+
         break;
       }
       case "retry-provisioning":
