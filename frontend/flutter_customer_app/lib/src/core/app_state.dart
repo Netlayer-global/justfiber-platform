@@ -302,12 +302,11 @@ class AppState extends ChangeNotifier {
               'billing',
               () async => billing = await api.fetchBilling(current,
                   customerId: selectedCustomerId)),
-        if (hasConnections)
-          runRefreshTask(
-              'jaze billing',
-              () async => jazeBilling = await api.fetchJazeBilling(
-                  current,
-                  customerId: selectedCustomerId)),
+        runRefreshTask(
+            'jaze billing',
+            () async => jazeBilling = await api.fetchJazeBilling(
+                current,
+                customerId: selectedCustomerId)),
         runRefreshTask('notifications',
             () async => notifications = await api.fetchNotifications(current)),
         runRefreshTask(

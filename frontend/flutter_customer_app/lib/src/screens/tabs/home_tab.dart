@@ -50,7 +50,7 @@ class HomeTab extends StatelessWidget {
           // ── Hero — new user gets booking card, existing gets plan hero ──
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: appState.connections.isEmpty
+            child: appState.connections.isEmpty && appState.jazeBilling?.summary == null
                 ? _NewUserConnectCard(
                     onBookNow: () => Navigator.of(context).push(
                       MaterialPageRoute(
@@ -66,12 +66,14 @@ class HomeTab extends StatelessWidget {
                     ),
                   )
                 : _PremiumHeroCard(
-                    planName: billing.currentPlan,
+                    planName: appState.jazeBilling?.summary?.currentPlanName.isNotEmpty == true
+                        ? appState.jazeBilling!.summary!.currentPlanName
+                        : billing.currentPlan,
                     wifiName: dashboard.wifiName,
                     usedGb: dashboard.usedGb,
                     totalGb: dashboard.totalGb,
                     usagePct: usagePct,
-                    isOnline: isOnline,
+                    isOnline: isOnline || (appState.jazeBilling?.summary?.status == 'active'),
                     activeDays: dashboard.activeDays,
                     onBookNow: () => Navigator.of(context).push(
                       MaterialPageRoute(
