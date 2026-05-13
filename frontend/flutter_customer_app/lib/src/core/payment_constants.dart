@@ -5,7 +5,8 @@
 library;
 
 /// The primary Jaze payment domain used for WebView domain whitelisting.
-const String kJazePaymentDomain = 'jaze.in';
+/// The WebView allows navigation to this domain and 'justfiber' domains.
+const String kJazePaymentDomain = 'justfiber.in';
 
 /// URL patterns that indicate a successful payment completion.
 /// The WebView navigation delegate checks URLs against these patterns

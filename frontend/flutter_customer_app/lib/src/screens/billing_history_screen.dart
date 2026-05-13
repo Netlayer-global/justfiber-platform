@@ -11,6 +11,7 @@ import '../core/theme.dart';
 import '../widgets/pressable_scale.dart';
 import 'document_viewer_screen.dart';
 import 'all_invoices_screen.dart';
+import 'billing_payment_screen.dart';
 import 'payment_webview_screen.dart';
 import 'payments_history_screen.dart';
 import 'support_history_screen.dart';
@@ -211,18 +212,9 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
                     // ── Latest Invoice Receipt ───────────────────────
                     _sectionLabel('LATEST INVOICE'),
                     const SizedBox(height: 8),
-                    if (latestInvoice == null)
-                      _card(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Text(
-                            'No invoice generated yet.',
-                            style:
-                                GoogleFonts.inter(color: kMuted, fontSize: 13),
-                          ),
-                        ),
-                      )
-                    else
+                    if (useJaze && jazeInvoices.isNotEmpty)
+                      _JazeInvoiceCard(invoice: jazeInvoices.first)
+                    else if (latestInvoice != null)
                       _ReceiptCard(
                         invoice: latestInvoice,
                         onOpen: (latestInvoice.pdfUrl.isNotEmpty ||
@@ -236,6 +228,17 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
                                       : latestInvoice.viewUrl,
                                 )
                             : null,
+                      )
+                    else
+                      _card(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            'No invoice generated yet.',
+                            style:
+                                GoogleFonts.inter(color: kMuted, fontSize: 13),
+                          ),
+                        ),
                       ),
 
                     const SizedBox(height: 20),
@@ -466,82 +469,49 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
     // Store pre-payment outstanding amount for stale data detection (Req 3.3)
     _prePaymentOutstanding = jazeBilling?.summary?.outstanding;
 
-    // Determine payment URL: use cached Jaze link or request a fresh one
-    String? paymentUrl;
-    if (jazeBilling?.paymentLink.isNotEmpty ?? false) {
-      paymentUrl = jazeBilling!.paymentLink;
-    } else {
-      // Request a fresh payment link from the backend
-      try {
-        paymentUrl = await appState.api.requestPaymentLink(appState.session!);
-      } on Exception catch (e) {
-        if (context.mounted) {
-          messenger.showSnackBar(SnackBar(
-            content: Text('Unable to generate payment link: $e'),
-          ));
-        }
-        return;
-      }
-    }
+    // Create Razorpay order and open native checkout
+    try {
+      // Use Jaze outstanding as amount
+      final amount = jazeBilling?.summary?.outstanding ?? 0;
+      final order = await appState.api.createBillingPaymentOrder(
+        appState.session!,
+        customerId: appState.selectedCustomerId,
+        amount: amount > 0 ? amount : null,
+      );
 
-    if (paymentUrl == null || paymentUrl.isEmpty) {
-      if (context.mounted) {
-        messenger.showSnackBar(
-            const SnackBar(content: Text('Unable to generate payment link.')));
-      }
-      return;
-    }
+      if (!context.mounted) return;
 
-    if (!context.mounted) return;
-
-    // Navigate to the in-app WebView payment screen
-    final success = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => PaymentWebViewScreen(
-          paymentUrl: paymentUrl!,
-          jazeDomain: kJazePaymentDomain,
+      // Navigate to BillingPaymentScreen (native Razorpay checkout)
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => BillingPaymentScreen(paymentOrder: order),
         ),
-      ),
-    );
+      );
 
-    // On success: refresh billing data with timeout (Req 1.5, 3.1, 3.2, 3.3, 3.4)
-    if (success == true) {
+      // After returning, refresh billing
       if (!mounted) return;
       setState(() => _refreshState = _BillingRefreshState.refreshing);
-
-      if (context.mounted) {
-        messenger.showSnackBar(const SnackBar(
-          content: Text('Payment successful! Refreshing billing...'),
-        ));
-      }
-
-      // Refresh billing with 10-second timeout (Req 3.1)
-      final refreshed = await _refreshBillingWithTimeout(appState);
-
+      await appState.loadJazeBilling();
       if (!mounted) return;
 
-      if (!refreshed) {
-        // Timeout or failure: show unavailable message, retain previous data (Req 3.4)
-        setState(() => _refreshState = _BillingRefreshState.failed);
-        return;
-      }
-
-      // Check for stale data (Req 3.3)
       final newOutstanding = appState.jazeBilling?.summary?.outstanding;
       if (_prePaymentOutstanding != null &&
           newOutstanding != null &&
           (newOutstanding - _prePaymentOutstanding!).abs() < 0.01) {
-        // Outstanding unchanged — data is stale
         setState(() => _refreshState = _BillingRefreshState.staleData);
       } else {
-        // Data updated successfully
         setState(() {
           _refreshState = _BillingRefreshState.idle;
           _prePaymentOutstanding = null;
         });
       }
+    } catch (e) {
+      if (context.mounted) {
+        messenger.showSnackBar(SnackBar(
+          content: Text('Payment error: $e'),
+        ));
+      }
     }
-    // On failure/cancellation: return to billing screen without refresh (Req 1.8)
   }
 
   Future<void> _openDocument(BuildContext context, AppState appState,
@@ -1902,4 +1872,123 @@ class _UsageCard extends StatelessWidget {
           ],
         ),
       );
+}
+
+
+// ── Jaze Invoice Card ─────────────────────────────────────────────────────────
+
+class _JazeInvoiceCard extends StatelessWidget {
+  const _JazeInvoiceCard({required this.invoice});
+
+  final JazeInvoice invoice;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 18),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: kBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8224E3).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.receipt_long_rounded,
+                    color: Color(0xFF8224E3), size: 20),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Invoice #${invoice.invoiceId}',
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      invoice.planGroupName.isNotEmpty
+                          ? invoice.planGroupName
+                          : invoice.durationLabel,
+                      style: GoogleFonts.inter(color: kMuted, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                'Rs ${invoice.amount.toStringAsFixed(0)}',
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(height: 1, color: kBorder),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _invoiceDetail('Period',
+                    '${_fmtDateShort(invoice.periodStart)} - ${_fmtDateShort(invoice.periodEnd)}'),
+              ),
+              Expanded(
+                child: _invoiceDetail('Issued', _fmtDateShort(invoice.issuedAt)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _invoiceDetail('Base Amount', 'Rs ${invoice.baseAmount.toStringAsFixed(0)}'),
+              ),
+              Expanded(
+                child: _invoiceDetail('Tax', 'Rs ${invoice.taxAmount.toStringAsFixed(0)}'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _invoiceDetail(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: GoogleFonts.inter(
+                color: kMuted, fontSize: 10, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 3),
+        Text(value,
+            style: GoogleFonts.inter(
+                color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
+      ],
+    );
+  }
+
+  static String _fmtDateShort(String raw) {
+    if (raw.isEmpty) return '-';
+    final dt = DateTime.tryParse(raw);
+    if (dt == null) return raw;
+    return '${dt.day}/${dt.month}/${dt.year}';
+  }
 }

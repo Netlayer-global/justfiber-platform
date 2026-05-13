@@ -145,10 +145,15 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
     }
 
     // Domain whitelist check (Req 6.3)
-    // Allow navigation only to Jaze payment domain and justfiber domains
+    // Allow navigation to Jaze payment domain, justfiber domains, and payment gateways
     final host = uri.host.toLowerCase();
     if (!host.contains(widget.jazeDomain.toLowerCase()) &&
-        !host.contains('justfiber')) {
+        !host.contains('justfiber') &&
+        !host.contains('razorpay') &&
+        !host.contains('jaze') &&
+        !host.contains('paytm') &&
+        !host.contains('phonepe') &&
+        !host.contains('upi')) {
       // Silently block navigation outside allowed domains
       return NavigationDecision.prevent;
     }

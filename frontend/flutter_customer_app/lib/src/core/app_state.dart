@@ -268,6 +268,7 @@ class AppState extends ChangeNotifier {
       try {
         await task();
       } catch (e) {
+        debugPrint('[refresh] TASK FAILED: $label — $e');
         failures.add('$label: $e');
       }
     }
@@ -286,6 +287,7 @@ class AppState extends ChangeNotifier {
       }
 
       final hasConnections = connections.isNotEmpty;
+      debugPrint('[refresh] selectedCustomerId=$selectedCustomerId, connections=${connections.length}, hasConnections=$hasConnections');
       await Future.wait<void>([
         if (hasConnections)
           runRefreshTask(

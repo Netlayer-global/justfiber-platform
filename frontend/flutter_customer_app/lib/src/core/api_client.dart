@@ -1543,14 +1543,17 @@ class ApiClient {
 
   Future<JazeBillingView> fetchJazeBilling(CustomerSession session,
       {String? customerId, String? fromDate, String? toDate}) async {
-    final path = _withCustomerId('/api/v1/customer/billing/jaze/view', customerId);
-    final queryParams = <String, String>{};
-    if (fromDate != null) queryParams['fromDate'] = fromDate;
-    if (toDate != null) queryParams['toDate'] = toDate;
-    final uri = _uri(path).replace(queryParameters: queryParams);
+    String path = _withCustomerId('/api/v1/customer/billing/jaze/view', customerId);
+    final queryParts = <String>[];
+    if (fromDate != null) queryParts.add('fromDate=$fromDate');
+    if (toDate != null) queryParts.add('toDate=$toDate');
+    if (queryParts.isNotEmpty) {
+      final separator = path.contains('?') ? '&' : '?';
+      path = '$path$separator${queryParts.join('&')}';
+    }
 
     final data = _asMap(
-      await _request(uri.toString(), token: session.accessToken),
+      await _request(path, token: session.accessToken),
     );
     final summaryMap = _asMap(data['summary']);
     final summary = summaryMap.isEmpty
