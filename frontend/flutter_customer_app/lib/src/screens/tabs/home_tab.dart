@@ -47,6 +47,17 @@ class HomeTab extends StatelessWidget {
 
           const SizedBox(height: 20),
 
+          // ── Connection Switcher (when multiple connections) ─────────
+          if (appState.connections.length > 1)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+              child: _ConnectionSwitcher(
+                connections: appState.connections,
+                selectedId: appState.selectedCustomerId,
+                onSwitch: (id) => appState.selectConnection(id),
+              ),
+            ),
+
           // ── Hero — new user gets booking card, existing gets plan hero ──
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -1129,5 +1140,95 @@ String _fmtDate(String raw) {
   } catch (_) {
     final t = raw.indexOf('T');
     return t > 0 ? raw.substring(0, t) : raw;
+  }
+}
+
+
+// ── Connection Switcher ───────────────────────────────────────────────────────
+
+class _ConnectionSwitcher extends StatelessWidget {
+  const _ConnectionSwitcher({
+    required this.connections,
+    required this.selectedId,
+    required this.onSwitch,
+  });
+
+  final List<CustomerConnection> connections;
+  final String? selectedId;
+  final ValueChanged<String> onSwitch;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kBorder),
+      ),
+      child: Column(
+        children: connections.map((conn) {
+          final isSelected = conn.customerId == selectedId;
+          return GestureDetector(
+            onTap: () {
+              if (!isSelected) onSwitch(conn.customerId);
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: isSelected ? kPrimary.withValues(alpha: 0.15) : Colors.transparent,
+                borderRadius: BorderRadius.circular(10),
+                border: isSelected ? Border.all(color: kPrimary.withValues(alpha: 0.4)) : null,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: isSelected ? kPrimary.withValues(alpha: 0.2) : kSurface2,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.router_rounded,
+                      size: 16,
+                      color: isSelected ? kPrimaryLight : kMuted,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${conn.customerId} • ${conn.planName.isNotEmpty ? conn.planName : "No plan"}',
+                          style: GoogleFonts.inter(
+                            color: isSelected ? Colors.white : kText,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          conn.address.isNotEmpty ? conn.address : 'Address not set',
+                          style: GoogleFonts.inter(
+                            color: kMuted,
+                            fontSize: 11,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isSelected)
+                    const Icon(Icons.check_circle_rounded, color: kPrimaryLight, size: 18),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
   }
 }
