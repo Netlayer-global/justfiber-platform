@@ -65,15 +65,7 @@ export default function LoginPage() {
 
         <div className="relative rounded-[18px] border border-slate-200 bg-white p-8 shadow-[0_12px_40px_rgba(15,23,42,0.08)] md:p-10">
           <div className="flex items-center justify-center">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-700 text-lg font-semibold text-white">
-                J
-              </div>
-              <div>
-                <div className="text-xl font-semibold tracking-tight text-slate-900">JustFiber</div>
-                <div className="text-sm text-slate-500">Admin Console</div>
-              </div>
-            </div>
+            <img src="/logo.svg" alt="JustFiber" className="h-10 w-auto" />
           </div>
 
           <div className="mt-8 text-center">

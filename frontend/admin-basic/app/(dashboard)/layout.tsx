@@ -117,16 +117,14 @@ function SidebarContent({
   return (
     <div className="flex h-full flex-col bg-white">
       <div className={cn('border-b border-slate-100', collapsed ? 'px-3 py-5' : 'px-5 py-5')}>
-        <Link href="/dashboard" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-purple-800 text-base font-bold text-white shadow-brand">
-            J
-          </div>
-          {!collapsed ? (
-            <div className="min-w-0">
-              <div className="truncate text-base font-bold tracking-tight text-slate-900">JustFiber</div>
-              <div className="text-[11px] font-medium uppercase tracking-wider text-purple-600">Admin Console</div>
+        <Link href="/dashboard" className="flex items-center">
+          {collapsed ? (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center">
+              <img src="/logo.svg" alt="JustFiber" className="h-7 w-auto" />
             </div>
-          ) : null}
+          ) : (
+            <img src="/logo.svg" alt="JustFiber" className="h-9 w-auto" />
+          )}
         </Link>
         {!collapsed ? (
           <div className="modernize-search mt-4" onClick={onOpenCommandPalette} role="button" tabIndex={0}>
