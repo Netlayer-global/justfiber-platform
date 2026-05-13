@@ -3794,79 +3794,102 @@ customerPortalRouter.get(
       ? invoices.find(i => i.invoiceId === invoiceId) || invoices[0]
       : invoices[0];
 
-    // Generate PDF
-    const PDFDocument = (await import("pdfkit")).default;
-    const pdf = new PDFDocument({ size: "A4", margin: 50 });
+    const fmtDate = (raw) => {
+      if (!raw) return "-";
+      const d = new Date(raw);
+      if (isNaN(d.getTime())) return raw;
+      return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    };
 
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename="Invoice-${invoice.invoiceId}.pdf"`);
-    pdf.pipe(res);
+    // Serve as HTML (renders perfectly in WebView, no blur)
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(`<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f1a; color: #fff; padding: 24px; }
+  .invoice { max-width: 600px; margin: 0 auto; background: #1a1a2e; border-radius: 24px; padding: 32px; border: 1px solid #2a2a4a; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
+  .brand { font-size: 28px; font-weight: 900; color: #8b5cf6; letter-spacing: -1px; }
+  .brand-sub { font-size: 12px; color: #64748b; margin-top: 4px; }
+  .invoice-title { text-align: right; }
+  .invoice-title h2 { font-size: 14px; color: #8b5cf6; font-weight: 700; letter-spacing: 2px; }
+  .invoice-title .num { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+  .divider { height: 1px; background: #2a2a4a; margin: 20px 0; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+  .info-block label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; }
+  .info-block p { font-size: 14px; color: #e2e8f0; margin-top: 6px; font-weight: 600; }
+  .table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+  .table th { text-align: left; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; padding: 12px 16px; background: #12122a; border-radius: 12px; }
+  .table th:last-child { text-align: right; }
+  .table td { padding: 14px 16px; font-size: 14px; color: #e2e8f0; border-bottom: 1px solid #1f1f3a; }
+  .table td:last-child { text-align: right; font-weight: 700; }
+  .total-row { background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); border-radius: 16px; padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
+  .total-row .label { font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.9); }
+  .total-row .amount { font-size: 24px; font-weight: 900; color: #fff; letter-spacing: -0.5px; }
+  .footer { margin-top: 28px; text-align: center; font-size: 11px; color: #475569; line-height: 1.8; }
+  .badge { display: inline-block; background: #1e1b4b; color: #a78bfa; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; border: 1px solid #312e81; }
+</style>
+</head>
+<body>
+<div class="invoice">
+  <div class="header">
+    <div>
+      <div class="brand">JustFiber</div>
+      <div class="brand-sub">Internet Service Provider<br>Rewari, Haryana</div>
+    </div>
+    <div class="invoice-title">
+      <h2>TAX INVOICE</h2>
+      <div class="num">#${invoice.invoiceId}</div>
+      <div class="num">${fmtDate(invoice.issuedAt)}</div>
+    </div>
+  </div>
 
-    // Header
-    pdf.fontSize(24).font("Helvetica-Bold").text("JustFiber", 50, 50);
-    pdf.fontSize(10).font("Helvetica").fillColor("#666666").text("Internet Service Provider", 50, 78);
-    pdf.fontSize(10).text("Rewari, Haryana", 50, 92);
-    
-    // Invoice title
-    pdf.fillColor("#000000").fontSize(18).font("Helvetica-Bold").text("TAX INVOICE", 400, 50, { align: "right" });
-    pdf.fontSize(10).font("Helvetica").fillColor("#666666");
-    pdf.text(`Invoice #: ${invoice.invoiceId}`, 400, 75, { align: "right" });
-    pdf.text(`Date: ${formatPdfDate(invoice.issuedAt)}`, 400, 90, { align: "right" });
+  <div class="divider"></div>
 
-    // Divider
-    pdf.moveTo(50, 120).lineTo(545, 120).strokeColor("#e0e0e0").stroke();
+  <div class="info-grid">
+    <div class="info-block">
+      <label>Bill To</label>
+      <p>${customer.fullName || "Customer"}</p>
+      <p style="font-size:12px;color:#94a3b8;margin-top:2px">${customer.mobile || ""}</p>
+    </div>
+    <div class="info-block">
+      <label>Plan</label>
+      <p>${invoice.planGroupName || "Internet Service"}</p>
+      <p style="font-size:12px;color:#94a3b8;margin-top:2px">${invoice.durationLabel}</p>
+    </div>
+    <div class="info-block">
+      <label>Period</label>
+      <p>${fmtDate(invoice.periodStart)} — ${fmtDate(invoice.periodEnd)}</p>
+    </div>
+    <div class="info-block">
+      <label>Status</label>
+      <p><span class="badge">UNPAID</span></p>
+    </div>
+  </div>
 
-    // Customer info
-    pdf.fillColor("#000000").fontSize(11).font("Helvetica-Bold").text("Bill To:", 50, 140);
-    pdf.fontSize(10).font("Helvetica").fillColor("#333333");
-    pdf.text(customer.fullName || "Customer", 50, 158);
-    pdf.text(customer.mobile || "", 50, 173);
-    pdf.text(customer.email || "", 50, 188);
+  <table class="table">
+    <thead><tr><th>Description</th><th>Amount</th></tr></thead>
+    <tbody>
+      <tr><td>Internet Service — ${invoice.planGroupName || "Broadband"}</td><td>₹${invoice.baseAmount.toFixed(2)}</td></tr>
+      <tr><td>GST (18%)</td><td>₹${invoice.taxAmount.toFixed(2)}</td></tr>
+    </tbody>
+  </table>
 
-    // Invoice details box
-    pdf.fillColor("#000000").fontSize(11).font("Helvetica-Bold").text("Invoice Details:", 300, 140);
-    pdf.fontSize(10).font("Helvetica").fillColor("#333333");
-    pdf.text(`Period: ${formatPdfDate(invoice.periodStart)} to ${formatPdfDate(invoice.periodEnd)}`, 300, 158);
-    pdf.text(`Duration: ${invoice.durationLabel}`, 300, 173);
-    pdf.text(`Plan: ${invoice.planGroupName || "Internet Service"}`, 300, 188);
+  <div class="total-row">
+    <div class="label">Total Amount</div>
+    <div class="amount">₹${invoice.amount.toFixed(0)}</div>
+  </div>
 
-    // Table header
-    const tableTop = 230;
-    pdf.fillColor("#f5f5f5").rect(50, tableTop, 495, 25).fill();
-    pdf.fillColor("#000000").fontSize(10).font("Helvetica-Bold");
-    pdf.text("Description", 60, tableTop + 8);
-    pdf.text("Amount", 450, tableTop + 8, { align: "right" });
-
-    // Table rows
-    let y = tableTop + 35;
-    pdf.font("Helvetica").fillColor("#333333");
-    
-    pdf.text(`Internet Service - ${invoice.planGroupName || "Broadband"}`, 60, y);
-    pdf.text(`Rs ${invoice.baseAmount.toFixed(2)}`, 450, y, { align: "right" });
-    y += 25;
-
-    pdf.text("GST (18%)", 60, y);
-    pdf.text(`Rs ${invoice.taxAmount.toFixed(2)}`, 450, y, { align: "right" });
-    y += 25;
-
-    // Divider before total
-    pdf.moveTo(50, y).lineTo(545, y).strokeColor("#e0e0e0").stroke();
-    y += 15;
-
-    // Total
-    pdf.fontSize(12).font("Helvetica-Bold").fillColor("#000000");
-    pdf.text("Total Amount", 60, y);
-    pdf.text(`Rs ${invoice.amount.toFixed(2)}`, 450, y, { align: "right" });
-    y += 35;
-
-    // Footer
-    pdf.moveTo(50, y).lineTo(545, y).strokeColor("#e0e0e0").stroke();
-    y += 20;
-    pdf.fontSize(9).font("Helvetica").fillColor("#999999");
-    pdf.text("This is a computer-generated invoice and does not require a signature.", 50, y);
-    pdf.text("For queries, contact support@justfiber.in", 50, y + 15);
-
-    pdf.end();
+  <div class="footer">
+    This is a computer-generated invoice.<br>
+    For queries, contact support@justfiber.in
+  </div>
+</div>
+</body>
+</html>`);
   })
 );
 

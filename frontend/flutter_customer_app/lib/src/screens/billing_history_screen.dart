@@ -216,14 +216,12 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
                     if (useJaze && jazeInvoices.isNotEmpty)
                       _JazeInvoiceCard(
                         invoice: jazeInvoices.first,
-                        onDownloadPdf: () async {
-                          final session = appState.session;
-                          if (session == null) return;
-                          final base = appState.api.baseUrl.replaceAll(RegExp(r'/$'), '');
-                          final url = Uri.parse(
-                            '$base/api/v1/customer/billing/jaze/invoice-pdf?invoiceId=${jazeInvoices.first.invoiceId}&token=${session.accessToken}');
-                          await launchUrl(url, mode: LaunchMode.externalApplication);
-                        },
+                        onDownloadPdf: () => _openDocument(
+                          context,
+                          appState,
+                          'Invoice #${jazeInvoices.first.invoiceId}',
+                          '/api/v1/customer/billing/jaze/invoice-pdf?invoiceId=${jazeInvoices.first.invoiceId}',
+                        ),
                       )
                     else if (latestInvoice != null)
                       _ReceiptCard(
