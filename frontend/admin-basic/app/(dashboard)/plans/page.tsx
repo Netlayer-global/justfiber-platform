@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import type { Plan } from '@/lib/types'
-import { Loader, RefreshCw, X } from 'lucide-react'
+import { Loader, Pencil, RefreshCw, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -14,7 +14,9 @@ interface SpeedGroup {
 }
 
 interface EditFormState {
+  name: string
   price: string
+  billingPeriodMonths: string
   jazeGroupId: string
   visibleInCustomerApp: boolean
   visibleInSalesApp: boolean
@@ -24,13 +26,19 @@ interface EditFormState {
 // ─── Duration label helper ────────────────────────────────────────────────────
 
 function durationLabel(months: number): string {
-  switch (months) {
-    case 1: return '1M'
-    case 3: return '3M'
-    case 6: return '6M'
-    case 12: return '12M'
-    default: return `${months}M`
-  }
+  if (months <= 1) return '1 Month'
+  if (months === 3) return '3 Months'
+  if (months === 6) return '6 Months'
+  if (months === 12) return '1 Year'
+  return `${months} Months`
+}
+
+function durationShort(months: number): string {
+  if (months <= 1) return '1M'
+  if (months === 3) return '3M'
+  if (months === 6) return '6M'
+  if (months === 12) return '12M'
+  return `${months}M`
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -40,13 +48,17 @@ export default function PlansPage() {
   const [loading, setLoading] = useState(true)
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null)
   const [editForm, setEditForm] = useState<EditFormState>({
+    name: '',
     price: '',
+    billingPeriodMonths: '1',
     jazeGroupId: '',
     visibleInCustomerApp: true,
     visibleInSalesApp: true,
     active: true,
   })
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState<Plan | null>(null)
 
   // ─── Fetch plans ──────────────────────────────────────────────────────────
 
@@ -97,7 +109,9 @@ export default function PlansPage() {
   function openEdit(plan: Plan) {
     setEditingPlan(plan)
     setEditForm({
+      name: plan.name || '',
       price: String(plan.price || 0),
+      billingPeriodMonths: String(plan.billingPeriodMonths || 1),
       jazeGroupId: plan.provisioning?.jazeGroupId || '',
       visibleInCustomerApp: plan.visibleInCustomerApp !== false,
       visibleInSalesApp: plan.visibleInSalesApp !== false,
@@ -115,7 +129,9 @@ export default function PlansPage() {
     try {
       const planId = editingPlan.planCode || editingPlan.id
       const res = await adminAPI.updatePlan(planId, {
+        name: editForm.name,
         price: Number(editForm.price) || 0,
+        billingPeriodMonths: Number(editForm.billingPeriodMonths) || 1,
         provisioning: {
           ...editingPlan.provisioning,
           jazeGroupId: editForm.jazeGroupId,
@@ -135,6 +151,27 @@ export default function PlansPage() {
       toast.error('Failed to update plan')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!confirmDelete) return
+    setDeleting(true)
+    try {
+      const planId = confirmDelete.planCode || confirmDelete.id
+      const res = await adminAPI.deletePlan(planId)
+      if (res.success) {
+        toast.success('Plan deleted')
+        setConfirmDelete(null)
+        closeEdit()
+        fetchPlans()
+      } else {
+        toast.error(res.error || 'Failed to delete plan')
+      }
+    } catch {
+      toast.error('Failed to delete plan')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -194,13 +231,18 @@ export default function PlansPage() {
                     : 'border-gray-200 bg-white'
                 }`}
               >
+                {/* Plan name */}
+                <div className="text-xs font-semibold text-gray-700 truncate" title={plan.name}>
+                  {plan.name}
+                </div>
+
                 {/* Duration badge */}
-                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                <div className="mt-0.5 text-[11px] font-medium text-purple-600">
                   {durationLabel(plan.billingPeriodMonths || 1)}
                 </div>
 
                 {/* Price */}
-                <div className="mt-1 text-lg font-bold text-gray-900">
+                <div className="mt-1.5 text-lg font-bold text-gray-900">
                   ₹{(plan.price || 0).toLocaleString('en-IN')}
                 </div>
 
@@ -229,11 +271,6 @@ export default function PlansPage() {
                     <span className="ml-1 text-xs text-red-500 font-medium">Inactive</span>
                   )}
                 </div>
-
-                {/* Plan code */}
-                <div className="mt-1 text-[10px] text-gray-400 truncate" title={plan.planCode}>
-                  {plan.planCode}
-                </div>
               </button>
             ))}
           </div>
@@ -243,7 +280,7 @@ export default function PlansPage() {
       {/* Edit Modal */}
       {editingPlan && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6 max-h-[90vh] overflow-y-auto">
             {/* Modal header */}
             <div className="flex items-center justify-between mb-5">
               <div>
@@ -251,7 +288,7 @@ export default function PlansPage() {
                   Edit Plan
                 </h3>
                 <p className="text-sm text-gray-500 mt-0.5">
-                  {editingPlan.name}
+                  {editingPlan.speed} Mbps · {editingPlan.planCode}
                 </p>
               </div>
               <button
@@ -262,26 +299,24 @@ export default function PlansPage() {
               </button>
             </div>
 
-            {/* Plan info */}
-            <div className="mb-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-600 space-y-1">
-              <div className="flex justify-between">
-                <span>Speed</span>
-                <span className="font-medium">{editingPlan.speed} Mbps</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Duration</span>
-                <span className="font-medium">
-                  {durationLabel(editingPlan.billingPeriodMonths || 1)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Plan Code</span>
-                <span className="font-mono text-xs">{editingPlan.planCode}</span>
-              </div>
-            </div>
-
             {/* Form fields */}
             <div className="space-y-4">
+              {/* Plan Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Plan Name
+                </label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, name: e.target.value }))
+                  }
+                  className="input w-full"
+                  placeholder="e.g. 100M 3 Month"
+                />
+              </div>
+
               {/* Price */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -296,6 +331,25 @@ export default function PlansPage() {
                   className="input w-full"
                   placeholder="0"
                 />
+              </div>
+
+              {/* Duration */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Duration (Months)
+                </label>
+                <select
+                  value={editForm.billingPeriodMonths}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, billingPeriodMonths: e.target.value }))
+                  }
+                  className="input w-full"
+                >
+                  <option value="1">1 Month</option>
+                  <option value="3">3 Months</option>
+                  <option value="6">6 Months</option>
+                  <option value="12">12 Months (1 Year)</option>
+                </select>
               </div>
 
               {/* Jaze Group ID */}
@@ -315,7 +369,7 @@ export default function PlansPage() {
               </div>
 
               {/* Toggles */}
-              <div className="space-y-3">
+              <div className="space-y-3 pt-2">
                 {/* Visible in Customer App */}
                 <label className="flex items-center justify-between cursor-pointer">
                   <span className="text-sm text-gray-700">
@@ -403,21 +457,69 @@ export default function PlansPage() {
             </div>
 
             {/* Actions */}
-            <div className="mt-6 flex items-center justify-end gap-3">
+            <div className="mt-6 flex items-center justify-between">
               <button
-                onClick={closeEdit}
-                className="btn-secondary"
+                onClick={() => setConfirmDelete(editingPlan)}
+                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
                 disabled={saving}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={closeEdit}
+                  className="btn-secondary"
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="btn-primary inline-flex items-center gap-2"
+                >
+                  {saving && <Loader className="h-4 w-4 animate-spin" />}
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+                <Trash2 className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">Delete Plan</h3>
+                <p className="text-sm text-gray-500">This cannot be undone</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-5">
+              Are you sure you want to delete <strong>{confirmDelete.name}</strong>?
+              This plan will be archived and no longer visible in any app.
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="btn-secondary"
+                disabled={deleting}
               >
                 Cancel
               </button>
               <button
-                onClick={handleSave}
-                disabled={saving}
-                className="btn-primary inline-flex items-center gap-2"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors disabled:opacity-50"
               >
-                {saving && <Loader className="h-4 w-4 animate-spin" />}
-                Save
+                {deleting && <Loader className="h-4 w-4 animate-spin" />}
+                Delete
               </button>
             </div>
           </div>
