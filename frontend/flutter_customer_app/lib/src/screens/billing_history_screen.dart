@@ -2092,10 +2092,22 @@ class _InvoiceViewerScreenState extends State<_InvoiceViewerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0f0f1a),
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1a1a2e),
-        title: Text(widget.title, style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16)),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0.5,
+        title: Text(widget.title, style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16, color: Colors.black)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.open_in_browser_rounded),
+            tooltip: 'Open in browser to download',
+            onPressed: () => launchUrl(
+              Uri.parse('${widget.url}&token=${widget.accessToken}'),
+              mode: LaunchMode.externalApplication,
+            ),
+          ),
+        ],
       ),
       body: Stack(
         children: [
