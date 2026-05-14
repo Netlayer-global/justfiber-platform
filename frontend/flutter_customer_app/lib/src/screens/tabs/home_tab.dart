@@ -319,6 +319,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                       iconColor: const Color(0xFF0EA5E9),
                       title: 'View Plans',
                       subtitle: 'Browse all available fiber internet plans and pricing.',
+                      buttonLabel: 'Plans',
                       onTap: () async {
                         await Navigator.of(context).push(MaterialPageRoute(
                             builder: (_) => const PlanCatalogScreen()));
@@ -331,6 +332,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                       iconColor: const Color(0xFF10B981),
                       title: 'Book Installation',
                       subtitle: 'Schedule your fiber installation at a time that works for you.',
+                      buttonLabel: 'Book Now',
                       onTap: () async {
                         await Navigator.of(context).push(MaterialPageRoute(
                             builder: (_) => LeadBookingFlowScreen(
