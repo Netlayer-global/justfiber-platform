@@ -1417,17 +1417,17 @@ class _DataUsageCard extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            kPrimary.withValues(alpha: 0.06),
-            kSurface,
+            kPrimary.withValues(alpha: 0.12),
+            kPrimary.withValues(alpha: 0.03),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: kPrimary.withValues(alpha: 0.15)),
+        border: Border.all(color: kPrimary.withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
-            color: kPrimary.withValues(alpha: 0.08),
+            color: kPrimary.withValues(alpha: 0.12),
             blurRadius: 24,
             offset: const Offset(0, 8),
           ),
@@ -1623,17 +1623,17 @@ class _GlassStatTile extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            accent.withValues(alpha: 0.08),
-            kSurface,
+            accent.withValues(alpha: 0.15),
+            accent.withValues(alpha: 0.04),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: accent.withValues(alpha: 0.2)),
+        border: Border.all(color: accent.withValues(alpha: 0.35)),
         boxShadow: [
           BoxShadow(
-            color: accent.withValues(alpha: 0.08),
+            color: accent.withValues(alpha: 0.15),
             blurRadius: 20,
             offset: const Offset(0, 6),
           ),
@@ -1648,14 +1648,14 @@ class _GlassStatTile extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  accent.withValues(alpha: 0.25),
-                  accent.withValues(alpha: 0.08),
+                  accent.withValues(alpha: 0.4),
+                  accent.withValues(alpha: 0.15),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(11),
-              border: Border.all(color: accent.withValues(alpha: 0.2)),
+              border: Border.all(color: accent.withValues(alpha: 0.3)),
             ),
             child: Icon(icon, color: accent, size: 17),
           ),
@@ -1858,17 +1858,17 @@ class _BookingActionCard extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              iconColor.withValues(alpha: 0.06),
-              kSurface,
+              iconColor.withValues(alpha: 0.12),
+              iconColor.withValues(alpha: 0.03),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: iconColor.withValues(alpha: 0.2)),
+          border: Border.all(color: iconColor.withValues(alpha: 0.35)),
           boxShadow: [
             BoxShadow(
-              color: iconColor.withValues(alpha: 0.08),
+              color: iconColor.withValues(alpha: 0.15),
               blurRadius: 20,
               offset: const Offset(0, 6),
             ),
@@ -1882,14 +1882,14 @@ class _BookingActionCard extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    iconColor.withValues(alpha: 0.3),
-                    iconColor.withValues(alpha: 0.1),
+                    iconColor.withValues(alpha: 0.4),
+                    iconColor.withValues(alpha: 0.15),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: iconColor.withValues(alpha: 0.25)),
+                border: Border.all(color: iconColor.withValues(alpha: 0.35)),
               ),
               child: Icon(icon, color: iconColor, size: 24),
             ),
