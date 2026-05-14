@@ -1,3 +1,4 @@
+import argon2 from "argon2";
 import { Router } from "express";
 import PDFDocument from "pdfkit";
 import { asyncHandler } from "../../common/asyncHandler.js";
@@ -202,6 +203,84 @@ adminSalesRouter.get(
   asyncHandler(async (_req, res) => {
     const agents = await SalesAgent.find().sort({ createdAt: -1 }).lean();
     return ok(res, agents);
+  })
+);
+
+// ─── Sales Agent CRUD ─────────────────────────────────────────────────────────
+
+adminSalesRouter.post(
+  "/sales/agents",
+  requirePermission(permissions.customerUpdate),
+  asyncHandler(async (req, res) => {
+    const { agentCode, fullName, phone, email, password, assignedAreas } = req.body || {};
+    if (!agentCode || !fullName || !phone || !password) {
+      throw new ApiError(400, "agentCode, fullName, phone, and password are required");
+    }
+    const existing = await SalesAgent.findOne({ $or: [{ agentCode }, { phone }] }).lean();
+    if (existing) {
+      throw new ApiError(409, "Sales agent with this code or phone already exists");
+    }
+    const passwordHash = await argon2.hash(String(password));
+    const agent = await SalesAgent.create({
+      agentCode: String(agentCode).trim(),
+      fullName: String(fullName).trim(),
+      phone: String(phone).trim(),
+      email: email ? String(email).trim() : undefined,
+      passwordHash,
+      status: "active",
+      assignedAreas: Array.isArray(assignedAreas) ? assignedAreas : (assignedAreas || "").split(",").map(s => s.trim()).filter(Boolean),
+    });
+    return ok(res, agent, { created: true });
+  })
+);
+
+adminSalesRouter.patch(
+  "/sales/agents/:agentId",
+  requirePermission(permissions.customerUpdate),
+  asyncHandler(async (req, res) => {
+    const { fullName, phone, email, status, assignedAreas } = req.body || {};
+    const update = {};
+    if (fullName) update.fullName = String(fullName).trim();
+    if (phone) update.phone = String(phone).trim();
+    if (email !== undefined) update.email = email ? String(email).trim() : "";
+    if (status) update.status = status;
+    if (assignedAreas !== undefined) {
+      update.assignedAreas = Array.isArray(assignedAreas) ? assignedAreas : (assignedAreas || "").split(",").map(s => s.trim()).filter(Boolean);
+    }
+    const agent = await SalesAgent.findByIdAndUpdate(req.params.agentId, { $set: update }, { new: true }).lean();
+    if (!agent) throw new ApiError(404, "Sales agent not found");
+    return ok(res, agent);
+  })
+);
+
+adminSalesRouter.post(
+  "/sales/agents/:agentId/reset-password",
+  requirePermission(permissions.customerUpdate),
+  asyncHandler(async (req, res) => {
+    const { password } = req.body || {};
+    if (!password || String(password).length < 6) {
+      throw new ApiError(400, "Password must be at least 6 characters");
+    }
+    const agent = await SalesAgent.findById(req.params.agentId);
+    if (!agent) throw new ApiError(404, "Sales agent not found");
+    agent.passwordHash = await argon2.hash(String(password));
+    await agent.save();
+    return ok(res, { reset: true });
+  })
+);
+
+adminSalesRouter.delete(
+  "/sales/agents/:agentId",
+  requirePermission(permissions.customerUpdate),
+  asyncHandler(async (req, res) => {
+    const agent = await SalesAgent.findById(req.params.agentId).lean();
+    if (!agent) throw new ApiError(404, "Sales agent not found");
+    const activeLeads = await Lead.countDocuments({ salesAgentId: agent._id, status: { $nin: ["converted", "dropped"] } });
+    if (activeLeads > 0) {
+      throw new ApiError(409, `Cannot delete: ${activeLeads} active leads assigned to this agent. Reassign or close them first.`);
+    }
+    await SalesAgent.deleteOne({ _id: agent._id });
+    return ok(res, { deleted: true, agentId: agent._id });
   })
 );
 

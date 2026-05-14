@@ -1818,6 +1818,14 @@ export const adminAPI = {
       data: Array.isArray(res.data) ? res.data.map(mapSalesAgent) : [],
     }
   },
+  createSalesAgent: (data: { agentCode: string; fullName: string; phone: string; email?: string; password: string; assignedAreas?: string[] }) =>
+    request<any>('/api/v1/admin/sales/agents', { method: 'POST', body: JSON.stringify(data) }),
+  updateSalesAgent: (agentId: string, data: { fullName?: string; phone?: string; email?: string; status?: string; assignedAreas?: string[] }) =>
+    request<any>(`/api/v1/admin/sales/agents/${agentId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  resetSalesAgentPassword: (agentId: string, password: string) =>
+    request<{ reset: boolean }>(`/api/v1/admin/sales/agents/${agentId}/reset-password`, { method: 'POST', body: JSON.stringify({ password }) }),
+  deleteSalesAgent: (agentId: string) =>
+    request<{ deleted: boolean; agentId: string }>(`/api/v1/admin/sales/agents/${agentId}`, { method: 'DELETE' }),
   deleteSalesBooking: (bookingId: string) =>
     request<{ deleted: boolean; bookingId: string; bookingNumber: string }>(`/api/v1/admin/sales/bookings/${bookingId}`, { method: 'DELETE' }),
   deleteSalesLead: (leadId: string) =>

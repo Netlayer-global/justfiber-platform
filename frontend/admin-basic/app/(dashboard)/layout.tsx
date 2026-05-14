@@ -64,6 +64,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/plans', label: 'Plans', icon: Cable },
       { href: '/sales', label: 'Sales & Leads', icon: Briefcase },
+      { href: '/sales-agents', label: 'Sales Agents', icon: UserSquare2 },
       { href: '/customers', label: 'Customers', icon: UserRound },
     ],
   },
