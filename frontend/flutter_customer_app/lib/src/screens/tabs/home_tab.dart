@@ -240,10 +240,10 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 18),
                 child: _QuickActionsRow(
-                  onSpeedTest: () => widget.onNavigate(2),
                   onPayBill: () => _openPayBill(context, appState),
-                  onWifi: () => widget.onNavigate(1),
+                  onWifi: () => widget.onNavigate(2),
                   onSupport: () => widget.onNavigate(3),
+                  onProfile: () => widget.onNavigate(4),
                 ),
               ),
             ),
@@ -297,25 +297,23 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _SectionHeader(label: 'YOUR USAGE'),
+                  const _SectionHeader(label: 'DATA & NETWORK'),
+                  const SizedBox(height: 12),
+                  // Premium Data Usage Card
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    child: _DataUsageCard(
+                      usedGb: dashboard.usedGb,
+                      totalGb: dashboard.totalGb,
+                      usagePct: usagePct,
+                      ringAnimation: _ringProgress,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 18),
                     child: Row(
                       children: [
-                        Expanded(
-                          child: _GlassStatTile(
-                            icon: Icons.data_usage_rounded,
-                            accent: kPrimary,
-                            label: 'Data Used',
-                            value:
-                                '${dashboard.usedGb.toStringAsFixed(1)} GB',
-                            sub: dashboard.totalGb > 0
-                                ? 'of ${dashboard.totalGb.toStringAsFixed(0)} GB'
-                                : 'Unlimited',
-                          ),
-                        ),
-                        const SizedBox(width: 12),
                         Expanded(
                           child: _GlassStatTile(
                             icon: Icons.event_repeat_rounded,
@@ -327,26 +325,6 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                             sub: billing.nextBillDate.isEmpty
                                 ? 'No date set'
                                 : _fmtDate(billing.nextBillDate),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 18),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _GlassStatTile(
-                            icon: Icons.wifi_rounded,
-                            accent: const Color(0xFF10B981),
-                            label: 'Wi-Fi Name',
-                            value: dashboard.wifiName.isEmpty
-                                ? '—'
-                                : dashboard.wifiName,
-                            sub: 'Primary network',
-                            smallValue: true,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -1054,30 +1032,21 @@ class _UsageRingPainter extends CustomPainter {
 
 class _QuickActionsRow extends StatelessWidget {
   const _QuickActionsRow({
-    required this.onSpeedTest,
     required this.onPayBill,
     required this.onWifi,
     required this.onSupport,
+    required this.onProfile,
   });
 
-  final VoidCallback onSpeedTest;
   final VoidCallback onPayBill;
   final VoidCallback onWifi;
   final VoidCallback onSupport;
+  final VoidCallback onProfile;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(
-          child: _QuickActionButton(
-            icon: Icons.speed_rounded,
-            label: 'Speed\nTest',
-            gradient: const [Color(0xFF7C3AED), Color(0xFFA855F7)],
-            onTap: onSpeedTest,
-          ),
-        ),
-        const SizedBox(width: 12),
         Expanded(
           child: _QuickActionButton(
             icon: Icons.payment_rounded,
@@ -1102,6 +1071,15 @@ class _QuickActionsRow extends StatelessWidget {
             label: 'Support',
             gradient: const [Color(0xFFD97706), Color(0xFFF59E0B)],
             onTap: onSupport,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _QuickActionButton(
+            icon: Icons.person_rounded,
+            label: 'Profile',
+            gradient: const [Color(0xFF7C3AED), Color(0xFFA855F7)],
+            onTap: onProfile,
           ),
         ),
       ],
@@ -1441,6 +1419,146 @@ class _PaymentTicketCard extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── DATA USAGE CARD (PREMIUM) ────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _DataUsageCard extends StatelessWidget {
+  const _DataUsageCard({
+    required this.usedGb,
+    required this.totalGb,
+    required this.usagePct,
+    required this.ringAnimation,
+  });
+
+  final double usedGb, totalGb, usagePct;
+  final Animation<double> ringAnimation;
+
+  @override
+  Widget build(BuildContext context) {
+    final isUnlimited = totalGb <= 0;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: kBorder),
+        boxShadow: [
+          BoxShadow(
+            color: kPrimary.withValues(alpha: 0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Mini animated ring
+          AnimatedBuilder(
+            animation: ringAnimation,
+            builder: (_, __) => SizedBox(
+              width: 72,
+              height: 72,
+              child: CustomPaint(
+                painter: _UsageRingPainter(
+                  progress: isUnlimited ? 0.0 : usagePct * ringAnimation.value,
+                  bgOpacity: 0.1,
+                  strokeWidth: 5.0,
+                ),
+                child: Center(
+                  child: isUnlimited
+                      ? const Icon(Icons.all_inclusive_rounded, color: kAccentCyan, size: 22)
+                      : Text(
+                          '${(usagePct * 100 * ringAnimation.value).toStringAsFixed(0)}%',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 18),
+          // Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Data Usage',
+                  style: GoogleFonts.inter(
+                    color: kMuted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  isUnlimited
+                      ? 'Unlimited'
+                      : '${usedGb.toStringAsFixed(1)} GB used',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                if (!isUnlimited) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'of ${totalGb.toStringAsFixed(0)} GB total',
+                    style: GoogleFonts.inter(
+                      color: kMuted,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Progress bar
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: AnimatedBuilder(
+                      animation: ringAnimation,
+                      builder: (_, __) => Container(
+                        height: 4,
+                        color: Colors.white.withValues(alpha: 0.08),
+                        child: FractionallySizedBox(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: (usagePct * ringAnimation.value).clamp(0.0, 1.0),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: usagePct > 0.85
+                                    ? [const Color(0xFFEF4444), const Color(0xFFF87171)]
+                                    : [kPrimary, kAccentCyan],
+                              ),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                if (isUnlimited) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'No data cap on your plan',
+                    style: GoogleFonts.inter(color: kMuted, fontSize: 12),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
