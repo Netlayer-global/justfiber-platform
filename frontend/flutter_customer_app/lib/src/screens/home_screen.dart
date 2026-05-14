@@ -57,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final profileBadge = unreadNotifs.clamp(0, 99);
     final supportBadge = openSupport.clamp(0, 99);
 
-    final badges = [0, billingBadge, 0, supportBadge, profileBadge];
+    final badges = [0, 0, 0, 0, 0];
 
     final pages = [
       HomeTab(onNavigate: _goTo),

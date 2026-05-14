@@ -11,7 +11,7 @@ import '../booking_enquiry_screen.dart';
 import '../booking_payment_screen.dart';
 import '../lead_booking_flow_screen.dart';
 import '../notifications_screen.dart';
-import '../plan_catalog_screen.dart';
+import '../public_plan_catalog_screen.dart';
 
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key, required this.onNavigate});
@@ -180,7 +180,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                         pendingBooking: appState.pendingPaymentBooking,
                         onViewPlans: () async {
                           await Navigator.of(context).push(MaterialPageRoute(
-                              builder: (_) => const PlanCatalogScreen()));
+                              builder: (_) => const PublicPlanCatalogScreen()));
                           await appState.refresh();
                         },
                         onBookNow: () async {
@@ -212,7 +212,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                         pulseCtrl: _pulseCtrl,
                         onUpgrade: () => Navigator.of(context).push(
                           MaterialPageRoute(
-                              builder: (_) => const PlanCatalogScreen()),
+                              builder: (_) => const PublicPlanCatalogScreen()),
                         ),
                       ),
               ),
@@ -308,7 +308,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                       buttonLabel: 'Plans',
                       onTap: () async {
                         await Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => const PlanCatalogScreen()));
+                            builder: (_) => const PublicPlanCatalogScreen()));
                         await appState.refresh();
                       },
                     ),
@@ -860,7 +860,7 @@ class _PremiumHeroCard extends StatelessWidget {
                       elevation: 0,
                     ),
                     child: Text(
-                      planName.isEmpty ? 'View Plans' : 'Upgrade Plan',
+                      'View Plans',
                       style: GoogleFonts.inter(
                           fontSize: 14, fontWeight: FontWeight.w800),
                     ),
