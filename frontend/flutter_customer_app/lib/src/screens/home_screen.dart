@@ -273,23 +273,18 @@ class _BottomNavState extends State<_BottomNav>
     final count = widget.items.length;
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
         child: Container(
-          height: 82,
+          height: 72,
           decoration: BoxDecoration(
-            color: const Color(0xFF0D0D14),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+            color: const Color(0xFF12121E),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.58),
-                blurRadius: 34,
-                offset: const Offset(0, 14),
-              ),
-              BoxShadow(
-                color: kPrimary.withValues(alpha: 0.1),
-                blurRadius: 34,
-                offset: const Offset(0, 8),
+                color: Colors.black.withValues(alpha: 0.5),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
@@ -341,7 +336,7 @@ class _BottomNavState extends State<_BottomNav>
                             widget.onTap(i);
                           },
                           child: SizedBox(
-                            height: 82,
+                            height: 72,
                             child: Stack(
                               alignment: Alignment.center,
                               children: [

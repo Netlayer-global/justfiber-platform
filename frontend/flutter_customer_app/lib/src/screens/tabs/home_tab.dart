@@ -1415,12 +1415,19 @@ class _DataUsageCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: kSurface,
+        gradient: LinearGradient(
+          colors: [
+            kPrimary.withValues(alpha: 0.06),
+            kSurface,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: kBorder),
+        border: Border.all(color: kPrimary.withValues(alpha: 0.15)),
         boxShadow: [
           BoxShadow(
-            color: kPrimary.withValues(alpha: 0.06),
+            color: kPrimary.withValues(alpha: 0.08),
             blurRadius: 24,
             offset: const Offset(0, 8),
           ),
@@ -1614,12 +1621,19 @@ class _GlassStatTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: kSurface,
+        gradient: LinearGradient(
+          colors: [
+            accent.withValues(alpha: 0.08),
+            kSurface,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: kBorder),
+        border: Border.all(color: accent.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: accent.withValues(alpha: 0.06),
+            color: accent.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 6),
           ),
@@ -1634,14 +1648,14 @@ class _GlassStatTile extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  accent.withValues(alpha: 0.2),
-                  accent.withValues(alpha: 0.06),
+                  accent.withValues(alpha: 0.25),
+                  accent.withValues(alpha: 0.08),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(11),
-              border: Border.all(color: accent.withValues(alpha: 0.15)),
+              border: Border.all(color: accent.withValues(alpha: 0.2)),
             ),
             child: Icon(icon, color: accent, size: 17),
           ),
@@ -1842,12 +1856,19 @@ class _BookingActionCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: kSurface,
+          gradient: LinearGradient(
+            colors: [
+              iconColor.withValues(alpha: 0.06),
+              kSurface,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: kBorder),
+          border: Border.all(color: iconColor.withValues(alpha: 0.2)),
           boxShadow: [
             BoxShadow(
-              color: iconColor.withValues(alpha: 0.06),
+              color: iconColor.withValues(alpha: 0.08),
               blurRadius: 20,
               offset: const Offset(0, 6),
             ),
@@ -1861,14 +1882,14 @@ class _BookingActionCard extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    iconColor.withValues(alpha: 0.22),
-                    iconColor.withValues(alpha: 0.08),
+                    iconColor.withValues(alpha: 0.3),
+                    iconColor.withValues(alpha: 0.1),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: iconColor.withValues(alpha: 0.2)),
+                border: Border.all(color: iconColor.withValues(alpha: 0.25)),
               ),
               child: Icon(icon, color: iconColor, size: 24),
             ),
