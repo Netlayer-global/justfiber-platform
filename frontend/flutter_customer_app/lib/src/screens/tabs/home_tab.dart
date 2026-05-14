@@ -1415,19 +1415,15 @@ class _DataUsageCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            kPrimary.withValues(alpha: 0.12),
-            kPrimary.withValues(alpha: 0.03),
-          ],
+        gradient: const LinearGradient(
+          colors: [Color(0xFF8224E3), Color(0xFF6D28D9)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: kPrimary.withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
-            color: kPrimary.withValues(alpha: 0.12),
+            color: const Color(0xFF8224E3).withValues(alpha: 0.3),
             blurRadius: 24,
             offset: const Offset(0, 8),
           ),
@@ -1446,7 +1442,7 @@ class _DataUsageCard extends StatelessWidget {
                   child: CustomPaint(
                     painter: _UsageRingPainter(
                       progress: isUnlimited ? 0.0 : usagePct * ringAnimation.value,
-                      bgOpacity: 0.1,
+                      bgOpacity: 0.25,
                       strokeWidth: 5.0,
                     ),
                     child: Center(
@@ -1622,20 +1618,16 @@ class _GlassStatTile extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            accent.withValues(alpha: 0.15),
-            accent.withValues(alpha: 0.04),
-          ],
+          colors: [accent, accent.withValues(alpha: 0.7)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: accent.withValues(alpha: 0.35)),
         boxShadow: [
           BoxShadow(
-            color: accent.withValues(alpha: 0.15),
+            color: accent.withValues(alpha: 0.35),
             blurRadius: 20,
-            offset: const Offset(0, 6),
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -1646,18 +1638,10 @@ class _GlassStatTile extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  accent.withValues(alpha: 0.4),
-                  accent.withValues(alpha: 0.15),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(11),
-              border: Border.all(color: accent.withValues(alpha: 0.3)),
             ),
-            child: Icon(icon, color: accent, size: 17),
+            child: Icon(icon, color: Colors.white, size: 17),
           ),
           const SizedBox(height: 14),
           Text(
@@ -1678,13 +1662,13 @@ class _GlassStatTile extends StatelessWidget {
             style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Colors.white60,
+              color: Colors.white.withValues(alpha: 0.85),
             ),
           ),
           const SizedBox(height: 2),
           Text(
             sub,
-            style: GoogleFonts.inter(fontSize: 10, color: kMuted),
+            style: GoogleFonts.inter(fontSize: 10, color: Colors.white.withValues(alpha: 0.6)),
             overflow: TextOverflow.ellipsis,
           ),
         ],
@@ -1857,20 +1841,16 @@ class _BookingActionCard extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              iconColor.withValues(alpha: 0.12),
-              iconColor.withValues(alpha: 0.03),
-            ],
+            colors: [iconColor, iconColor.withValues(alpha: 0.75)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: iconColor.withValues(alpha: 0.35)),
           boxShadow: [
             BoxShadow(
-              color: iconColor.withValues(alpha: 0.15),
+              color: iconColor.withValues(alpha: 0.3),
               blurRadius: 20,
-              offset: const Offset(0, 6),
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -1880,18 +1860,10 @@ class _BookingActionCard extends StatelessWidget {
               width: 52,
               height: 52,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    iconColor.withValues(alpha: 0.4),
-                    iconColor.withValues(alpha: 0.15),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: iconColor.withValues(alpha: 0.35)),
               ),
-              child: Icon(icon, color: iconColor, size: 24),
+              child: Icon(icon, color: Colors.white, size: 24),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -1909,13 +1881,13 @@ class _BookingActionCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: GoogleFonts.inter(color: kMuted, fontSize: 12, height: 1.4),
+                    style: GoogleFonts.inter(color: Colors.white.withValues(alpha: 0.7), fontSize: 12, height: 1.4),
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            Icon(Icons.arrow_forward_ios_rounded, color: iconColor, size: 16),
+            Icon(Icons.arrow_forward_ios_rounded, color: Colors.white.withValues(alpha: 0.6), size: 16),
           ],
         ),
       ),
