@@ -23,6 +23,8 @@ type PathFormState = {
   name: string
   pathType: string
   status: string
+  fiberColor: string
+  coreCount: string
   points: LatLngPoint[]
 }
 
@@ -50,6 +52,8 @@ const emptyPathForm: PathFormState = {
   name: '',
   pathType: 'distribution',
   status: 'healthy',
+  fiberColor: '',
+  coreCount: '',
   points: [],
 }
 
@@ -95,6 +99,25 @@ function markerColor(asset: NetworkMapAssetItem) {
 }
 
 function pathColor(path: FiberPathItem) {
+  // Use fiber color if set
+  if (path.fiberColor) {
+    const colorMap: Record<string, string> = {
+      blue: '#2563eb',
+      orange: '#ea580c',
+      green: '#16a34a',
+      brown: '#92400e',
+      slate: '#64748b',
+      white: '#e2e8f0',
+      red: '#dc2626',
+      black: '#1e293b',
+      yellow: '#eab308',
+      violet: '#7c3aed',
+      rose: '#e11d48',
+      aqua: '#06b6d4',
+    }
+    return colorMap[path.fiberColor.toLowerCase()] || path.fiberColor
+  }
+  // Fallback to status-based color
   const status = String(path.status || '').toLowerCase()
   if (status.includes('cut') || status.includes('fault')) return '#dc2626'
   if (status.includes('warning')) return '#f59e0b'
@@ -431,6 +454,8 @@ export default function NetworkMapPage() {
         name: pathForm.name.trim(),
         pathType: pathForm.pathType,
         status: pathForm.status,
+        fiberColor: pathForm.fiberColor || undefined,
+        coreCount: pathForm.coreCount ? Number(pathForm.coreCount) : undefined,
         points: pathForm.points,
       })
       if (!res.success || !res.data) {
@@ -677,6 +702,22 @@ export default function NetworkMapPage() {
               <option value="distribution">Distribution</option>
               <option value="drop">Drop</option>
             </select>
+            <select className="input" value={pathForm.fiberColor} onChange={(event) => setPathForm((prev) => ({ ...prev, fiberColor: event.target.value }))}>
+              <option value="">Fiber Color (auto)</option>
+              <option value="blue">🔵 Blue</option>
+              <option value="orange">🟠 Orange</option>
+              <option value="green">🟢 Green</option>
+              <option value="brown">🟤 Brown</option>
+              <option value="slate">⚪ Slate</option>
+              <option value="white">⬜ White</option>
+              <option value="red">🔴 Red</option>
+              <option value="black">⚫ Black</option>
+              <option value="yellow">🟡 Yellow</option>
+              <option value="violet">🟣 Violet</option>
+              <option value="rose">💗 Rose</option>
+              <option value="aqua">🩵 Aqua</option>
+            </select>
+            <input className="input" inputMode="numeric" placeholder="Core count (e.g. 2, 4, 6, 12, 24)" value={pathForm.coreCount} onChange={(event) => setPathForm((prev) => ({ ...prev, coreCount: event.target.value.replace(/[^\d]/g, '') }))} />
             <select className="input" value={pathForm.status} onChange={(event) => setPathForm((prev) => ({ ...prev, status: event.target.value }))}>
               <option value="healthy">Healthy</option>
               <option value="warning">Warning</option>

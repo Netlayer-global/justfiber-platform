@@ -2458,6 +2458,8 @@ export const adminAPI = {
     fromAssetId?: string
     toAssetId?: string
     status?: string
+    fiberColor?: string
+    coreCount?: number
     points: Array<{ lat: number; lng: number }>
     metadata?: Record<string, any>
   }) => {

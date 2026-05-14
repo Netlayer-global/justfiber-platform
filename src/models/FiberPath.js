@@ -14,6 +14,8 @@ const fiberPathSchema = new mongoose.Schema(
     fromAssetId: String,
     toAssetId: String,
     status: { type: String, default: "healthy", index: true },
+    fiberColor: { type: String, default: "" },
+    coreCount: { type: Number },
     points: {
       type: [
         {
