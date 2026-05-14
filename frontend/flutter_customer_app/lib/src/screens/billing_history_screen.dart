@@ -191,27 +191,6 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // ── Data Usage (FUP) ─────────────────────────────
-                    if (useJaze && jazeSummary?.bandwidth != null) ...[
-                      _sectionLabel('DATA USAGE'),
-                      const SizedBox(height: 8),
-                      _JazeUsageCard(
-                        bandwidth: jazeSummary!.bandwidth!,
-                      ),
-                      const SizedBox(height: 20),
-                    ] else if (billing.usageCapGb > 0) ...[
-                      _sectionLabel('DATA USAGE'),
-                      const SizedBox(height: 8),
-                      _UsageCard(
-                        usedGb: billing.usageGb,
-                        capGb: billing.usageCapGb,
-                        capReached: billing.usageCapReached,
-                        cycleStartedAt: billing.usageCycleStartedAt,
-                        fupSpeedMbps: billing.fupSpeedMbps,
-                      ),
-                      const SizedBox(height: 20),
-                    ],
-
                     // ── Latest Invoice Receipt ───────────────────────
                     _sectionLabel('LATEST INVOICE'),
                     const SizedBox(height: 8),

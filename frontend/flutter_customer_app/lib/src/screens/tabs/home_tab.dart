@@ -352,6 +352,8 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                       totalGb: dashboard.totalGb,
                       usagePct: usagePct,
                       ringAnimation: _ringProgress,
+                      downloadMbps: appState.jazeBilling?.summary?.downloadMbps ?? 0,
+                      uploadMbps: appState.jazeBilling?.summary?.uploadMbps ?? 0,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -1398,10 +1400,14 @@ class _DataUsageCard extends StatelessWidget {
     required this.totalGb,
     required this.usagePct,
     required this.ringAnimation,
+    this.downloadMbps = 0,
+    this.uploadMbps = 0,
   });
 
   final double usedGb, totalGb, usagePct;
   final Animation<double> ringAnimation;
+  final int downloadMbps;
+  final int uploadMbps;
 
   @override
   Widget build(BuildContext context) {
@@ -1420,108 +1426,164 @@ class _DataUsageCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          // Mini animated ring
-          AnimatedBuilder(
-            animation: ringAnimation,
-            builder: (_, __) => SizedBox(
-              width: 72,
-              height: 72,
-              child: CustomPaint(
-                painter: _UsageRingPainter(
-                  progress: isUnlimited ? 0.0 : usagePct * ringAnimation.value,
-                  bgOpacity: 0.1,
-                  strokeWidth: 5.0,
-                ),
-                child: Center(
-                  child: isUnlimited
-                      ? const Icon(Icons.all_inclusive_rounded, color: kAccentCyan, size: 22)
-                      : Text(
-                          '${(usagePct * 100 * ringAnimation.value).toStringAsFixed(0)}%',
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 18),
-          // Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Data Usage',
-                  style: GoogleFonts.inter(
-                    color: kMuted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  isUnlimited
-                      ? 'Unlimited'
-                      : '${usedGb.toStringAsFixed(1)} GB used',
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                if (!isUnlimited) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'of ${totalGb.toStringAsFixed(0)} GB total',
-                    style: GoogleFonts.inter(
-                      color: kMuted,
-                      fontSize: 12,
+          Row(
+            children: [
+              // Mini animated ring
+              AnimatedBuilder(
+                animation: ringAnimation,
+                builder: (_, __) => SizedBox(
+                  width: 72,
+                  height: 72,
+                  child: CustomPaint(
+                    painter: _UsageRingPainter(
+                      progress: isUnlimited ? 0.0 : usagePct * ringAnimation.value,
+                      bgOpacity: 0.1,
+                      strokeWidth: 5.0,
+                    ),
+                    child: Center(
+                      child: isUnlimited
+                          ? const Icon(Icons.all_inclusive_rounded, color: kAccentCyan, size: 22)
+                          : Text(
+                              '${(usagePct * 100 * ringAnimation.value).toStringAsFixed(0)}%',
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  // Progress bar
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: AnimatedBuilder(
-                      animation: ringAnimation,
-                      builder: (_, __) => Container(
-                        height: 4,
-                        color: Colors.white.withValues(alpha: 0.08),
-                        child: FractionallySizedBox(
-                          alignment: Alignment.centerLeft,
-                          widthFactor: (usagePct * ringAnimation.value).clamp(0.0, 1.0),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: usagePct > 0.85
-                                    ? [const Color(0xFFEF4444), const Color(0xFFF87171)]
-                                    : [kPrimary, kAccentCyan],
+                ),
+              ),
+              const SizedBox(width: 18),
+              // Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Data Usage',
+                      style: GoogleFonts.inter(
+                        color: kMuted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isUnlimited
+                          ? 'Unlimited'
+                          : '${usedGb.toStringAsFixed(1)} GB used',
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    if (!isUnlimited) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'of ${totalGb.toStringAsFixed(0)} GB total',
+                        style: GoogleFonts.inter(color: kMuted, fontSize: 12),
+                      ),
+                      const SizedBox(height: 8),
+                      // Progress bar
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: AnimatedBuilder(
+                          animation: ringAnimation,
+                          builder: (_, __) => Container(
+                            height: 4,
+                            color: Colors.white.withValues(alpha: 0.08),
+                            child: FractionallySizedBox(
+                              alignment: Alignment.centerLeft,
+                              widthFactor: (usagePct * ringAnimation.value).clamp(0.0, 1.0),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: usagePct > 0.85
+                                        ? [const Color(0xFFEF4444), const Color(0xFFF87171)]
+                                        : [kPrimary, kAccentCyan],
+                                  ),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
                               ),
-                              borderRadius: BorderRadius.circular(999),
                             ),
                           ),
                         ),
                       ),
+                    ],
+                    if (isUnlimited) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'No data cap on your plan',
+                        style: GoogleFonts.inter(color: kMuted, fontSize: 12),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          // Download / Upload speed row
+          if (downloadMbps > 0 || uploadMbps > 0) ...[
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.15)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.arrow_downward_rounded, color: Color(0xFF10B981), size: 14),
+                        const SizedBox(width: 6),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Download', style: GoogleFonts.inter(color: kMuted, fontSize: 9, fontWeight: FontWeight.w600)),
+                            Text('$downloadMbps Mbps', style: GoogleFonts.inter(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800)),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                ],
-                if (isUnlimited) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'No data cap on your plan',
-                    style: GoogleFonts.inter(color: kMuted, fontSize: 12),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: kAccentCyan.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: kAccentCyan.withValues(alpha: 0.15)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.arrow_upward_rounded, color: kAccentCyan, size: 14),
+                        const SizedBox(width: 6),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Upload', style: GoogleFonts.inter(color: kMuted, fontSize: 9, fontWeight: FontWeight.w600)),
+                            Text('$uploadMbps Mbps', style: GoogleFonts.inter(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800)),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ],
+                ),
               ],
             ),
-          ),
+          ],
         ],
       ),
     );
