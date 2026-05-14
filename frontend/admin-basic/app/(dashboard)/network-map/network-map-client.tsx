@@ -594,7 +594,6 @@ export default function NetworkMapPage() {
                   opacity: selectedPath?.pathId === path.pathId ? 1 : 0.9,
                   lineCap: 'round',
                   lineJoin: 'round',
-                  smoothFactor: 1.5,
                 }}
                 eventHandlers={{ click: () => setSelectedPath(path) }}
               />
@@ -651,7 +650,6 @@ export default function NetworkMapPage() {
                   opacity: 0.7,
                   lineCap: 'round',
                   lineJoin: 'round',
-                  smoothFactor: 1.5,
                   dashArray: '8 6',
                 }}
               />
