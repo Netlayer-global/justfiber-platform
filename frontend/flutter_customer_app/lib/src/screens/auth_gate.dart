@@ -17,8 +17,8 @@ class AuthGate extends StatelessWidget {
       return const _AuthGateLoading();
     }
     if (appState.session == null) return const LoginScreen();
-    if (appState.connections.isNotEmpty) return const HomeScreen();
-    return const NewUserHomeScreen();
+    // Always show HomeScreen — Home Tab handles new user vs existing user
+    return const HomeScreen();
   }
 }
 
