@@ -8,7 +8,7 @@ import { Loader2, MapPinned, Plus, RefreshCw, Route } from 'lucide-react'
 import { toast } from 'sonner'
 
 type LatLngPoint = { lat: number; lng: number }
-type CaptureMode = 'idle' | 'asset' | 'path'
+type CaptureMode = 'idle' | 'asset' | 'path' | 'path-freehand'
 
 type AssetFormState = {
   assetType: string
@@ -72,11 +72,15 @@ function CaptureLayer({
   mode,
   onAddAssetPoint,
   onAddPathPoint,
+  onFreehandDraw,
 }: {
   mode: CaptureMode
   onAddAssetPoint: (point: LatLngPoint) => void
   onAddPathPoint: (point: LatLngPoint) => void
+  onFreehandDraw?: (point: LatLngPoint) => void
 }) {
+  const [isDrawing, setIsDrawing] = useState(false)
+
   useMapEvents({
     click(event) {
       const point = {
@@ -85,6 +89,33 @@ function CaptureLayer({
       }
       if (mode === 'asset') onAddAssetPoint(point)
       if (mode === 'path') onAddPathPoint(point)
+    },
+    mousedown(event) {
+      if (mode === 'path-freehand') {
+        setIsDrawing(true)
+        const point = {
+          lat: Number(event.latlng.lat.toFixed(6)),
+          lng: Number(event.latlng.lng.toFixed(6)),
+        }
+        onFreehandDraw?.(point)
+        // Disable map dragging while drawing
+        event.target.dragging.disable()
+      }
+    },
+    mousemove(event) {
+      if (mode === 'path-freehand' && isDrawing) {
+        const point = {
+          lat: Number(event.latlng.lat.toFixed(6)),
+          lng: Number(event.latlng.lng.toFixed(6)),
+        }
+        onFreehandDraw?.(point)
+      }
+    },
+    mouseup(event) {
+      if (mode === 'path-freehand' && isDrawing) {
+        setIsDrawing(false)
+        event.target.dragging.enable()
+      }
     },
   })
   return null
@@ -540,6 +571,17 @@ export default function NetworkMapPage() {
               mode={mode}
               onAddAssetPoint={(point) => setAssetForm((prev) => ({ ...prev, location: point }))}
               onAddPathPoint={(point) => setPathForm((prev) => ({ ...prev, points: [...prev.points, point] }))}
+              onFreehandDraw={(point) => {
+                setPathForm((prev) => {
+                  // Only add point if it's far enough from last point (avoid too many close points)
+                  const last = prev.points[prev.points.length - 1]
+                  if (last) {
+                    const dist = Math.sqrt(Math.pow(point.lat - last.lat, 2) + Math.pow(point.lng - last.lng, 2))
+                    if (dist < 0.00005) return prev // ~5 meters minimum gap
+                  }
+                  return { ...prev, points: [...prev.points, point] }
+                })
+              }}
             />
 
             {paths.map((path) => (
@@ -548,8 +590,11 @@ export default function NetworkMapPage() {
                 positions={path.points.map((point) => [point.lat, point.lng]) as [number, number][]}
                 pathOptions={{
                   color: pathColor(path),
-                  weight: selectedPath?.pathId === path.pathId ? 6 : 4,
-                  opacity: selectedPath?.pathId === path.pathId ? 1 : 0.85,
+                  weight: selectedPath?.pathId === path.pathId ? 7 : 5,
+                  opacity: selectedPath?.pathId === path.pathId ? 1 : 0.9,
+                  lineCap: 'round',
+                  lineJoin: 'round',
+                  smoothFactor: 1.5,
                 }}
                 eventHandlers={{ click: () => setSelectedPath(path) }}
               />
@@ -593,6 +638,24 @@ export default function NetworkMapPage() {
             {assetForm.location ? (
               <CircleMarker center={[assetForm.location.lat, assetForm.location.lng]} radius={8} pathOptions={{ color: '#7c3aed', fillColor: '#7c3aed', fillOpacity: 0.8 }} />
             ) : null}
+
+            {/* Live preview of path being drawn */}
+            {pathForm.points.length >= 2 && (
+              <Polyline
+                positions={pathForm.points.map((p) => [p.lat, p.lng]) as [number, number][]}
+                pathOptions={{
+                  color: pathForm.fiberColor ? (
+                    { blue: '#2563eb', orange: '#ea580c', green: '#16a34a', brown: '#92400e', slate: '#64748b', white: '#e2e8f0', red: '#dc2626', black: '#1e293b', yellow: '#eab308', violet: '#7c3aed', rose: '#e11d48', aqua: '#06b6d4' }[pathForm.fiberColor] || '#7c3aed'
+                  ) : '#7c3aed',
+                  weight: 5,
+                  opacity: 0.7,
+                  lineCap: 'round',
+                  lineJoin: 'round',
+                  smoothFactor: 1.5,
+                  dashArray: '8 6',
+                }}
+              />
+            )}
           </MapContainer>
         </div>
 
@@ -656,11 +719,18 @@ export default function NetworkMapPage() {
               </button>
               <button type="button" className={`btn-secondary ${mode === 'path' ? 'bg-purple-100 text-purple-700' : ''}`} onClick={() => setMode(mode === 'path' ? 'idle' : 'path')}>
                 <Route className="mr-2 inline h-4 w-4" />
-                Draw path
+                Draw path (click)
+              </button>
+              <button type="button" className={`btn-secondary ${mode === 'path-freehand' ? 'bg-emerald-100 text-emerald-700' : ''}`} onClick={() => setMode(mode === 'path-freehand' ? 'idle' : 'path-freehand')}>
+                <Route className="mr-2 inline h-4 w-4" />
+                Draw path (freehand)
               </button>
             </div>
             <div className="text-sm text-slate-500">
-              {mode === 'asset' ? 'Click on the map to pin an asset.' : mode === 'path' ? 'Click multiple points on the map to draw fiber path.' : 'Choose a mode to start mapping.'}
+              {mode === 'asset' && 'Click on the map to pin an asset.'}
+              {mode === 'path' && 'Click multiple points on the map to draw fiber path.'}
+              {mode === 'path-freehand' && 'Hold mouse button and drag to draw fiber path like a pen. Release to stop.'}
+              {mode === 'idle' && 'Choose a mode to start mapping.'}
             </div>
           </section>
 
