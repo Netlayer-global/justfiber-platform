@@ -96,9 +96,45 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Container(
-        color: Colors.black,
-        child: SafeArea(
+      body: Stack(
+        children: [
+          // Animated gradient orbs for premium depth
+          Positioned(
+            top: -80,
+            right: -60,
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    kPrimary.withValues(alpha: 0.12),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -100,
+            left: -80,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    kAccentCyan.withValues(alpha: 0.06),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Main content
+          SafeArea(
           child: SingleChildScrollView(
             child: ConstrainedBox(
               constraints: BoxConstraints(minHeight: size.height - top),
@@ -437,6 +473,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+        ],
       ),
     );
   }
