@@ -181,20 +181,23 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                 padding: const EdgeInsets.symmetric(horizontal: 18),
                 child: appState.connections.isEmpty &&
                         appState.jazeBilling?.summary == null
-                    ? _NewUserConnectCard(
-                        onBookNow: () => Navigator.of(context).push(
-                          MaterialPageRoute(
+                    ? _NewUserBookingSection(
+                        mobile: appState.session?.mobile ?? '',
+                        pendingBooking: appState.pendingPaymentBooking,
+                        onViewPlans: () async {
+                          await Navigator.of(context).push(MaterialPageRoute(
+                              builder: (_) => const PlanCatalogScreen()));
+                          await appState.refresh();
+                        },
+                        onBookNow: () async {
+                          await Navigator.of(context).push(MaterialPageRoute(
                               builder: (_) => LeadBookingFlowScreen(
-                                  initialMobile: appState.session?.mobile)),
-                        ),
-                        onEnquiry: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (_) => BookingEnquiryScreen(
-                                    initialMobile: appState.session?.mobile,
-                                    initialName:
-                                        appState.dashboard.customerName,
-                                  )),
-                        ),
+                                  initialMobile: appState.session?.mobile)));
+                          await appState.refresh();
+                        },
+                        onPayBooking: appState.pendingPaymentBooking != null
+                            ? () => _openPayBooking(context, appState, appState.pendingPaymentBooking!)
+                            : null,
                       )
                     : _PremiumHeroCard(
                         planName: appState.jazeBilling?.summary
@@ -1680,199 +1683,196 @@ class _SectionHeader extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ─── NEW USER CONNECT CARD ────────────────────────────────────────────────────
+// ─── NEW USER BOOKING SECTION (PREMIUM) ───────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 
-class _NewUserConnectCard extends StatelessWidget {
-  const _NewUserConnectCard(
-      {required this.onBookNow, required this.onEnquiry});
+class _NewUserBookingSection extends StatelessWidget {
+  const _NewUserBookingSection({
+    required this.mobile,
+    required this.pendingBooking,
+    required this.onViewPlans,
+    required this.onBookNow,
+    this.onPayBooking,
+  });
+
+  final String mobile;
+  final BookingQuote? pendingBooking;
+  final VoidCallback onViewPlans;
   final VoidCallback onBookNow;
-  final VoidCallback onEnquiry;
+  final VoidCallback? onPayBooking;
 
   @override
   Widget build(BuildContext context) {
+    final hasPending = pendingBooking != null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Intro info row
+        // ── Welcome Hero Card ─────────────────────────────────────
         Container(
-          padding: const EdgeInsets.all(18),
+          width: double.infinity,
           decoration: BoxDecoration(
-            color: kSurface,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: kBorder),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      kPrimary.withValues(alpha: 0.2),
-                      kPrimary.withValues(alpha: 0.08),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  border:
-                      Border.all(color: kPrimary.withValues(alpha: 0.2)),
-                ),
-                child:
-                    const Icon(Icons.wifi_rounded, color: kPrimary, size: 24),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Get connected to JustFiber',
-                      style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 15),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      'High-speed fiber broadband at your doorstep.',
-                      style: GoogleFonts.inter(
-                          color: kMuted, fontSize: 12, height: 1.4),
-                    ),
-                  ],
-                ),
+            gradient: const LinearGradient(
+              colors: [Color(0xFF8224E3), Color(0xFF5B10A0)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: const Color(0x44D8B4FE)),
+            boxShadow: [
+              BoxShadow(
+                color: kPrimary.withValues(alpha: 0.25),
+                blurRadius: 30,
+                offset: const Offset(0, 12),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 12),
-        // Option tiles
-        Container(
-          decoration: BoxDecoration(
-            color: kSurface,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: kBorder),
-          ),
+          padding: const EdgeInsets.all(26),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _optionTile(
-                icon: Icons.add_circle_outline_rounded,
-                title: 'Book new connection',
-                subtitle: 'Start a new fiber broadband connection',
-                onTap: onBookNow,
-                topRadius: true,
+              Text(
+                hasPending ? 'Almost Connected!' : 'Welcome to\nJustFiber',
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1,
+                  height: 1.15,
+                ),
               ),
-              Divider(
-                  height: 1,
-                  color: Colors.white.withValues(alpha: 0.06)),
-              _optionTile(
-                icon: Icons.call_rounded,
-                title: 'Quick enquiry',
-                subtitle: 'Have questions? Get a callback from us',
-                onTap: onEnquiry,
-                bottomRadius: true,
+              const SizedBox(height: 10),
+              if (mobile.isNotEmpty)
+                Text(
+                  'Logged in as +91 $mobile',
+                  style: GoogleFonts.inter(color: Colors.white70, fontSize: 13),
+                ),
+              const SizedBox(height: 6),
+              Text(
+                hasPending
+                    ? 'Complete your payment to confirm your installation booking.'
+                    : 'Choose a plan and book your installation to get connected.',
+                style: GoogleFonts.inter(
+                  color: Colors.white54,
+                  fontSize: 12,
+                  height: 1.5,
+                ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 14),
-        PressableScale(
-          onTap: onBookNow,
-          haptic: true,
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 15),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFA855F7), Color(0xFF7C3AED)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: kPrimary.withValues(alpha: 0.3),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.arrow_forward_rounded,
-                    size: 18, color: Colors.white),
-                const SizedBox(width: 8),
-                Text(
-                  'Book Your Connection',
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
+
+        const SizedBox(height: 20),
+
+        // ── Payment Ticket (when pending) ─────────────────────────
+        if (hasPending) ...[
+          _PaymentTicketCard(
+            booking: pendingBooking!,
+            onPayNow: onPayBooking ?? () {},
           ),
-        ),
+          const SizedBox(height: 20),
+        ],
+
+        // ── Action Cards (when no pending) ────────────────────────
+        if (!hasPending) ...[
+          _BookingActionCard(
+            icon: Icons.grid_view_rounded,
+            iconColor: const Color(0xFF0EA5E9),
+            title: 'View Plans',
+            subtitle: 'Browse all available fiber internet plans and pricing.',
+            buttonLabel: 'View Plans',
+            onTap: onViewPlans,
+          ),
+          const SizedBox(height: 12),
+          _BookingActionCard(
+            icon: Icons.calendar_month_rounded,
+            iconColor: const Color(0xFF10B981),
+            title: 'Book Installation',
+            subtitle: 'Schedule your fiber installation at a time that works for you.',
+            buttonLabel: 'Book Now',
+            onTap: onBookNow,
+          ),
+        ],
       ],
     );
   }
+}
 
-  Widget _optionTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-    bool topRadius = false,
-    bool bottomRadius = false,
-  }) {
-    final radius = BorderRadius.only(
-      topLeft: topRadius ? const Radius.circular(24) : Radius.zero,
-      topRight: topRadius ? const Radius.circular(24) : Radius.zero,
-      bottomLeft: bottomRadius ? const Radius.circular(24) : Radius.zero,
-      bottomRight:
-          bottomRadius ? const Radius.circular(24) : Radius.zero,
-    );
+class _BookingActionCard extends StatelessWidget {
+  const _BookingActionCard({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.buttonLabel,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String title, subtitle, buttonLabel;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
     return PressableScale(
       onTap: onTap,
       child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(borderRadius: radius),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: kSurface,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: kBorder),
+          boxShadow: [
+            BoxShadow(
+              color: iconColor.withValues(alpha: 0.06),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
         child: Row(
           children: [
             Container(
-              width: 42,
-              height: 42,
+              width: 52,
+              height: 52,
               decoration: BoxDecoration(
-                color: kPrimary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(13),
-                border:
-                    Border.all(color: kPrimary.withValues(alpha: 0.15)),
+                gradient: LinearGradient(
+                  colors: [
+                    iconColor.withValues(alpha: 0.22),
+                    iconColor.withValues(alpha: 0.08),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: iconColor.withValues(alpha: 0.2)),
               ),
-              child: Icon(icon, color: kPrimary, size: 20),
+              child: Icon(icon, color: iconColor, size: 24),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 2),
-                  Text(subtitle,
-                      style: GoogleFonts.inter(
-                          color: kMuted, fontSize: 12)),
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.inter(color: kMuted, fontSize: 12, height: 1.4),
+                  ),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded,
-                color: kMuted, size: 14),
+            const SizedBox(width: 8),
+            Icon(Icons.arrow_forward_ios_rounded, color: iconColor, size: 16),
           ],
         ),
       ),
