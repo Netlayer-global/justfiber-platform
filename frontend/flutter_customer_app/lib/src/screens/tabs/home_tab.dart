@@ -278,6 +278,62 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
             const SizedBox(height: 20),
           ],
 
+          // ── Book New Connection ────────────────────────────────
+          SlideTransition(
+            position: _billingSlide,
+            child: FadeTransition(
+              opacity: _billingFade,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(left: 2, bottom: 12),
+                      child: Text(
+                        'GET STARTED',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: kMuted,
+                          letterSpacing: 1.6,
+                        ),
+                      ),
+                    ),
+                    _BookingActionCard(
+                      icon: Icons.grid_view_rounded,
+                      iconColor: const Color(0xFF0EA5E9),
+                      title: 'View Plans',
+                      subtitle: 'Browse all available fiber internet plans and pricing.',
+                      buttonLabel: 'Plans',
+                      onTap: () async {
+                        await Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => const PlanCatalogScreen()));
+                        await appState.refresh();
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _BookingActionCard(
+                      icon: Icons.calendar_month_rounded,
+                      iconColor: const Color(0xFF10B981),
+                      title: 'Book Installation',
+                      subtitle: 'Schedule your fiber installation at a time that works for you.',
+                      buttonLabel: 'Book Now',
+                      onTap: () async {
+                        await Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => LeadBookingFlowScreen(
+                                initialMobile: appState.session?.mobile)));
+                        await appState.refresh();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
           // ── Usage Stats ───────────────────────────────────────
           SlideTransition(
             position: _statsSlide,
