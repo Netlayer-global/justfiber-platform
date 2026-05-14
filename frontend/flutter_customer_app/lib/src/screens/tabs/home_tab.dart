@@ -143,12 +143,6 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
               opacity: _topBarFade,
               child: _TopBar(
                 name: dashboard.customerName,
-                unread: unread,
-                pulseCtrl: _pulseCtrl,
-                onNotif: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => const NotificationsScreen()),
-                ),
               ),
             ),
           ),
@@ -220,14 +214,6 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                           MaterialPageRoute(
                               builder: (_) => const PlanCatalogScreen()),
                         ),
-                        onBook: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (_) => BookingEnquiryScreen(
-                                    initialMobile: appState.session?.mobile,
-                                    initialName:
-                                        appState.dashboard.customerName,
-                                  )),
-                        ),
                       ),
               ),
             ),
@@ -291,62 +277,6 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 20),
           ],
-
-          // ── Book New Connection (for registered users too) ────
-          SlideTransition(
-            position: _billingSlide,
-            child: FadeTransition(
-              opacity: _billingFade,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 2, bottom: 12),
-                      child: Text(
-                        'GET STARTED',
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: kMuted,
-                          letterSpacing: 1.6,
-                        ),
-                      ),
-                    ),
-                    _BookingActionCard(
-                      icon: Icons.grid_view_rounded,
-                      iconColor: const Color(0xFF0EA5E9),
-                      title: 'View Plans',
-                      subtitle: 'Browse all available fiber internet plans and pricing.',
-                      buttonLabel: 'Plans',
-                      onTap: () async {
-                        await Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => const PlanCatalogScreen()));
-                        await appState.refresh();
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    _BookingActionCard(
-                      icon: Icons.calendar_month_rounded,
-                      iconColor: const Color(0xFF10B981),
-                      title: 'Book Installation',
-                      subtitle: 'Schedule your fiber installation at a time that works for you.',
-                      buttonLabel: 'Book Now',
-                      onTap: () async {
-                        await Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => LeadBookingFlowScreen(
-                                initialMobile: appState.session?.mobile)));
-                        await appState.refresh();
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 20),
 
           // ── Usage Stats ───────────────────────────────────────
           SlideTransition(
@@ -457,14 +387,8 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
 class _TopBar extends StatelessWidget {
   const _TopBar({
     required this.name,
-    required this.unread,
-    required this.pulseCtrl,
-    required this.onNotif,
   });
   final String name;
-  final int unread;
-  final AnimationController pulseCtrl;
-  final VoidCallback onNotif;
 
   String get _greeting {
     final h = DateTime.now().hour;
@@ -546,55 +470,6 @@ class _TopBar extends StatelessWidget {
             ],
           ),
           const Spacer(),
-          // Notification bell with animated red dot
-          PressableScale(
-            onTap: onNotif,
-            child: Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: kSurface2,
-                shape: BoxShape.circle,
-                border: Border.all(color: kBorder),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  const Icon(Icons.notifications_outlined,
-                      color: Colors.white70, size: 22),
-                  if (unread > 0)
-                    Positioned(
-                      top: 12,
-                      right: 13,
-                      child: AnimatedBuilder(
-                        animation: pulseCtrl,
-                        builder: (_, child) => Transform.scale(
-                          scale: 0.8 + (pulseCtrl.value * 0.4),
-                          child: child,
-                        ),
-                        child: Container(
-                          width: 9,
-                          height: 9,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEF4444),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                                color: kSurface2, width: 1.5),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFFEF4444)
-                                    .withValues(alpha: 0.6),
-                                blurRadius: 6,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -617,7 +492,6 @@ class _PremiumHeroCard extends StatelessWidget {
     required this.ringAnimation,
     required this.pulseCtrl,
     required this.onUpgrade,
-    required this.onBook,
   });
 
   final String planName, wifiName;
@@ -627,14 +501,13 @@ class _PremiumHeroCard extends StatelessWidget {
   final Animation<double> ringAnimation;
   final AnimationController pulseCtrl;
   final VoidCallback onUpgrade;
-  final VoidCallback onBook;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF1A0645), Color(0xFF2D1B69), Color(0xFF1E1145)],
+          colors: [Color(0xFF8224E3), Color(0xFF5B10A0), Color(0xFF3D0B6E)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           stops: [0.0, 0.5, 1.0],
@@ -643,7 +516,7 @@ class _PremiumHeroCard extends StatelessWidget {
         border: Border.all(color: const Color(0x33D8B4FE)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF7C2DE1).withValues(alpha: 0.25),
+            color: const Color(0xFF8224E3).withValues(alpha: 0.3),
             blurRadius: 40,
             offset: const Offset(0, 16),
           ),
@@ -915,50 +788,25 @@ class _PremiumHeroCard extends StatelessWidget {
 
                 const SizedBox(height: 18),
 
-                // Action buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: onBook,
-                        icon: const Icon(Icons.call_rounded, size: 16),
-                        label: Text(
-                          'Book',
-                          style: GoogleFonts.inter(
-                              fontSize: 13, fontWeight: FontWeight.w800),
-                        ),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF6D28D9),
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(999)),
-                          elevation: 0,
-                        ),
-                      ),
+                // Action button
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: onUpgrade,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF6D28D9),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999)),
+                      elevation: 0,
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: onUpgrade,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          side: BorderSide(
-                              color: Colors.white.withValues(alpha: 0.3)),
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(999)),
-                        ),
-                        child: Text(
-                          planName.isEmpty ? 'Book Now' : 'Upgrade',
-                          style: GoogleFonts.inter(
-                              fontSize: 13, fontWeight: FontWeight.w700),
-                        ),
-                      ),
+                    child: Text(
+                      planName.isEmpty ? 'View Plans' : 'Upgrade Plan',
+                      style: GoogleFonts.inter(
+                          fontSize: 14, fontWeight: FontWeight.w800),
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
