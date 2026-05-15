@@ -451,26 +451,39 @@ class _TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final first = name.split(' ').first;
     final initials = name.isNotEmpty
-        ? name.trim().split(' ').map((w) => w.isNotEmpty ? w[0] : '').take(2).join().toUpperCase()
+        ? name
+            .trim()
+            .split(' ')
+            .map((w) => w.isNotEmpty ? w[0] : '')
+            .take(2)
+            .join()
+            .toUpperCase()
         : '?';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Row(
         children: [
+          // Avatar circle
           Container(
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF8224E3), Color(0xFFA855F7)],
-              ),
+              color: const Color(0xFF16162A),
               shape: BoxShape.circle,
+              border: Border.all(
+                color: kPrimary.withValues(alpha: 0.4),
+                width: 2,
+              ),
             ),
             child: Center(
               child: Text(
                 initials,
-                style: GoogleFonts.inter(color: kText, fontSize: 15, fontWeight: FontWeight.w700),
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),
@@ -478,10 +491,23 @@ class _TopBar extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Hi,', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w400, color: kMuted)),
+              Text(
+                'Hi,',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                  color: const Color(0xFF9CA3AF),
+                ),
+              ),
               Text(
                 first.isEmpty ? 'there' : first,
-                style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: kText, letterSpacing: -0.3, height: 1.2),
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  letterSpacing: -0.3,
+                  height: 1.2,
+                ),
               ),
             ],
           ),
@@ -595,7 +621,7 @@ class _PlanHeroCard extends StatelessWidget {
           Text(
             planName.isEmpty ? 'No active plan' : planName,
             style: GoogleFonts.inter(
-              color: kText,
+              color: Colors.white,
               fontSize: 24,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.5,
@@ -628,7 +654,7 @@ class _PlanHeroCard extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
-                  color: kText,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
@@ -676,15 +702,13 @@ class _DataUsageCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: kText,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1E1145), Color(0xFF16162A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border.all(color: const Color(0xFF8224E3).withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -710,7 +734,7 @@ class _DataUsageCard extends StatelessWidget {
                           : Text(
                               '${(usagePct * 100 * ringAnimation.value).toStringAsFixed(0)}%',
                               style: GoogleFonts.inter(
-                                color: kText,
+                                color: Colors.white,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -728,7 +752,7 @@ class _DataUsageCard extends StatelessWidget {
                     Text(
                       'Data Used',
                       style: GoogleFonts.inter(
-                        color: kMuted,
+                        color: const Color(0xFF9CA3AF),
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
                       ),
@@ -743,7 +767,7 @@ class _DataUsageCard extends StatelessWidget {
                               ? '∞'
                               : usedGb.toStringAsFixed(1),
                           style: GoogleFonts.inter(
-                            color: kText,
+                            color: Colors.white,
                             fontSize: 32,
                             fontWeight: FontWeight.w800,
                             letterSpacing: -1,
@@ -756,7 +780,7 @@ class _DataUsageCard extends StatelessWidget {
                               ? 'Unlimited'
                               : 'of ${totalGb.toStringAsFixed(0)} GB',
                           style: GoogleFonts.inter(
-                            color: kMuted,
+                            color: const Color(0xFF6B7280),
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
@@ -775,7 +799,7 @@ class _DataUsageCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: kSurface2,
+                color: const Color(0xFF0C0C18),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -787,7 +811,7 @@ class _DataUsageCard extends StatelessWidget {
                   Text(
                     '$downloadMbps',
                     style: GoogleFonts.inter(
-                      color: kText,
+                      color: Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                     ),
@@ -803,7 +827,7 @@ class _DataUsageCard extends StatelessWidget {
                   Container(
                     width: 1,
                     height: 20,
-                    color: kBorder,
+                    color: const Color(0xFF2D2D44),
                   ),
                   const Spacer(),
                   // Upload
@@ -813,7 +837,7 @@ class _DataUsageCard extends StatelessWidget {
                   Text(
                     '$uploadMbps',
                     style: GoogleFonts.inter(
-                      color: kText,
+                      color: Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                     ),
@@ -989,13 +1013,13 @@ class _QuickActionItem extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(icon, color: kText, size: 22),
+            child: Icon(icon, color: Colors.white, size: 22),
           ),
           const SizedBox(height: 8),
           Text(
             label,
             style: GoogleFonts.inter(
-              color: kMuted,
+              color: Colors.white70,
               fontSize: 11,
               fontWeight: FontWeight.w500,
             ),
@@ -1053,7 +1077,7 @@ class _BillingStrip extends StatelessWidget {
                   style: GoogleFonts.inter(
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
-                    color: kText,
+                    color: Colors.white,
                     letterSpacing: -0.5,
                   ),
                 ),
@@ -1083,7 +1107,7 @@ class _BillingStrip extends StatelessWidget {
                 style: GoogleFonts.inter(
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
-                  color: kText,
+                  color: Colors.white,
                 ),
               ),
             ),
@@ -1109,7 +1133,7 @@ class _PaymentTicketCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFF16162A),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: const Color(0xFF8224E3).withValues(alpha: 0.3),
@@ -1146,7 +1170,7 @@ class _PaymentTicketCard extends StatelessWidget {
           Text(
             booking.planName.isNotEmpty ? booking.planName : 'Your Plan',
             style: GoogleFonts.inter(
-              color: kText,
+              color: Colors.white,
               fontSize: 20,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.3,
@@ -1180,7 +1204,7 @@ class _PaymentTicketCard extends StatelessWidget {
                           ? '₹${booking.amount.toInt()}'
                           : 'TBD',
                       style: GoogleFonts.inter(
-                        color: kText,
+                        color: Colors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
                       ),
@@ -1204,7 +1228,7 @@ class _PaymentTicketCard extends StatelessWidget {
                         ? booking.durationLabel
                         : '${booking.durationMonths} month',
                     style: GoogleFonts.inter(
-                      color: kText,
+                      color: Colors.white,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                     ),
@@ -1234,7 +1258,7 @@ class _PaymentTicketCard extends StatelessWidget {
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: kText,
+                      color: Colors.white,
                     ),
                   ),
                 ),
@@ -1285,7 +1309,7 @@ class _GetStartedCard extends StatelessWidget {
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFF1E1145), Colors.white],
+            colors: [Color(0xFF1E1145), Color(0xFF16162A)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -1306,13 +1330,13 @@ class _GetStartedCard extends StatelessWidget {
                 ),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: kText, size: 20),
+              child: Icon(icon, color: Colors.white, size: 20),
             ),
             const SizedBox(height: 14),
             Text(
               title,
               style: GoogleFonts.inter(
-                color: kText,
+                color: Colors.white,
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
               ),
@@ -1354,7 +1378,7 @@ class _StatTile extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF1E1145), Colors.white],
+          colors: [Color(0xFF1E1145), Color(0xFF16162A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -1375,7 +1399,7 @@ class _StatTile extends StatelessWidget {
                 style: GoogleFonts.inter(
                   fontSize: 26,
                   fontWeight: FontWeight.w800,
-                  color: kText,
+                  color: Colors.white,
                   letterSpacing: -0.5,
                   height: 1.0,
                 ),
@@ -1440,7 +1464,7 @@ class _NewUserSection extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: const Color(0xFF16162A),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
@@ -1449,7 +1473,7 @@ class _NewUserSection extends StatelessWidget {
               Text(
                 hasPending ? 'Almost Connected!' : 'Welcome to JustFiber',
                 style: GoogleFonts.inter(
-                  color: kText,
+                  color: Colors.white,
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
@@ -1494,7 +1518,7 @@ class _NewUserSection extends StatelessWidget {
                         child: Text(
                           'View Plans',
                           style: GoogleFonts.inter(
-                            color: kText,
+                            color: Colors.white,
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
                           ),
@@ -1556,7 +1580,7 @@ class _ConnectionSwitcher extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isSelected
                     ? const Color(0xFF8224E3).withValues(alpha: 0.15)
-                    : Colors.white,
+                    : const Color(0xFF16162A),
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(
                   color: isSelected

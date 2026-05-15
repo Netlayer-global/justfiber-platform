@@ -277,14 +277,14 @@ class _BottomNavState extends State<_BottomNav>
         child: Container(
           height: 72,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: const Color(0xFF12121E),
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: kBorder),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 20,
-                offset: const Offset(0, -4),
+                color: Colors.black.withValues(alpha: 0.5),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
               ),
             ],
           ),

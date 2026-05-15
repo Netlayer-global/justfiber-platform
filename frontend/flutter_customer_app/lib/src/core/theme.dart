@@ -2,38 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// JustFiber Premium Light Theme — Bright, Colorful, Modern
+// JustFiber Premium Dark Theme
 // Palette
-const kBg = Color(0xFFF5F5FA); // light grey-purple background
-const kSurface = Color(0xFFFFFFFF); // white cards
-const kSurface2 = Color(0xFFF0EEFF); // elevated card (light purple tint)
-const kPrimary = Color(0xFF8224E3); // brand purple
-const kPrimaryLight = Color(0xFFB06AFF); // lighter purple
-const kAccentCyan = Color(0xFF0EA5E9); // network accent blue
-const kText = Color(0xFF1A1A2E); // dark text
-const kMuted = Color(0xFF6B7280); // grey secondary text
-const kBorder = Color(0xFFE5E7EB); // light grey border
-const kDivider = Color(0xFFE5E7EB);
+const kBg = Color(0xFF000000); // pure black
+const kSurface = Color(0xFF0C0C18); // card dark
+const kSurface2 = Color(0xFF111120); // elevated card
+const kPrimary = Color(0xFFA855F7); // bright Wi-Fi purple
+const kPrimaryLight = Color(0xFFD8B4FE); // soft glow purple
+const kAccentCyan = Color(0xFF22D3EE); // network accent
+const kText = Color(0xFFFFFFFF); // primary text
+const kMuted = Color(0xFFB8ACCC); // muted secondary text
+const kBorder = Color(0x1FFFFFFF); // subtle glass border
+const kDivider = Color(0x0AFFFFFF);
 
 ThemeData buildJustFiberTheme() {
-  // System chrome — light status bar
+  // System chrome
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.dark,
-    systemNavigationBarColor: Colors.white,
-    systemNavigationBarIconBrightness: Brightness.dark,
+    statusBarIconBrightness: Brightness.light,
+    systemNavigationBarColor: Colors.black,
+    systemNavigationBarIconBrightness: Brightness.light,
   ));
 
-  final baseText = GoogleFonts.interTextTheme(ThemeData.light().textTheme);
+  final baseText = GoogleFonts.interTextTheme(ThemeData.dark().textTheme);
 
   return ThemeData(
-    brightness: Brightness.light,
-    colorScheme: const ColorScheme.light(
+    brightness: Brightness.dark,
+    colorScheme: const ColorScheme.dark(
       primary: kPrimary,
       secondary: kAccentCyan,
       surface: kSurface,
       onSurface: kText,
-      onPrimary: Colors.white,
+      onPrimary: kText,
     ),
     useMaterial3: true,
     scaffoldBackgroundColor: kBg,
@@ -43,7 +43,7 @@ ThemeData buildJustFiberTheme() {
       elevation: 0,
       foregroundColor: kText,
       systemOverlayStyle: const SystemUiOverlayStyle(
-        statusBarIconBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.light,
       ),
       titleTextStyle: GoogleFonts.inter(
         fontSize: 17,
@@ -65,7 +65,7 @@ ThemeData buildJustFiberTheme() {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: kSurface,
+      fillColor: kSurface2,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: const BorderSide(color: kBorder),
@@ -85,7 +85,7 @@ ThemeData buildJustFiberTheme() {
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: kPrimary,
-        foregroundColor: Colors.white,
+        foregroundColor: kText,
         elevation: 0,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -94,7 +94,7 @@ ThemeData buildJustFiberTheme() {
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: kPrimary,
+        foregroundColor: kText,
         side: const BorderSide(color: kBorder),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -103,26 +103,29 @@ ThemeData buildJustFiberTheme() {
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: kPrimary,
+        foregroundColor: kPrimaryLight,
         textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
       ),
     ),
     dropdownMenuTheme: DropdownMenuThemeData(
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: kSurface,
+        fillColor: kSurface2,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: kBorder)),
       ),
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: kText,
-      contentTextStyle: GoogleFonts.inter(color: Colors.white, fontSize: 13),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      backgroundColor: kSurface2,
+      contentTextStyle: GoogleFonts.inter(color: kText, fontSize: 13),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: kBorder),
+      ),
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       backgroundColor: kSurface,
-      selectedItemColor: kPrimary,
+      selectedItemColor: kPrimaryLight,
       unselectedItemColor: kMuted,
       showUnselectedLabels: true,
       type: BottomNavigationBarType.fixed,
@@ -141,7 +144,7 @@ ThemeData buildJustFiberTheme() {
       modalBackgroundColor: kSurface,
     ),
     popupMenuTheme: PopupMenuThemeData(
-      color: kSurface,
+      color: kSurface2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: kBorder)),
     ),
     chipTheme: ChipThemeData(
