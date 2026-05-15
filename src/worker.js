@@ -777,9 +777,9 @@ const worker = new Worker(
             try {
               const planCode = jobRecord.customerSnapshot?.planCode || customer.planCode;
               const plan = planCode ? await PlanCatalog.findOne({ planCode }).lean() : null;
-              const jazeGroupId = plan?.provisioning?.jazeGroupId || null;
+              const jazeGroupId = plan?.provisioning?.jazeGroupId || jobRecord.customerSnapshot?.planProvisioning?.jazeGroupId || jobRecord.customerSnapshot?.jazeGroupId || null;
               if (!jazeGroupId) {
-                console.warn(`[worker] Skipping Jaze createUser — no jazeGroupId for plan ${planCode}`);
+                console.warn(`[worker] Skipping Jaze createUser — no jazeGroupId for plan ${planCode}. customerSnapshot.planProvisioning:`, JSON.stringify(jobRecord.customerSnapshot?.planProvisioning || {}));
               } else {
                 const fullName = jobRecord.customerSnapshot?.fullName || customer.fullName || "Customer";
                 const nameParts = fullName.trim().split(/\s+/);

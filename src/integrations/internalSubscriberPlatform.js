@@ -661,10 +661,11 @@ export class InternalSubscriberPlatform {
           : null;
         const jazeGroupId =
           plan?.provisioning?.jazeGroupId ||
+          installerJob.customerSnapshot?.planProvisioning?.jazeGroupId ||
           installerJob.customerSnapshot?.jazeGroupId ||
           null;
         if (!jazeGroupId) {
-          console.warn(`[internalSubscriberPlatform] Skipping Jaze createUser — no jazeGroupId for plan ${planCode}`);
+          console.warn(`[internalSubscriberPlatform] Skipping Jaze createUser — no jazeGroupId for plan ${planCode}. planProvisioning:`, JSON.stringify(installerJob.customerSnapshot?.planProvisioning || {}));
           installerJob.activation = {
             ...(installerJob.activation || {}),
             jazeProvisioningError: `No jazeGroupId mapped for plan ${planCode}`,
