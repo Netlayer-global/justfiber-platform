@@ -469,7 +469,7 @@ class _TopBar extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: const Color(0xFF16162A),
+              color: const Color(0xFF1E1845),
               shape: BoxShape.circle,
               border: Border.all(
                 color: kPrimary.withValues(alpha: 0.4),
@@ -496,7 +496,7 @@ class _TopBar extends StatelessWidget {
                 style: GoogleFonts.inter(
                   fontSize: 13,
                   fontWeight: FontWeight.w400,
-                  color: const Color(0xFF9CA3AF),
+                  color: const Color(0xFFB8C0CC),
                 ),
               ),
               Text(
@@ -607,7 +607,7 @@ class _PlanHeroCard extends StatelessWidget {
                 Text(
                   'Expires in $activeDays days',
                   style: GoogleFonts.inter(
-                    color: const Color(0xFF9CA3AF),
+                    color: const Color(0xFFB8C0CC),
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
                   ),
@@ -636,7 +636,7 @@ class _PlanHeroCard extends StatelessWidget {
             Text(
               'Next billing: ${_fmtDate(nextBillDate)}',
               style: GoogleFonts.inter(
-                color: const Color(0xFF6B7280),
+                color: const Color(0xFFB8C0CC),
                 fontSize: 12,
                 fontWeight: FontWeight.w400,
               ),
@@ -659,7 +659,7 @@ class _PlanHeroCard extends StatelessWidget {
                 ),
                 child: Center(
                   child: Text(
-                    'View Plans',
+                    'Upgrade',
                     style: GoogleFonts.inter(
                       color: const Color(0xFF5B10A0),
                       fontSize: 14,
@@ -703,7 +703,7 @@ class _DataUsageCard extends StatelessWidget {
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF1E1145), Color(0xFF16162A)],
+          colors: [Color(0xFF2A1B5E), Color(0xFF1E1845)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -752,7 +752,7 @@ class _DataUsageCard extends StatelessWidget {
                     Text(
                       'Data Used',
                       style: GoogleFonts.inter(
-                        color: const Color(0xFF9CA3AF),
+                        color: const Color(0xFFB8C0CC),
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
                       ),
@@ -780,7 +780,7 @@ class _DataUsageCard extends StatelessWidget {
                               ? 'Unlimited'
                               : 'of ${totalGb.toStringAsFixed(0)} GB',
                           style: GoogleFonts.inter(
-                            color: const Color(0xFF6B7280),
+                            color: const Color(0xFFB8C0CC),
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
@@ -819,7 +819,7 @@ class _DataUsageCard extends StatelessWidget {
                   Text(
                     ' Mbps',
                     style: GoogleFonts.inter(
-                      color: const Color(0xFF6B7280),
+                      color: const Color(0xFFB8C0CC),
                       fontSize: 11,
                     ),
                   ),
@@ -845,7 +845,7 @@ class _DataUsageCard extends StatelessWidget {
                   Text(
                     ' Mbps',
                     style: GoogleFonts.inter(
-                      color: const Color(0xFF6B7280),
+                      color: const Color(0xFFB8C0CC),
                       fontSize: 11,
                     ),
                   ),
@@ -1067,7 +1067,7 @@ class _BillingStrip extends StatelessWidget {
                   'Amount Due',
                   style: GoogleFonts.inter(
                     fontSize: 11,
-                    color: const Color(0xFF9CA3AF),
+                    color: const Color(0xFFB8C0CC),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -1086,7 +1086,7 @@ class _BillingStrip extends StatelessWidget {
                     'Due ${_fmtDate(nextBillDate)}',
                     style: GoogleFonts.inter(
                       fontSize: 11,
-                      color: const Color(0xFF6B7280),
+                      color: const Color(0xFFB8C0CC),
                     ),
                   ),
               ],
@@ -1133,7 +1133,7 @@ class _PaymentTicketCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: const Color(0xFF16162A),
+        color: const Color(0xFF1E1845),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: const Color(0xFF8224E3).withValues(alpha: 0.3),
@@ -1180,7 +1180,7 @@ class _PaymentTicketCard extends StatelessWidget {
           Text(
             'Booking #${booking.bookingNumber}',
             style: GoogleFonts.inter(
-              color: const Color(0xFF6B7280),
+              color: const Color(0xFFB8C0CC),
               fontSize: 12,
             ),
           ),
@@ -1194,7 +1194,7 @@ class _PaymentTicketCard extends StatelessWidget {
                     Text(
                       'Amount',
                       style: GoogleFonts.inter(
-                        color: const Color(0xFF6B7280),
+                        color: const Color(0xFFB8C0CC),
                         fontSize: 11,
                       ),
                     ),
@@ -1218,7 +1218,7 @@ class _PaymentTicketCard extends StatelessWidget {
                   Text(
                     'Duration',
                     style: GoogleFonts.inter(
-                      color: const Color(0xFF6B7280),
+                      color: const Color(0xFFB8C0CC),
                       fontSize: 11,
                     ),
                   ),
@@ -1270,7 +1270,7 @@ class _PaymentTicketCard extends StatelessWidget {
             Text(
               'Amount will be confirmed by your sales agent.',
               style: GoogleFonts.inter(
-                color: const Color(0xFF6B7280),
+                color: const Color(0xFFB8C0CC),
                 fontSize: 11,
                 height: 1.4,
               ),
@@ -1309,7 +1309,7 @@ class _GetStartedCard extends StatelessWidget {
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFF1E1145), Color(0xFF16162A)],
+            colors: [Color(0xFF2A1B5E), Color(0xFF1E1845)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -1345,7 +1345,7 @@ class _GetStartedCard extends StatelessWidget {
             Text(
               subtitle,
               style: GoogleFonts.inter(
-                color: const Color(0xFF6B7280),
+                color: const Color(0xFFB8C0CC),
                 fontSize: 11,
                 fontWeight: FontWeight.w400,
               ),
@@ -1378,7 +1378,7 @@ class _StatTile extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF1E1145), Color(0xFF16162A)],
+          colors: [Color(0xFF2A1B5E), Color(0xFF1E1845)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -1411,7 +1411,7 @@ class _StatTile extends StatelessWidget {
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: const Color(0xFF6B7280),
+                    color: const Color(0xFFB8C0CC),
                   ),
                 ),
               ],
@@ -1423,7 +1423,7 @@ class _StatTile extends StatelessWidget {
             style: GoogleFonts.inter(
               fontSize: 11,
               fontWeight: FontWeight.w500,
-              color: const Color(0xFF9CA3AF),
+              color: const Color(0xFFB8C0CC),
             ),
           ),
         ],
@@ -1464,7 +1464,7 @@ class _NewUserSection extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: const Color(0xFF16162A),
+            color: const Color(0xFF1E1845),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
@@ -1485,7 +1485,7 @@ class _NewUserSection extends StatelessWidget {
                 Text(
                   'Logged in as +91 $mobile',
                   style: GoogleFonts.inter(
-                    color: const Color(0xFF9CA3AF),
+                    color: const Color(0xFFB8C0CC),
                     fontSize: 13,
                   ),
                 ),
@@ -1495,7 +1495,7 @@ class _NewUserSection extends StatelessWidget {
                     ? 'Complete your payment to confirm your installation.'
                     : 'Choose a plan and book your installation to get connected.',
                 style: GoogleFonts.inter(
-                  color: const Color(0xFF6B7280),
+                  color: const Color(0xFFB8C0CC),
                   fontSize: 12,
                   height: 1.5,
                 ),
@@ -1580,7 +1580,7 @@ class _ConnectionSwitcher extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isSelected
                     ? const Color(0xFF8224E3).withValues(alpha: 0.15)
-                    : const Color(0xFF16162A),
+                    : const Color(0xFF1E1845),
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(
                   color: isSelected
@@ -1596,7 +1596,7 @@ class _ConnectionSwitcher extends StatelessWidget {
                     size: 14,
                     color: isSelected
                         ? const Color(0xFFA855F7)
-                        : const Color(0xFF6B7280),
+                        : const Color(0xFFB8C0CC),
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -1606,7 +1606,7 @@ class _ConnectionSwitcher extends StatelessWidget {
                     style: GoogleFonts.inter(
                       color: isSelected
                           ? Colors.white
-                          : const Color(0xFF9CA3AF),
+                          : const Color(0xFFB8C0CC),
                       fontWeight: FontWeight.w600,
                       fontSize: 12,
                     ),
