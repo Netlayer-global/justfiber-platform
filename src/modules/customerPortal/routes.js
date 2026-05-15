@@ -2655,7 +2655,14 @@ customerPortalRouter.get(
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
     const { page, limit, skip } = buildPagination(req.query);
-    const filter = { customerUserId: req.customerUser._id };
+    // Search by customerUserId OR by mobile number (for bookings created by installer/sales)
+    const mobile = String(req.customerUser.mobile || "").replace(/\D+/g, "");
+    const filter = {
+      $or: [
+        { customerUserId: req.customerUser._id },
+        ...(mobile ? [{ "personalDetails.mobile": { $regex: mobile.slice(-10) } }] : []),
+      ]
+    };
     if (req.query.status) {
       filter.status = req.query.status;
     }

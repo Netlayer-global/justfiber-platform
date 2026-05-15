@@ -11,6 +11,7 @@ import '../booking_enquiry_screen.dart';
 import '../booking_payment_screen.dart';
 import '../lead_booking_flow_screen.dart';
 import '../notifications_screen.dart';
+import '../plan_catalog_screen.dart';
 import '../public_plan_catalog_screen.dart';
 
 class HomeTab extends StatefulWidget {
@@ -204,7 +205,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                         pulseCtrl: _pulseCtrl,
                         onViewPlans: () => Navigator.of(context).push(
                           MaterialPageRoute(
-                              builder: (_) => const PublicPlanCatalogScreen()),
+                              builder: (_) => const PlanCatalogScreen()),
                         ),
                       ),
               ),
