@@ -1243,7 +1243,7 @@ class _PaymentTicketCard extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: PressableScale(
-              onTap: booking.amount > 0 ? onPayNow : null,
+              onTap: onPayNow,
               haptic: true,
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -1266,18 +1266,6 @@ class _PaymentTicketCard extends StatelessWidget {
               ),
             ),
           ),
-          if (booking.amount <= 0) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Amount will be confirmed by your sales agent.',
-              style: GoogleFonts.inter(
-                color: const Color(0xFFB8C0CC),
-                fontSize: 11,
-                height: 1.4,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
         ],
       ),
     );

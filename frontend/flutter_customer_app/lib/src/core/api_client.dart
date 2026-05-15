@@ -1520,13 +1520,18 @@ class ApiClient {
       final status = (map['status'] ?? '').toString().toLowerCase();
       if (status == 'payment_pending') {
         final selectedPlan = _asMap(map['selectedPlan']);
+        final payment = _asMap(map['payment']);
         final tracking = _asMap(map['tracking']);
+        // Try multiple amount sources: selectedPlan.totalAmount, selectedPlan.amount, payment.amount
+        final amount = double.tryParse('${selectedPlan['totalAmount'] ?? 0}') ??
+            double.tryParse('${selectedPlan['amount'] ?? 0}') ??
+            double.tryParse('${payment['amount'] ?? 0}') ??
+            0;
         return BookingQuote(
           bookingNumber: (map['bookingNumber'] ?? '').toString(),
           status: status,
           planName: (selectedPlan['planName'] ?? '').toString(),
-          amount:
-              double.tryParse('${selectedPlan['totalAmount'] ?? 0}') ?? 0,
+          amount: amount > 0 ? amount : (double.tryParse('${payment['amount'] ?? 0}') ?? 0),
           currentStep:
               (tracking['currentStep'] ?? 'booking_placed').toString(),
           preferredDate: '',
