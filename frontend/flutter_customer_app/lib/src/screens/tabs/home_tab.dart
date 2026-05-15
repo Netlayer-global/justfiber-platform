@@ -544,8 +544,19 @@ class _PlanHeroCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: const Color(0xFF16162A),
-        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF8224E3), Color(0xFF5B10A0)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF8224E3).withValues(alpha: 0.35),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -634,7 +645,7 @@ class _PlanHeroCard extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // View Plans button — purple accent CTA
+          // View Plans button — white on purple
           SizedBox(
             width: double.infinity,
             child: PressableScale(
@@ -643,14 +654,14 @@ class _PlanHeroCard extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF8224E3),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
                   child: Text(
                     'View Plans',
                     style: GoogleFonts.inter(
-                      color: Colors.white,
+                      color: const Color(0xFF5B10A0),
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                     ),
@@ -691,8 +702,13 @@ class _DataUsageCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: const Color(0xFF16162A),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1E1145), Color(0xFF16162A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF8224E3).withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -933,21 +949,25 @@ class _QuickActionsRow extends StatelessWidget {
         _QuickActionItem(
           icon: Icons.payment_rounded,
           label: 'Pay Bill',
+          color: const Color(0xFF0EA5E9),
           onTap: onPayBill,
         ),
         _QuickActionItem(
           icon: Icons.wifi_rounded,
           label: 'Wi-Fi',
+          color: const Color(0xFF10B981),
           onTap: onWifi,
         ),
         _QuickActionItem(
           icon: Icons.headset_mic_rounded,
           label: 'Support',
+          color: const Color(0xFFF59E0B),
           onTap: onSupport,
         ),
         _QuickActionItem(
           icon: Icons.person_rounded,
           label: 'Profile',
+          color: const Color(0xFFA855F7),
           onTap: onProfile,
         ),
       ],
@@ -959,11 +979,13 @@ class _QuickActionItem extends StatelessWidget {
   const _QuickActionItem({
     required this.icon,
     required this.label,
+    required this.color,
     required this.onTap,
   });
 
   final IconData icon;
   final String label;
+  final Color color;
   final VoidCallback onTap;
 
   @override
@@ -977,20 +999,27 @@ class _QuickActionItem extends StatelessWidget {
             width: 52,
             height: 52,
             decoration: BoxDecoration(
-              color: const Color(0xFF16162A),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: const Color(0xFF2D2D44),
-                width: 1,
+              gradient: LinearGradient(
+                colors: [color, color.withValues(alpha: 0.7)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            child: Icon(icon, color: const Color(0xFF9CA3AF), size: 20),
+            child: Icon(icon, color: Colors.white, size: 22),
           ),
           const SizedBox(height: 8),
           Text(
             label,
             style: GoogleFonts.inter(
-              color: const Color(0xFF9CA3AF),
+              color: Colors.white70,
               fontSize: 11,
               fontWeight: FontWeight.w500,
             ),
@@ -1279,8 +1308,13 @@ class _GetStartedCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: const Color(0xFF16162A),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1E1145), Color(0xFF16162A)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF8224E3).withValues(alpha: 0.25)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1289,10 +1323,14 @@ class _GetStartedCard extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: const Color(0xFF8224E3).withValues(alpha: 0.12),
+                gradient: LinearGradient(
+                  colors: [const Color(0xFF8224E3), const Color(0xFF8224E3).withValues(alpha: 0.6)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: const Color(0xFFA855F7), size: 20),
+              child: Icon(icon, color: Colors.white, size: 20),
             ),
             const SizedBox(height: 14),
             Text(
@@ -1339,13 +1377,18 @@ class _StatTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFF16162A),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1E1145), Color(0xFF16162A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF8224E3).withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: const Color(0xFF6B7280), size: 18),
+          Icon(icon, color: const Color(0xFFA855F7), size: 18),
           const SizedBox(height: 12),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
