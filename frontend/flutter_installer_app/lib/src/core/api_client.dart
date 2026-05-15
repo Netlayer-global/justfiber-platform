@@ -883,6 +883,29 @@ class InstallerApiClient {
     );
   }
 
+  Future<String?> generateSalesPaymentLink(
+    InstallerSession session,
+    String bookingNumber,
+  ) async {
+    final data = _asMap(await _request(
+      '/api/v1/installer/bookings/by-number/$bookingNumber/payment-link',
+      method: 'POST',
+      token: session.accessToken,
+    ));
+    return (data['paymentLink'] ?? '').toString();
+  }
+
+  Future<void> deleteSalesBooking(
+    InstallerSession session,
+    String bookingNumber,
+  ) async {
+    await _request(
+      '/api/v1/installer/bookings/by-number/$bookingNumber',
+      method: 'DELETE',
+      token: session.accessToken,
+    );
+  }
+
   /// Fetches optical power data for a customer's device.
   /// Uses the admin devices API to get optical info.
   Future<Map<String, dynamic>> checkCustomerOptical(

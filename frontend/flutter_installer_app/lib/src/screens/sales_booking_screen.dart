@@ -1748,6 +1748,68 @@ class _SuccessView extends StatelessWidget {
   final SalesLead lead;
   final VoidCallback onDone;
 
+  Future<void> _regeneratePaymentLink(BuildContext context) async {
+    final appState = InstallerStateScope.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final link = await appState.api.generateSalesPaymentLink(
+        appState.session!,
+        lead.bookingNumber,
+      );
+      if (!context.mounted) return;
+      if (link != null && link.isNotEmpty) {
+        await Clipboard.setData(ClipboardData(text: link));
+        messenger.showSnackBar(SnackBar(
+          content: Text('Payment link regenerated & copied!', style: GoogleFonts.inter(fontSize: 13)),
+        ));
+      } else {
+        messenger.showSnackBar(const SnackBar(content: Text('Failed to generate link')));
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  Future<void> _deleteBooking(BuildContext context) async {
+    // Check if payment is done
+    if (lead.paymentMode != 'cash' && lead.amount > 0) {
+      // We allow delete only if payment is not completed
+      // The backend will block if payment is done
+    }
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: kSurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Delete Booking?', style: GoogleFonts.inter(color: kText, fontWeight: FontWeight.w800)),
+        content: Text(
+          'Booking #${lead.bookingNumber} will be permanently deleted. This cannot be undone.',
+          style: GoogleFonts.inter(color: kMuted, fontSize: 14),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text('Cancel', style: GoogleFonts.inter(color: kMuted))),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('Delete', style: GoogleFonts.inter(color: const Color(0xFFEF4444), fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !context.mounted) return;
+    final appState = InstallerStateScope.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await appState.api.deleteSalesBooking(appState.session!, lead.bookingNumber);
+      if (!context.mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text('Booking deleted', style: GoogleFonts.inter(fontSize: 13))));
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!context.mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isCash = lead.paymentMode == 'cash';
@@ -1893,6 +1955,40 @@ class _SuccessView extends StatelessWidget {
               child: Text('Done',
                   style: GoogleFonts.inter(
                       fontSize: 15, fontWeight: FontWeight.w700)),
+            ),
+          ),
+          if (!isCash) ...[
+            const SizedBox(height: 16),
+            const Divider(color: kBorder),
+            const SizedBox(height: 12),
+            Text('ACTIONS', style: GoogleFonts.inter(color: kMuted, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.4)),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _regeneratePaymentLink(context),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF0EA5E9),
+                  side: const BorderSide(color: Color(0xFF0EA5E9)),
+                ),
+                icon: const Icon(Icons.refresh_rounded, size: 16),
+                label: Text('Regenerate Payment Link',
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _deleteBooking(context),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFEF4444),
+                side: const BorderSide(color: Color(0xFFEF4444)),
+              ),
+              icon: const Icon(Icons.delete_outline_rounded, size: 16),
+              label: Text('Delete Booking',
+                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700)),
             ),
           ),
         ],

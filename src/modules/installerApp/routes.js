@@ -2335,6 +2335,10 @@ installerAppRouter.delete(
     if (blocked.includes(String(booking.status || "").toLowerCase())) {
       throw new ApiError(409, `Cannot delete a booking with status '${booking.status}'`);
     }
+    // Block delete if payment is done
+    if (String(booking.payment?.status || "").toLowerCase() === "paid") {
+      throw new ApiError(409, "Cannot delete a booking after payment is completed");
+    }
     await ConnectionBooking.deleteOne({ _id: booking._id });
     return ok(res, { deleted: true, bookingNumber: booking.bookingNumber });
   })
