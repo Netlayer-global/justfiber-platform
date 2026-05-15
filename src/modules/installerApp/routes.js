@@ -2440,6 +2440,8 @@ installerAppRouter.post(
       ...(booking.payment || {}),
       razorpayPaymentLinkId: link.id,
       razorpayPaymentLinkUrl: link.short_url,
+      amount,
+      status: "pending",
     };
     await booking.save();
     return ok(res, { paymentLink: link.short_url, linkId: link.id, amount });

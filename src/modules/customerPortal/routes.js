@@ -2784,9 +2784,9 @@ customerPortalRouter.post(
   asyncHandler(async (req, res) => {
     const payload = bookingPaymentOrderSchema.parse(req.body || {});
     const booking = await getOwnedBookingOrThrow(req.params.bookingNumber, req.customerUser._id, req.customerUser.mobile);
-    const amount = payload.amount || booking.selectedPlan?.totalAmount || booking.payment?.amount || 0;
+    const amount = payload.amount || booking.selectedPlan?.totalAmount || booking.selectedPlan?.amount || booking.payment?.amount || booking.payment?.razorpayPaymentLinkAmount || 0;
     if (!Number.isFinite(Number(amount)) || Number(amount) <= 0) {
-      throw new ApiError(400, "No payable booking amount found");
+      throw new ApiError(400, "No payable booking amount found. Please contact support or regenerate payment link from admin.");
     }
 
     const order = await razorpayClient.createOrder({

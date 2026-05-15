@@ -526,7 +526,7 @@ adminSalesRouter.post(
 
     await ConnectionBooking.updateOne(
       { _id: booking._id },
-      { $set: { "payment.razorpayPaymentLinkId": link.id, "payment.razorpayPaymentLinkUrl": link.short_url } }
+      { $set: { "payment.razorpayPaymentLinkId": link.id, "payment.razorpayPaymentLinkUrl": link.short_url, "payment.amount": amount, "payment.status": "pending" } }
     );
 
     return ok(res, { paymentLink: link.short_url, linkId: link.id, amount });
