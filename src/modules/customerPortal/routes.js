@@ -1,4 +1,4 @@
-﻿import { Router } from "express";
+import { Router } from "express";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import { asyncHandler } from "../../common/asyncHandler.js";
@@ -985,11 +985,21 @@ async function evaluateFeasibility({ lat, lng, address, pinCode }) {
   };
 }
 
-async function getOwnedBookingOrThrow(bookingNumber, customerUserId) {
-  const booking = await ConnectionBooking.findOne({
+async function getOwnedBookingOrThrow(bookingNumber, customerUserId, customerMobile) {
+  // Try by customerUserId first, then by mobile number (for installer-created bookings)
+  let booking = await ConnectionBooking.findOne({
     bookingNumber,
     customerUserId
   });
+  if (!booking && customerMobile) {
+    const mobile = String(customerMobile).replace(/\D+/g, "").slice(-10);
+    if (mobile.length === 10) {
+      booking = await ConnectionBooking.findOne({
+        bookingNumber,
+        "personalDetails.mobile": { $regex: mobile }
+      });
+    }
+  }
   if (!booking) {
     throw new ApiError(404, "Booking not found");
   }
@@ -2716,7 +2726,7 @@ customerPortalRouter.post(
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
     const payload = bookingPreferenceSchema.parse(req.body || {});
-    const booking = await getOwnedBookingOrThrow(req.params.bookingNumber, req.customerUser._id);
+    const booking = await getOwnedBookingOrThrow(req.params.bookingNumber, req.customerUser._id, req.customerUser.mobile);
     booking.personalDetails = {
       ...(booking.personalDetails || {}),
       preferredSlot: payload.preferredSlotCode
@@ -2773,7 +2783,7 @@ customerPortalRouter.post(
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
     const payload = bookingPaymentOrderSchema.parse(req.body || {});
-    const booking = await getOwnedBookingOrThrow(req.params.bookingNumber, req.customerUser._id);
+    const booking = await getOwnedBookingOrThrow(req.params.bookingNumber, req.customerUser._id, req.customerUser.mobile);
     const amount = payload.amount || booking.selectedPlan?.totalAmount || booking.payment?.amount || 0;
     if (!Number.isFinite(Number(amount)) || Number(amount) <= 0) {
       throw new ApiError(400, "No payable booking amount found");
@@ -2849,7 +2859,7 @@ customerPortalRouter.post(
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
     const payload = bookingPaymentConfirmSchema.parse(req.body);
-    const booking = await getOwnedBookingOrThrow(req.params.bookingNumber, req.customerUser._id);
+    const booking = await getOwnedBookingOrThrow(req.params.bookingNumber, req.customerUser._id, req.customerUser.mobile);
 
     booking.payment = {
       ...(booking.payment || {}),
@@ -3022,7 +3032,7 @@ customerPortalRouter.post(
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
     const payload = bookingPaymentVerifySchema.parse(req.body || {});
-    const booking = await getOwnedBookingOrThrow(req.params.bookingNumber, req.customerUser._id);
+    const booking = await getOwnedBookingOrThrow(req.params.bookingNumber, req.customerUser._id, req.customerUser.mobile);
 
     const valid = razorpayClient.verifyCheckoutSignature({
       orderId: payload.razorpayOrderId,
@@ -3676,7 +3686,7 @@ customerPortalRouter.get(
   })
 );
 
-// â”€â”€â”€ Jaze-direct billing endpoints â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Jaze-direct billing endpoints ───────────────────────────────────────────
 // Source of truth: Jaze. JustFiber acts as a thin proxy/adapter so customer apps
 // see real renewals, outstanding amounts, and payment links from Jaze.
 
@@ -3782,7 +3792,7 @@ customerPortalRouter.get(
   })
 );
 
-// â”€â”€â”€ Invoice PDF Generation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Invoice PDF Generation ──────────────────────────────────────────────────
 
 customerPortalRouter.get(
   "/billing/jaze/invoice-pdf",
