@@ -495,12 +495,10 @@ class _SummaryCard extends StatelessWidget {
               children: [
                 _row('Booking', '#$bookingNumber'),
                 if (customerName.isNotEmpty) _row('Customer', customerName),
-                if (customerPhone.isNotEmpty)
-                  _row('Mobile', customerPhone),
-                if (address.isNotEmpty)
-                  _row('Address', address, last: true)
-                else
-                  _row('Booking', '#$bookingNumber', last: true),
+                if (customerPhone.isNotEmpty) _row('Mobile', customerPhone),
+                if (durationLabel.isNotEmpty) _row('Duration', durationLabel),
+                if (address.isNotEmpty) _row('Address', address, last: true),
+                if (address.isEmpty && customerPhone.isNotEmpty) _row('Mobile', customerPhone, last: true),
               ],
             ),
           ),
