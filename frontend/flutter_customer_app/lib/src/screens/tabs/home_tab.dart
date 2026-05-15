@@ -1109,7 +1109,7 @@ class _PaymentTicketCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: const Colors.white,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: const Color(0xFF8224E3).withValues(alpha: 0.3),
@@ -1440,7 +1440,7 @@ class _NewUserSection extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: const Colors.white,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
@@ -1556,7 +1556,7 @@ class _ConnectionSwitcher extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isSelected
                     ? const Color(0xFF8224E3).withValues(alpha: 0.15)
-                    : const Colors.white,
+                    : Colors.white,
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(
                   color: isSelected
