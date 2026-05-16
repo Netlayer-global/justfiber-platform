@@ -62,6 +62,12 @@ export default function PlansPage() {
     visibleInCustomerApp: true,
     visibleInSalesApp: true,
     active: true,
+    subtitle: '',
+    badges: '',
+    highlightFeatures: '',
+    spotlightLabel: '',
+    featured: false,
+    recommended: false,
   })
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
