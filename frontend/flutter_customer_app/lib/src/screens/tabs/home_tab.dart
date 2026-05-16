@@ -1567,53 +1567,6 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                             )
                           else
                             _bannerFallback(banner),
-                          // Text overlay
-                          Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                                colors: [
-                                  Colors.black.withValues(alpha: 0.7),
-                                  Colors.black.withValues(alpha: 0.1),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Text(
-                                  banner.title,
-                                  style: GoogleFonts.inter(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: -0.3,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                if (banner.description.isNotEmpty) ...[
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    banner.description,
-                                    style: GoogleFonts.inter(
-                                      color: Colors.white
-                                          .withValues(alpha: 0.85),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
                         ],
                       ),
                     ),

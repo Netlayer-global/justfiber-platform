@@ -671,6 +671,86 @@ adminCatalogRouter.post(
   })
 );
 
+// Banner image upload
+const BANNER_AD_UPLOAD_DIR = join(process.cwd(), "public", "uploads", "banners");
+try {
+  if (!existsSync(BANNER_AD_UPLOAD_DIR)) {
+    mkdirSync(BANNER_AD_UPLOAD_DIR, { recursive: true });
+  }
+} catch (e) {
+  console.warn("[BannerAd] Could not create upload dir:", e.message);
+}
+
+adminCatalogRouter.post(
+  "/catalog/banners/upload",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const contentType = req.headers["content-type"] || "";
+    if (!contentType.includes("multipart/form-data")) {
+      throw new ApiError(400, "Expected multipart/form-data");
+    }
+    const chunks = [];
+    for await (const chunk of req) { chunks.push(chunk); }
+    const body = Buffer.concat(chunks);
+    const boundaryMatch = contentType.match(/boundary=(.+)/);
+    if (!boundaryMatch) throw new ApiError(400, "Missing boundary");
+    const boundary = boundaryMatch[1].replace(/;.*$/, "").trim();
+    const boundaryBuffer = Buffer.from(`--${boundary}`);
+    const parts = [];
+    let start = 0;
+    while (true) {
+      const idx = body.indexOf(boundaryBuffer, start);
+      if (idx === -1) break;
+      if (start > 0) parts.push(body.slice(start, idx - 2));
+      start = idx + boundaryBuffer.length + 2;
+    }
+    let fileBuffer = null;
+    let fileName = "banner";
+    for (const part of parts) {
+      const headerEnd = part.indexOf("\r\n\r\n");
+      if (headerEnd === -1) continue;
+      const headers = part.slice(0, headerEnd).toString();
+      if (headers.includes('name="banner"')) {
+        fileBuffer = part.slice(headerEnd + 4);
+        const fnMatch = headers.match(/filename="([^"]+)"/);
+        if (fnMatch) fileName = fnMatch[1];
+        break;
+      }
+    }
+    if (!fileBuffer || fileBuffer.length === 0) throw new ApiError(400, "No file provided");
+    const ext = extname(fileName) || ".jpg";
+    const savedName = `banner-${Date.now()}${ext}`;
+    const { writeFileSync } = await import("fs");
+    writeFileSync(join(BANNER_AD_UPLOAD_DIR, savedName), fileBuffer);
+    const imageUrl = `/uploads/banners/${savedName}`;
+    return ok(res, { imageUrl });
+  })
+);
+
+adminCatalogRouter.patch(
+  "/catalog/banners/:id",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const banner = await AppBanner.findByIdAndUpdate(
+      req.params.id,
+      { $set: req.body },
+      { new: true }
+    ).lean();
+    if (!banner) throw new ApiError(404, "Banner not found");
+    return ok(res, banner);
+  })
+);
+
+adminCatalogRouter.delete(
+  "/catalog/banners/:id",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const banner = await AppBanner.findByIdAndDelete(req.params.id).lean();
+    if (!banner) throw new ApiError(404, "Banner not found");
+    return ok(res, { deleted: true });
+  })
+);
+
 adminCatalogRouter.get(
   "/catalog/jaze-groups",
   requirePermission(permissions.configRead),

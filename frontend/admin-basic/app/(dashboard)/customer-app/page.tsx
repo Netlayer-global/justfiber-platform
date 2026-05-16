@@ -133,8 +133,8 @@ export default function CustomerAppPage() {
   // ─── Save (create or update) ────────────────────────────────────────────
 
   async function handleSave() {
-    if (!form.title.trim()) {
-      toast.error('Title is required')
+    if (!form.title.trim() && !form.imageUrl.trim()) {
+      toast.error('Title or image is required')
       return
     }
     setSaving(true)
@@ -362,22 +362,13 @@ export default function CustomerAppPage() {
                 />
               </div>
 
-              {/* Image URL */}
+              {/* Banner Image Upload */}
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Image URL
+                  Banner Image
                 </label>
-                <input
-                  type="url"
-                  value={form.imageUrl}
-                  onChange={(e) =>
-                    setForm({ ...form, imageUrl: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
-                  placeholder="https://example.com/banner.jpg"
-                />
                 {form.imageUrl && (
-                  <div className="mt-2 h-24 overflow-hidden rounded-lg bg-gray-50">
+                  <div className="mb-2 h-28 overflow-hidden rounded-lg bg-gray-50">
                     <img
                       src={form.imageUrl}
                       alt="Preview"
@@ -388,6 +379,50 @@ export default function CustomerAppPage() {
                     />
                   </div>
                 )}
+                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-3 transition-colors hover:border-purple-400 hover:bg-purple-50">
+                  <ImageIcon className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm text-gray-600">Upload banner image</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      // Upload using plan banner endpoint (reuse for banners)
+                      const formData = new FormData()
+                      formData.append('banner', file)
+                      try {
+                        const token = (await import('@/lib/api')).getAuthToken()
+                        const base = (await import('@/lib/api')).getApiBaseUrl()
+                        const res = await fetch(`${base}/api/v1/admin/catalog/banners/upload`, {
+                          method: 'POST',
+                          headers: token ? { Authorization: `Bearer ${token}` } : {},
+                          body: formData,
+                        })
+                        const data = await res.json()
+                        if (data?.data?.imageUrl) {
+                          setForm((f) => ({ ...f, imageUrl: data.data.imageUrl }))
+                          toast.success('Image uploaded')
+                        } else {
+                          toast.error(data?.error || 'Upload failed')
+                        }
+                      } catch {
+                        toast.error('Upload failed')
+                      }
+                    }}
+                  />
+                </label>
+                <p className="mt-1 text-xs text-gray-400">Or paste URL directly:</p>
+                <input
+                  type="url"
+                  value={form.imageUrl}
+                  onChange={(e) =>
+                    setForm({ ...form, imageUrl: e.target.value })
+                  }
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  placeholder="https://example.com/banner.jpg"
+                />
               </div>
 
               {/* Target Type */}

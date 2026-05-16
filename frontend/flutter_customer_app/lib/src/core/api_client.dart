@@ -659,7 +659,7 @@ class ApiClient {
       return AppBannerItem(
         title: (map['title'] ?? 'JustFiber offer').toString(),
         description: description,
-        imageUrl: (map['imageUrl'] ?? '').toString(),
+        imageUrl: _resolveImageUrl(baseUrl, (map['imageUrl'] ?? '').toString()),
         targetType: targetType,
         targetValue: targetValue,
         ctaLabel: ctaLabel,
