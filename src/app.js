@@ -97,6 +97,7 @@ export function createApp() {
   app.use("/admin", express.static(path.join(publicRoot, "admin"), { index: "index.html" }));
   app.use("/user", express.static(path.join(publicRoot, "user"), { index: "index.html" }));
   app.use("/sales", express.static(path.join(publicRoot, "sales"), { index: "index.html" }));
+  app.use("/uploads", express.static(path.join(publicRoot, "uploads")));
   app.get("/noc", (_req, res) => {
     res.sendFile(path.join(publicRoot, "admin", "index.html"));
   });

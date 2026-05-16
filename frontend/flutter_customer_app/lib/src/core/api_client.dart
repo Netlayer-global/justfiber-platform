@@ -143,6 +143,14 @@ class ApiClient {
     return const [];
   }
 
+  /// Resolves a relative image path (like /uploads/...) to a full URL.
+  String _resolveImageUrl(String base, String path) {
+    if (path.isEmpty) return '';
+    if (path.startsWith('http')) return path; // already absolute
+    final cleanBase = base.replaceAll(RegExp(r'/$'), '');
+    return '$cleanBase$path';
+  }
+
   DateTime? _parseDate(String? value) {
     final text = (value ?? '').trim();
     if (text.isEmpty) return null;
@@ -728,7 +736,7 @@ class ApiClient {
             validityYearly: _asMap(map['validityOptions'])['yearly'] == true,
             ottApps: _asList(map['ottApps']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
             routerIncluded: map['routerIncluded'] == true,
-            bannerImageUrl: ((_asMap(map['merchandising']))['bannerImageUrl'] ?? '').toString(),
+            bannerImageUrl: _resolveImageUrl(baseUrl, ((_asMap(map['merchandising']))['bannerImageUrl'] ?? '').toString()),
             merchandisingSubtitle: ((_asMap(map['merchandising']))['subtitle'] ?? '').toString(),
             merchandisingBadges: _asList((_asMap(map['merchandising']))['badges']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
             recommended: (_asMap(map['merchandising']))['recommended'] == true,
@@ -1360,7 +1368,7 @@ class ApiClient {
             validityYearly: _asMap(map['validityOptions'])['yearly'] == true,
             ottApps: _asList(map['ottApps']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
             routerIncluded: map['routerIncluded'] == true,
-            bannerImageUrl: ((_asMap(map['merchandising']))['bannerImageUrl'] ?? '').toString(),
+            bannerImageUrl: _resolveImageUrl(baseUrl, ((_asMap(map['merchandising']))['bannerImageUrl'] ?? '').toString()),
             merchandisingSubtitle: ((_asMap(map['merchandising']))['subtitle'] ?? '').toString(),
             merchandisingBadges: _asList((_asMap(map['merchandising']))['badges']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
             recommended: (_asMap(map['merchandising']))['recommended'] == true,
@@ -1642,4 +1650,5 @@ class ApiClient {
 extension _FirstOrNull<T> on List<T> {
   T? get firstOrNull => isEmpty ? null : first;
 }
+
 
