@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -441,7 +442,8 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ─── TOP BAR (Airtel style — Avatar + Hi, Name) ──────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── TOP BAR (Modern Glass) ──────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class _TopBar extends StatelessWidget {
@@ -452,67 +454,69 @@ class _TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final first = name.split(' ').first;
     final initials = name.isNotEmpty
-        ? name
-            .trim()
-            .split(' ')
-            .map((w) => w.isNotEmpty ? w[0] : '')
-            .take(2)
-            .join()
-            .toUpperCase()
+        ? name.trim().split(' ').map((w) => w.isNotEmpty ? w[0] : '').take(2).join().toUpperCase()
         : '?';
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
       child: Row(
         children: [
-          // Avatar circle
+          // Sleek dark avatar container
           Container(
-            width: 44,
-            height: 44,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              color: const Color(0xFF1E1845),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: kPrimary.withValues(alpha: 0.4),
-                width: 2,
-              ),
+              color: const Color(0xFF1E1E1E), // Charcoal
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
             ),
             child: Center(
               child: Text(
                 initials,
                 style: GoogleFonts.inter(
                   color: Colors.white,
-                  fontSize: 15,
+                  fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Hi,',
+                'Welcome back',
                 style: GoogleFonts.inter(
                   fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                  color: const Color(0xFFB8C0CC),
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF6B7280), // Gray 500
                 ),
               ),
               Text(
-                first.isEmpty ? 'there' : first,
+                first.isEmpty ? 'Guest' : first,
                 style: GoogleFonts.inter(
-                  fontSize: 20,
+                  fontSize: 22,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
-                  letterSpacing: -0.3,
+                  letterSpacing: -0.5,
                   height: 1.2,
                 ),
               ),
             ],
           ),
           const Spacer(),
+          // Action button (like the screenshot's top-right elements)
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E1E1E),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+            ),
+            child: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 22),
+          ),
         ],
       ),
     );
@@ -520,7 +524,7 @@ class _TopBar extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ─── PLAN HERO CARD (Airtel style — dark navy, status dot, expiry) ───────────
+// ─── PLAN HERO CARD (Modern Mesh & Glass) ────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class _PlanHeroCard extends StatelessWidget {
@@ -543,127 +547,125 @@ class _PlanHeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF8224E3), Color(0xFF5B10A0)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
+        color: const Color(0xFF1E1E1E), // Dark Charcoal
+        borderRadius: BorderRadius.circular(40), // Very high border radius
+        border: Border.all(color: Colors.white.withValues(alpha: 0.03)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF8224E3).withValues(alpha: 0.35),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 30,
+            offset: const Offset(0, 20),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Status row
+          // Sleek minimalist status indicator
           Row(
             children: [
-              AnimatedBuilder(
-                animation: pulseCtrl,
-                builder: (_, __) => Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: isOnline
-                        ? Color.lerp(
-                            const Color(0xFF4ADE80),
-                            const Color(0xFF22C55E),
-                            pulseCtrl.value,
-                          )
-                        : const Color(0xFFEF4444),
-                    shape: BoxShape.circle,
-                    boxShadow: isOnline
-                        ? [
-                            BoxShadow(
-                              color: const Color(0xFF4ADE80)
-                                  .withValues(alpha: 0.4 * pulseCtrl.value),
-                              blurRadius: 6,
-                              spreadRadius: 1,
-                            ),
-                          ]
-                        : null,
-                  ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2A2A2A),
+                  borderRadius: BorderRadius.circular(999),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                isOnline ? 'Active' : 'Inactive',
-                style: GoogleFonts.inter(
-                  color: isOnline
-                      ? const Color(0xFF4ADE80)
-                      : const Color(0xFFEF4444),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: isOnline ? const Color(0xFF8224E3) : const Color(0xFFEF4444), // Primary Purple or Red
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      isOnline ? 'Connected' : 'Offline',
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const Spacer(),
               if (activeDays > 0)
                 Text(
-                  'Expires in $activeDays days',
+                  '$activeDays days left',
                   style: GoogleFonts.inter(
-                    color: const Color(0xFFB8C0CC),
-                    fontSize: 11,
+                    color: const Color(0xFF6B7280),
+                    fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
             ],
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 32),
 
-          // Plan name — big and prominent
+          Text(
+            'Current Plan',
+            style: GoogleFonts.inter(
+              color: const Color(0xFF6B7280),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+          // Large typography
           Text(
             planName.isEmpty ? 'No active plan' : planName,
             style: GoogleFonts.inter(
               color: Colors.white,
-              fontSize: 24,
+              fontSize: 34,
               fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
-              height: 1.2,
+              letterSpacing: -1,
+              height: 1.1,
             ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
 
           if (nextBillDate.isNotEmpty) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: 12),
             Text(
-              'Next billing: ${_fmtDate(nextBillDate)}',
+              'Renews ${_fmtDate(nextBillDate)}',
               style: GoogleFonts.inter(
-                color: const Color(0xFFB8C0CC),
-                fontSize: 12,
-                fontWeight: FontWeight.w400,
+                color: const Color(0xFF6B7280),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 32),
 
-          // View Plans button — white on purple
+          // High-contrast primary color button
           SizedBox(
             width: double.infinity,
             child: PressableScale(
               onTap: onViewPlans,
               haptic: true,
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 18),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  color: const Color(0xFF8224E3), // User's requested primary color
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Center(
                   child: Text(
-                    'Upgrade',
+                    'Upgrade Plan',
                     style: GoogleFonts.inter(
-                      color: const Color(0xFF5B10A0),
-                      fontSize: 14,
+                      color: Colors.white,
+                      fontSize: 15,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -678,7 +680,7 @@ class _PlanHeroCard extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ─── DATA USAGE CARD (Airtel style — ring + GB + speeds) ─────────────────────
+// ─── DATA USAGE CARD (Modern Glass Layout) ────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class _DataUsageCard extends StatelessWidget {
@@ -701,42 +703,35 @@ class _DataUsageCard extends StatelessWidget {
     final isUnlimited = totalGb <= 0;
 
     return Container(
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF2A1B5E), Color(0xFF1E1845)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF8224E3).withValues(alpha: 0.3)),
+        color: const Color(0xFF1E1E1E), // Dark Charcoal
+        borderRadius: BorderRadius.circular(40),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.03)),
       ),
       child: Column(
         children: [
           Row(
             children: [
-              // Usage ring
+              // Clean technical Usage ring
               AnimatedBuilder(
                 animation: ringAnimation,
                 builder: (_, __) => SizedBox(
-                  width: 80,
-                  height: 80,
+                  width: 90,
+                  height: 90,
                   child: CustomPaint(
                     painter: _UsageRingPainter(
-                      progress: isUnlimited
-                          ? 0.0
-                          : usagePct * ringAnimation.value,
-                      strokeWidth: 6.0,
+                      progress: isUnlimited ? 0.0 : usagePct * ringAnimation.value,
+                      strokeWidth: 10.0, // Thicker stroke
                     ),
                     child: Center(
                       child: isUnlimited
-                          ? const Icon(Icons.all_inclusive_rounded,
-                              color: Color(0xFF8224E3), size: 24)
+                          ? const Icon(Icons.all_inclusive_rounded, color: Color(0xFF8224E3), size: 28)
                           : Text(
                               '${(usagePct * 100 * ringAnimation.value).toStringAsFixed(0)}%',
                               style: GoogleFonts.inter(
                                 color: Colors.white,
-                                fontSize: 16,
+                                fontSize: 20,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -744,50 +739,57 @@ class _DataUsageCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 20),
+              const SizedBox(width: 24),
               // Data info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Data Used',
+                      'Data Consumption',
                       style: GoogleFonts.inter(
-                        color: const Color(0xFFB8C0CC),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF6B7280),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.baseline,
                       textBaseline: TextBaseline.alphabetic,
                       children: [
                         Text(
-                          isUnlimited
-                              ? '∞'
-                              : usedGb.toStringAsFixed(1),
+                          isUnlimited ? '∞' : usedGb.toStringAsFixed(1),
                           style: GoogleFonts.inter(
                             color: Colors.white,
-                            fontSize: 32,
+                            fontSize: 36,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: -1,
+                            letterSpacing: -1.5,
                             height: 1.0,
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 6),
                         Text(
-                          isUnlimited
-                              ? 'Unlimited'
-                              : 'of ${totalGb.toStringAsFixed(0)} GB',
+                          isUnlimited ? 'Unlimited' : 'GB',
                           style: GoogleFonts.inter(
-                            color: const Color(0xFFB8C0CC),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF6B7280),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
+                    if (!isUnlimited) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Total ${totalGb.toStringAsFixed(0)} GB',
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF6B7280),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -796,60 +798,21 @@ class _DataUsageCard extends StatelessWidget {
 
           // Speed row
           if (downloadMbps > 0 || uploadMbps > 0) ...[
-            const SizedBox(height: 18),
+            const SizedBox(height: 28),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFF0C0C18),
-                borderRadius: BorderRadius.circular(12),
+                color: const Color(0xFF141414), // Even darker for contrast
+                borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   // Download
-                  const Icon(Icons.arrow_downward_rounded,
-                      color: Color(0xFF10B981), size: 14),
-                  const SizedBox(width: 6),
-                  Text(
-                    '$downloadMbps',
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  Text(
-                    ' Mbps',
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFFB8C0CC),
-                      fontSize: 11,
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    width: 1,
-                    height: 20,
-                    color: const Color(0xFF2D2D44),
-                  ),
-                  const Spacer(),
+                  _SpeedWidget(icon: Icons.download_rounded, color: const Color(0xFF8224E3), value: downloadMbps, label: 'Down'),
+                  Container(width: 1, height: 30, color: const Color(0xFF2A2A2A)),
                   // Upload
-                  const Icon(Icons.arrow_upward_rounded,
-                      color: Color(0xFF22D3EE), size: 14),
-                  const SizedBox(width: 6),
-                  Text(
-                    '$uploadMbps',
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  Text(
-                    ' Mbps',
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFFB8C0CC),
-                      fontSize: 11,
-                    ),
-                  ),
+                  _SpeedWidget(icon: Icons.upload_rounded, color: const Color(0xFF8224E3), value: uploadMbps, label: 'Up'),
                 ],
               ),
             ),
@@ -860,17 +823,59 @@ class _DataUsageCard extends StatelessWidget {
   }
 }
 
+class _SpeedWidget extends StatelessWidget {
+  const _SpeedWidget({required this.icon, required this.color, required this.value, required this.label});
+  final IconData icon;
+  final Color color;
+  final int value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: const BoxDecoration(
+            color: Color(0xFF1E1E1E),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: 16),
+        ),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '$value Mbps',
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                color: const Color(0xFF6B7280),
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ─── USAGE RING CUSTOM PAINTER ────────────────────────────────────────────────
+// ─── USAGE RING CUSTOM PAINTER (Clean Flat) ──────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class _UsageRingPainter extends CustomPainter {
-  _UsageRingPainter({
-    required this.progress,
-    this.strokeWidth = 6.0,
-  });
-
+  _UsageRingPainter({required this.progress, this.strokeWidth = 10.0});
   final double progress;
   final double strokeWidth;
 
@@ -879,54 +884,35 @@ class _UsageRingPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width - strokeWidth) / 2;
 
-    // Background ring — subtle
+    // Background ring — solid dark grey
     final bgPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.06)
+      ..color = const Color(0xFF2A2A2A)
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
-
     canvas.drawCircle(center, radius, bgPaint);
 
-    // Progress ring — purple gradient
+    // Progress ring — Primary Purple
     if (progress > 0) {
       final rect = Rect.fromCircle(center: center, radius: radius);
-      final gradient = SweepGradient(
-        startAngle: -math.pi / 2,
-        endAngle: 3 * math.pi / 2,
-        colors: const [
-          Color(0xFFA855F7),
-          Color(0xFF8224E3),
-          Color(0xFFA855F7),
-        ],
-        stops: const [0.0, 0.5, 1.0],
-        transform: const GradientRotation(-math.pi / 2),
-      );
 
       final progressPaint = Paint()
-        ..shader = gradient.createShader(rect)
+        ..color = const Color(0xFF8224E3)
         ..style = PaintingStyle.stroke
         ..strokeWidth = strokeWidth
         ..strokeCap = StrokeCap.round;
 
       final sweepAngle = 2 * math.pi * progress;
-      canvas.drawArc(
-        rect,
-        -math.pi / 2,
-        sweepAngle,
-        false,
-        progressPaint,
-      );
+      canvas.drawArc(rect, -math.pi / 2, sweepAngle, false, progressPaint); // Solid ring
     }
   }
 
   @override
-  bool shouldRepaint(_UsageRingPainter oldDelegate) =>
-      oldDelegate.progress != progress;
+  bool shouldRepaint(_UsageRingPainter oldDelegate) => oldDelegate.progress != progress;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ─── QUICK ACTIONS ROW (Airtel style — small subtle circles) ─────────────────
+// ─── QUICK ACTIONS ROW (Modern Glass Tiles) ──────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class _QuickActionsRow extends StatelessWidget {
@@ -948,27 +934,23 @@ class _QuickActionsRow extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         _QuickActionItem(
-          icon: Icons.payment_rounded,
-          label: 'Pay Bill',
-          color: const Color(0xFF0EA5E9),
+          icon: Icons.account_balance_wallet_rounded,
+          label: 'Pay',
           onTap: onPayBill,
         ),
         _QuickActionItem(
           icon: Icons.wifi_rounded,
           label: 'Wi-Fi',
-          color: const Color(0xFF10B981),
           onTap: onWifi,
         ),
         _QuickActionItem(
-          icon: Icons.headset_mic_rounded,
+          icon: Icons.support_agent_rounded,
           label: 'Support',
-          color: const Color(0xFFF59E0B),
           onTap: onSupport,
         ),
         _QuickActionItem(
           icon: Icons.person_rounded,
           label: 'Profile',
-          color: const Color(0xFFA855F7),
           onTap: onProfile,
         ),
       ],
@@ -980,13 +962,11 @@ class _QuickActionItem extends StatelessWidget {
   const _QuickActionItem({
     required this.icon,
     required this.label,
-    required this.color,
     required this.onTap,
   });
 
   final IconData icon;
   final String label;
-  final Color color;
   final VoidCallback onTap;
 
   @override
@@ -997,32 +977,24 @@ class _QuickActionItem extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            width: 52,
-            height: 52,
+            width: 64,
+            height: 64,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [color, color.withValues(alpha: 0.7)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: 0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              color: const Color(0xFF1E1E1E), // Solid dark charcoal
+              borderRadius: BorderRadius.circular(24), // High border radius, almost circular
+              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
             ),
-            child: Icon(icon, color: Colors.white, size: 22),
+            child: Center(
+              child: Icon(icon, color: Colors.white, size: 26),
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text(
             label,
             style: GoogleFonts.inter(
-              color: Colors.white70,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
+              color: const Color(0xFF9CA3AF),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
