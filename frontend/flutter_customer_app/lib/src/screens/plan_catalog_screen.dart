@@ -433,91 +433,19 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Banner area (image or gradient placeholder) ──────
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(28)),
-            child: Container(
-              height: 160,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: premium
-                      ? [kAccent, kAccentDeep]
-                      : [const Color(0xFF1A1A2E), const Color(0xFF0F0F1A)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // Banner image if available
-                  if (bannerUrl.isNotEmpty)
-                    Image.network(
-                      bannerUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                    ),
-                  // Gradient overlay for text readability
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.6),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // Speed badge on banner
-                  Positioned(
-                    left: 16,
-                    bottom: 14,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(kRPill),
-                        border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.3)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.bolt_rounded,
-                              color: Colors.white, size: 14),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${plan.speedMbps.toStringAsFixed(0)} Mbps',
-                            style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // Wi-Fi icon (decorative, top-right)
-                  if (bannerUrl.isEmpty)
-                    Positioned(
-                      right: 20,
-                      top: 30,
-                      child: Icon(
-                        Icons.wifi_rounded,
-                        color: Colors.white.withValues(alpha: 0.15),
-                        size: 80,
-                      ),
-                    ),
-                ],
+          // ── Banner area (clean image, no overlay) ──────
+          if (bannerUrl.isNotEmpty)
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28)),
+              child: Image.network(
+                bannerUrl,
+                height: 160,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
               ),
             ),
-          ),
 
           // ── Content below banner ────────────────────────────
           Padding(
@@ -555,77 +483,88 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                     ),
                   ),
 
-                // Plan name
-                Text(
-                  plan.name,
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 20,
-                    color: kText,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: GoogleFonts.inter(
-                    color: kTextMuted,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Price + Speed + Data row
+                // Price row (Airtel style — big price + speed + data inline)
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Text(
-                                '₹${plan.monthlyPrice.toStringAsFixed(0)}',
-                                style: GoogleFonts.inter(
-                                  color: kText,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -0.5,
-                                ),
-                              ),
-                              Text(
-                                '/mo',
-                                style: GoogleFonts.inter(
-                                  color: kTextMuted,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
+                    // Price
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          '₹${plan.monthlyPrice.toStringAsFixed(0)}',
+                          style: GoogleFonts.inter(
+                            color: kText,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
                           ),
-                          if (plan.pricesExcludeGst)
-                            Text(
-                              '+GST',
-                              style: GoogleFonts.inter(
-                                color: kTextFaint,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                              ),
+                        ),
+                        Text(
+                          ' /m',
+                          style: GoogleFonts.inter(
+                            color: kTextMuted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (plan.pricesExcludeGst)
+                          Text(
+                            ' +GST',
+                            style: GoogleFonts.inter(
+                              color: kTextFaint,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
                             ),
-                        ],
-                      ),
+                          ),
+                      ],
                     ),
-                    _InfoChip(
-                      value: '${plan.speedMbps.toStringAsFixed(0)}',
-                      label: 'Mbps',
+                    const Spacer(),
+                    // Speed
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          '${plan.speedMbps.toStringAsFixed(0)} Mbps',
+                          style: GoogleFonts.inter(
+                            color: kText,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(
+                          'Speed',
+                          style: GoogleFonts.inter(
+                            color: kTextMuted,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    _InfoChip(
-                      value: _dataLabel(plan),
-                      label: 'Data',
+                    const SizedBox(width: 18),
+                    // Data
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          _dataLabel(plan),
+                          style: GoogleFonts.inter(
+                            color: kText,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(
+                          'Internet',
+                          style: GoogleFonts.inter(
+                            color: kTextMuted,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -685,7 +624,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
 
                 const SizedBox(height: 16),
 
-                // Action buttons
+                // Action buttons (Airtel style — View Details left, Select Plan right)
                 Row(
                   children: [
                     Expanded(
