@@ -1509,7 +1509,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
   @override
   void initState() {
     super.initState();
-    _pageCtrl = PageController(viewportFraction: 0.92);
+    _pageCtrl = PageController();
   }
 
   @override
@@ -1544,7 +1544,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
             itemBuilder: (_, i) {
               final banner = widget.banners[i];
               return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 22),
                 child: GestureDetector(
                   onTap: () => widget.onTap(banner),
                   child: Container(
@@ -1561,7 +1561,8 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                           if (banner.imageUrl.isNotEmpty)
                             Image.network(
                               banner.imageUrl,
-                              fit: BoxFit.cover,
+                              fit: BoxFit.fill,
+                              width: double.infinity,
                               errorBuilder: (_, __, ___) =>
                                   _bannerFallback(banner),
                             )
