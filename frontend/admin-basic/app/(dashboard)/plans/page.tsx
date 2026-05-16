@@ -148,6 +148,14 @@ export default function PlansPage() {
     setSaving(true)
     try {
       const planId = editingPlan.planCode || editingPlan.id
+      const merchandisingPayload = {
+        subtitle: editForm.subtitle,
+        badges: editForm.badges.split(',').map(s => s.trim()).filter(Boolean),
+        highlightFeatures: editForm.highlightFeatures.split(',').map(s => s.trim()).filter(Boolean),
+        spotlightLabel: editForm.spotlightLabel,
+        featured: editForm.featured,
+        recommended: editForm.recommended,
+      }
       const res = await adminAPI.updatePlan(planId, {
         name: editForm.name,
         price: Number(editForm.price) || 0,
@@ -161,16 +169,24 @@ export default function PlansPage() {
         status: editForm.active ? 'active' : 'inactive',
         merchandising: {
           ...editingPlan.merchandising,
-          subtitle: editForm.subtitle,
-          badges: editForm.badges.split(',').map(s => s.trim()).filter(Boolean),
-          highlightFeatures: editForm.highlightFeatures.split(',').map(s => s.trim()).filter(Boolean),
-          spotlightLabel: editForm.spotlightLabel,
-          featured: editForm.featured,
-          recommended: editForm.recommended,
+          ...merchandisingPayload,
         },
       })
       if (res.success) {
-        toast.success('Plan updated')
+        // Also apply merchandising template to all plans with same speed
+        const sameSpeedPlans = plans.filter(
+          (p) => p.speed === editingPlan.speed && p.id !== planId
+        )
+        if (sameSpeedPlans.length > 0 && (editForm.subtitle || editForm.badges || editForm.featured || editForm.recommended)) {
+          await Promise.allSettled(
+            sameSpeedPlans.map((p) =>
+              adminAPI.updatePlan(p.planCode || p.id, {
+                merchandising: { ...p.merchandising, ...merchandisingPayload },
+              })
+            )
+          )
+        }
+        toast.success('Plan updated' + (sameSpeedPlans.length > 0 ? ` (template applied to ${sameSpeedPlans.length + 1} plans)` : ''))
         closeEdit()
         fetchPlans()
       } else {
@@ -212,9 +228,21 @@ export default function PlansPage() {
       const res = await adminAPI.uploadPlanBanner(planId, e.target.files[0])
       if (res.success) {
         toast.success('Banner uploaded')
-        fetchPlans()
-        // Update the editing plan with new banner URL
+        // Apply banner to all plans with same speed
         if (res.data?.bannerImageUrl) {
+          const sameSpeedPlans = plans.filter(
+            (p) => p.speed === editingPlan.speed && (p.planCode || p.id) !== planId
+          )
+          if (sameSpeedPlans.length > 0) {
+            await Promise.allSettled(
+              sameSpeedPlans.map((p) =>
+                adminAPI.updatePlan(p.planCode || p.id, {
+                  merchandising: { ...p.merchandising, bannerImageUrl: res.data!.bannerImageUrl },
+                })
+              )
+            )
+            toast.success(`Banner applied to all ${sameSpeedPlans.length + 1} plans in this speed group`)
+          }
           setEditingPlan((prev) =>
             prev
               ? {
@@ -227,6 +255,7 @@ export default function PlansPage() {
               : prev
           )
         }
+        fetchPlans()
       } else {
         toast.error(res.error || 'Failed to upload banner')
       }
@@ -277,9 +306,31 @@ export default function PlansPage() {
       {speedGroups.map((group) => (
         <div key={group.speedMbps} className="card p-5">
           {/* Speed group header */}
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">
-            {group.speedMbps} Mbps
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold text-gray-800">
+                {group.speedMbps} Mbps
+              </h2>
+              {group.plans[0]?.merchandising?.bannerImageUrl && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+                  <ImageIcon className="h-3 w-3" /> Banner set
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const representative = group.plans[0]
+                if (!representative) return
+                // Apply template to all plans in this speed group
+                openEdit(representative)
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-xs font-medium text-purple-700 transition-colors hover:bg-purple-100"
+            >
+              <Upload className="h-3 w-3" />
+              Group Template
+            </button>
+          </div>
 
           {/* Duration cards grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
