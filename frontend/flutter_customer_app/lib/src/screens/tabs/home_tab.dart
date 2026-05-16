@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -192,7 +193,15 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
             ),
           if (!isNewUser) const SizedBox(height: 22),
 
-          const SizedBox(height: 22),
+          // ── Banner carousel (auto-scroll offers) ──────────────
+          if (appState.banners.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 22),
+              child: _BannerCarousel(
+                banners: appState.banners,
+                onTap: (banner) => _handleBannerTap(context, appState, banner),
+              ),
+            ),
 
           // ── Pending payment booking ───────────────────────────
           if (appState.pendingPaymentBooking != null) ...[
@@ -320,6 +329,25 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
   }
 
   // ─── Actions ─────────────────────────────────────────────────────────────
+  void _handleBannerTap(
+      BuildContext context, AppState appState, AppBannerItem banner) {
+    switch (banner.targetType) {
+      case 'plans':
+        Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const PublicPlanCatalogScreen()));
+        break;
+      case 'billing':
+        widget.onNavigate(1);
+        break;
+      case 'support':
+        widget.onNavigate(3);
+        break;
+      default:
+        // No action for unknown target types
+        break;
+    }
+  }
+
   Future<void> _openPayBill(BuildContext context, AppState appState) async {
     final messenger = ScaffoldMessenger.of(context);
     final order = await appState.loadBillingPaymentOrder();
@@ -1434,6 +1462,178 @@ class _ConnectionSwitcher extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  BANNER CAROUSEL — auto-scrolling offer banners
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _BannerCarousel extends StatefulWidget {
+  const _BannerCarousel({required this.banners, required this.onTap});
+  final List<AppBannerItem> banners;
+  final ValueChanged<AppBannerItem> onTap;
+
+  @override
+  State<_BannerCarousel> createState() => _BannerCarouselState();
+}
+
+class _BannerCarouselState extends State<_BannerCarousel> {
+  late final PageController _pageCtrl;
+  int _currentPage = 0;
+  late final _timer = _startAutoScroll();
+
+  @override
+  void initState() {
+    super.initState();
+    _pageCtrl = PageController(viewportFraction: 0.92);
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    _pageCtrl.dispose();
+    super.dispose();
+  }
+
+  Timer _startAutoScroll() {
+    return Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted || widget.banners.length <= 1) return;
+      final next = (_currentPage + 1) % widget.banners.length;
+      _pageCtrl.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SizedBox(
+          height: 130,
+          child: PageView.builder(
+            controller: _pageCtrl,
+            itemCount: widget.banners.length,
+            onPageChanged: (i) => setState(() => _currentPage = i),
+            itemBuilder: (_, i) {
+              final banner = widget.banners[i];
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: GestureDetector(
+                  onTap: () => widget.onTap(banner),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(kRSurface),
+                      border: Border.all(color: kBorderSoft),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(kRSurface),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          // Banner image or gradient fallback
+                          if (banner.imageUrl.isNotEmpty)
+                            Image.network(
+                              banner.imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  _bannerFallback(banner),
+                            )
+                          else
+                            _bannerFallback(banner),
+                          // Text overlay
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                                colors: [
+                                  Colors.black.withValues(alpha: 0.7),
+                                  Colors.black.withValues(alpha: 0.1),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Text(
+                                  banner.title,
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.3,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (banner.description.isNotEmpty) ...[
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    banner.description,
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white
+                                          .withValues(alpha: 0.85),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        // Dot indicators
+        if (widget.banners.length > 1) ...[
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(widget.banners.length, (i) {
+              final active = i == _currentPage;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: active ? 18 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: active ? kAccent : kBorderSoft,
+                  borderRadius: BorderRadius.circular(kRPill),
+                ),
+              );
+            }),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _bannerFallback(AppBannerItem banner) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [kAccent, kAccentDeep],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
     );
   }

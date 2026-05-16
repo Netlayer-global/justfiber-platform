@@ -137,6 +137,83 @@ class _PublicPlanCatalogScreenState extends State<PublicPlanCatalogScreen> {
               padding: const EdgeInsets.fromLTRB(18, 20, 18, 40),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
+                  // Top offer banner (first active banner)
+                  if (appState.banners.isNotEmpty) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(kRSurface),
+                      child: Container(
+                        height: 130,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [kAccent, kAccentDeep],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(kRSurface),
+                        ),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            if (appState.banners.first.imageUrl.isNotEmpty)
+                              Image.network(
+                                appState.banners.first.imageUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    const SizedBox.shrink(),
+                              ),
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                  colors: [
+                                    Colors.black.withValues(alpha: 0.65),
+                                    Colors.black.withValues(alpha: 0.1),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(18),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    appState.banners.first.title,
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: -0.3,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  if (appState.banners.first.description
+                                      .isNotEmpty) ...[
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      appState.banners.first.description,
+                                      style: GoogleFonts.inter(
+                                        color: Colors.white
+                                            .withValues(alpha: 0.85),
+                                        fontSize: 12,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                  ],
                   if (_loading || appState.busy) ...[
                     const SizedBox(height: 60),
                     const Center(
