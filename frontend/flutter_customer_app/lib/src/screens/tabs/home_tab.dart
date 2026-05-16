@@ -1535,8 +1535,8 @@ class _BannerCarouselState extends State<_BannerCarousel> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        SizedBox(
-          height: 130,
+        AspectRatio(
+          aspectRatio: 1080 / 400, // 2.7:1 — matches recommended banner size
           child: PageView.builder(
             controller: _pageCtrl,
             itemCount: widget.banners.length,
