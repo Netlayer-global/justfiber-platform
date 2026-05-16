@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_state.dart';
 import '../../core/models.dart';
@@ -336,14 +337,34 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
         Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const PublicPlanCatalogScreen()));
         break;
+      case 'plan_detail':
+        final plan = appState.plans.cast<PlanItem?>().firstWhere(
+          (p) => p?.planCode == banner.targetValue,
+          orElse: () => null,
+        );
+        if (plan != null) {
+          Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const PublicPlanCatalogScreen()));
+        }
+        break;
       case 'billing':
         widget.onNavigate(1);
         break;
       case 'support':
         widget.onNavigate(3);
         break;
+      case 'booking':
+        Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => LeadBookingFlowScreen(
+                initialMobile: appState.session?.mobile)));
+        break;
+      case 'external_url':
+        if (banner.targetValue.isNotEmpty) {
+          launchUrl(Uri.parse(banner.targetValue),
+              mode: LaunchMode.externalApplication);
+        }
+        break;
       default:
-        // No action for unknown target types
         break;
     }
   }

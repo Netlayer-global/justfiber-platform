@@ -533,6 +533,7 @@ function mapAppBanner(item: any): AppBanner {
   return {
     id: item._id || item.id || '',
     title: item.title || 'Untitled banner',
+    description: item.description || '',
     imageUrl: item.imageUrl || '',
     targetType: item.targetType || '',
     targetValue: item.targetValue || '',
@@ -3358,6 +3359,7 @@ export const adminAPI = {
   },
   createCatalogBanner: async (payload: {
     title: string
+    description?: string
     imageUrl?: string
     targetType?: string
     targetValue?: string
@@ -3376,6 +3378,18 @@ export const adminAPI = {
       data: res.data ? mapAppBanner(res.data) : undefined,
     }
   },
+  updateCatalogBanner: async (id: string, payload: Partial<AppBanner>) => {
+    const res = await request<any>(`/api/v1/admin/catalog/banners/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    })
+    return {
+      ...res,
+      data: res.data ? mapAppBanner(res.data) : undefined,
+    }
+  },
+  deleteCatalogBanner: async (id: string) =>
+    request(`/api/v1/admin/catalog/banners/${id}`, { method: 'DELETE' }),
   updateSettingsSection: async <T = Record<string, any>>(section: string, value: T) =>
     request(`/api/v1/admin/configs/settings/${section}`, {
       method: 'PUT',

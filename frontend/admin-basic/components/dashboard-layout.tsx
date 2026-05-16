@@ -14,6 +14,7 @@ import {
   Router,
   Settings,
   ShieldCheck,
+  Smartphone,
   Ticket,
   UserRound,
   Wrench,
@@ -23,6 +24,7 @@ import { clearAuthToken } from '@/lib/api'
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: BarChart3 },
   { href: '/plans', label: 'Plans', icon: Cable },
+  { href: '/customer-app', label: 'Customer App', icon: Smartphone },
   { href: '/routers', label: 'Routers', icon: Router },
   { href: '/provisioning', label: 'Provisioning', icon: ShieldCheck },
   { href: '/customers', label: 'Customers', icon: UserRound },

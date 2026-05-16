@@ -1139,6 +1139,7 @@ export interface SettingsSection<T = Record<string, any>> {
 export interface AppBanner {
   id: string
   title: string
+  description?: string
   imageUrl?: string
   targetType?: string
   targetValue?: string
