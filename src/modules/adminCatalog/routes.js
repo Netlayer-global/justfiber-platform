@@ -531,8 +531,12 @@ adminCatalogRouter.delete(
 // ── Plan banner image upload ──────────────────────────────────────────────────
 
 const BANNER_UPLOAD_DIR = join(process.cwd(), "public", "uploads", "plan-banners");
-if (!existsSync(BANNER_UPLOAD_DIR)) {
-  mkdirSync(BANNER_UPLOAD_DIR, { recursive: true });
+try {
+  if (!existsSync(BANNER_UPLOAD_DIR)) {
+    mkdirSync(BANNER_UPLOAD_DIR, { recursive: true });
+  }
+} catch (e) {
+  console.warn("[PlanBanner] Could not create upload dir:", e.message);
 }
 
 adminCatalogRouter.post(
