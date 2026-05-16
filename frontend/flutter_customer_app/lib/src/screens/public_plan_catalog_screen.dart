@@ -232,7 +232,7 @@ class _PublicPlanCatalogScreenState extends State<PublicPlanCatalogScreen> {
       );
 }
 
-// ─── Plan Card ────────────────────────────────────────────────────────────────
+// ─── Plan Card (banner-style, matching upgrade plan_catalog_screen) ───────────
 
 class _PlanCard extends StatelessWidget {
   const _PlanCard({required this.plan});
@@ -241,273 +241,355 @@ class _PlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final premium = _isPremium(plan);
-    final speed = plan.speedMbps.toStringAsFixed(0);
-    final terms = _terms(plan);
+    final badges = <String>[
+      if (premium || plan.recommended) 'Recommended',
+      if (plan.dataPolicy == 'unlimited') 'Unlimited Data',
+      if (plan.routerIncluded) 'Router Included',
+      ...plan.merchandisingBadges,
+    ];
+    final subtitle = plan.merchandisingSubtitle.isNotEmpty
+        ? plan.merchandisingSubtitle
+        : '${plan.speedMbps.toStringAsFixed(0)} Mbps Fiber Broadband';
+    final bannerUrl = plan.bannerImageUrl;
 
     return GestureDetector(
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => PlanDetailScreen(plan: plan))),
+      onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => PlanDetailScreen(plan: plan))),
       child: Container(
         decoration: BoxDecoration(
           color: kSurface,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: premium
-                ? kPrimary.withValues(alpha: 0.5)
-                : kBorder,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: kPrimary.withValues(alpha: premium ? 0.12 : 0.05),
-              blurRadius: 28,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(kRCard),
+          border: Border.all(color: kBorderSoft),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Top gradient header ───────────────────────────────
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    kPrimary.withValues(alpha: premium ? 0.22 : 0.12),
-                    kPrimary.withValues(alpha: 0.03),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+            // ── Banner area (image or gradient placeholder) ──────
+            ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(28)),
+              child: Container(
+                height: 160,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: premium
+                        ? [kAccent, kAccentDeep]
+                        : [const Color(0xFF1A1A2E), const Color(0xFF0F0F1A)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                 ),
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(24)),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Banner image if available
+                    if (bannerUrl.isNotEmpty)
+                      Image.network(
+                        bannerUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            const SizedBox.shrink(),
+                      ),
+                    // Gradient overlay for text readability
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.6),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Speed badge pill on banner
+                    Positioned(
+                      left: 16,
+                      bottom: 14,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(kRPill),
+                          border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.bolt_rounded,
+                                color: Colors.white, size: 14),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${plan.speedMbps.toStringAsFixed(0)} Mbps',
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Wi-Fi icon (decorative, top-right)
+                    if (bannerUrl.isEmpty)
+                      Positioned(
+                        right: 20,
+                        top: 30,
+                        child: Icon(
+                          Icons.wifi_rounded,
+                          color: Colors.white.withValues(alpha: 0.15),
+                          size: 80,
+                        ),
+                      ),
+                  ],
+                ),
               ),
-              child: Row(
+            ),
+
+            // ── Content below banner ────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Badges
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: [
-                            if (premium)
-                              _badge('RECOMMENDED', kPrimary,
-                                  kPrimaryLight),
-                            _badge(
-                              terms.length > 1
-                                  ? '${terms.length} DURATIONS'
-                                  : 'MONTHLY',
-                              kBg,
-                              kMuted,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          plan.name,
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 20,
-                            letterSpacing: -0.4,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          children: [
-                            Text(
-                              'Rs ${plan.monthlyPrice.toStringAsFixed(0)}',
-                              style: GoogleFonts.inter(
-                                color: kPrimaryLight,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 26,
-                              ),
-                            ),
-                            const SizedBox(width: 5),
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 2),
-                              child: Text(
-                                '/ month',
-                                style: GoogleFonts.inter(
-                                    color: kMuted, fontSize: 12),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                  // Badges row
+                  if (badges.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: badges
+                            .map((b) => Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: kAccentSoft,
+                                    borderRadius:
+                                        BorderRadius.circular(kRPill),
+                                  ),
+                                  child: Text(
+                                    b,
+                                    style: GoogleFonts.inter(
+                                      color: kAccent,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ))
+                            .toList(),
+                      ),
+                    ),
+
+                  // Plan name (big bold)
+                  Text(
+                    plan.name,
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 20,
+                      color: kText,
+                      letterSpacing: -0.3,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  // Speed bubble
-                  Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          kPrimary.withValues(alpha: 0.35),
-                          kPrimary.withValues(alpha: 0.08),
+                  const SizedBox(height: 4),
+                  // Subtitle
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.inter(
+                      color: kTextMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Price + Speed + Data info row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text(
+                                  '₹${plan.monthlyPrice.toStringAsFixed(0)}',
+                                  style: GoogleFonts.inter(
+                                    color: kText,
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                Text(
+                                  '/mo',
+                                  style: GoogleFonts.inter(
+                                    color: kTextMuted,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (plan.pricesExcludeGst)
+                              Text(
+                                '+GST',
+                                style: GoogleFonts.inter(
+                                  color: kTextFaint,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            plan.speedMbps.toStringAsFixed(0),
+                            style: GoogleFonts.inter(
+                              color: kText,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          Text(
+                            'Mbps',
+                            style: GoogleFonts.inter(
+                              color: kTextMuted,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ],
                       ),
-                      border: Border.all(
-                          color: kPrimary.withValues(alpha: 0.35), width: 1.5),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          speed,
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 20,
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            _dataLabel(plan),
+                            style: GoogleFonts.inter(
+                              color: kText,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3,
+                            ),
                           ),
-                        ),
-                        Text(
-                          'Mbps',
-                          style: GoogleFonts.inter(
-                              color: kPrimaryLight, fontSize: 9),
-                        ),
+                          Text(
+                            'Data',
+                            style: GoogleFonts.inter(
+                              color: kTextMuted,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  // OTT apps row
+                  if (plan.ottApps.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        ...plan.ottApps.take(4).map((app) => Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: kSurfaceLow,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: kBorderSoft),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    app.length > 2
+                                        ? app.substring(0, 2).toUpperCase()
+                                        : app.toUpperCase(),
+                                    style: GoogleFonts.inter(
+                                      color: kTextDim,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )),
+                        if (plan.ottApps.length > 4)
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: kSurfaceLow,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: kBorderSoft),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '+${plan.ottApps.length - 4}',
+                                style: GoogleFonts.inter(
+                                  color: kTextMuted,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-            ),
+                  ],
 
-            // ── Divider with stats ────────────────────────────────
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: const BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: kBorder),
-                  bottom: BorderSide(color: kBorder),
-                ),
-              ),
-              child: Row(
-                children: [
-                  _stat(Icons.download_rounded,
-                      '${plan.speedMbps.toStringAsFixed(0)} Mbps', 'Download'),
-                  _vertDiv(),
-                  _stat(Icons.upload_rounded,
-                      '${plan.uploadSpeedMbps.toStringAsFixed(0)} Mbps', 'Upload'),
-                  _vertDiv(),
-                  _stat(Icons.data_usage_rounded, _dataLabel(plan), 'Data'),
-                ],
-              ),
-            ),
+                  const SizedBox(height: 16),
 
-            // ── Features ─────────────────────────────────────────
-            if ([...plan.features, ...plan.staticBenefits].isNotEmpty) ...[
-              Padding(
-                padding:
-                    const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                child: Column(
-                  children: [
-                    for (final f in [...plan.features, ...plan.staticBenefits]
-                        .take(3))
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.check_circle_rounded,
-                                color: Color(0xFF4ADE80), size: 14),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(f,
-                                  style: GoogleFonts.inter(
-                                      color: Colors.white70,
-                                      fontSize: 12.5)),
-                            ),
-                          ],
+                  // Single "Book Now" button
+                  SizedBox(
+                    width: double.infinity,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        color: kAccent,
+                        borderRadius: BorderRadius.circular(kRSmall),
+                        boxShadow: [
+                          BoxShadow(
+                            color: kAccent.withValues(alpha: 0.4),
+                            blurRadius: 12,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Book Now',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
-                  ],
-                ),
-              ),
-            ],
-
-            // ── CTA ──────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => PlanDetailScreen(plan: plan))),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: kPrimary,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
+                    ),
                   ),
-                  icon: const Icon(Icons.arrow_forward_rounded, size: 16),
-                  label: Text(
-                    'View Details & Pricing',
-                    style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w700, fontSize: 13),
-                  ),
-                ),
+                ],
               ),
             ),
           ],
         ),
       ),
     );
-  }
-
-  Widget _badge(String label, Color bg, Color fg) => Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: fg.withValues(alpha: 0.3)),
-        ),
-        child: Text(label,
-            style: GoogleFonts.inter(
-                fontSize: 9,
-                fontWeight: FontWeight.w800,
-                color: fg,
-                letterSpacing: 0.8)),
-      );
-
-  Widget _stat(IconData icon, String value, String label) => Expanded(
-        child: Column(
-          children: [
-            Icon(icon, color: kPrimaryLight, size: 14),
-            const SizedBox(height: 4),
-            Text(value,
-                style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700)),
-            Text(label,
-                style: GoogleFonts.inter(color: kMuted, fontSize: 10)),
-          ],
-        ),
-      );
-
-  Widget _vertDiv() => Container(
-      width: 1, height: 36, color: Colors.white.withValues(alpha: 0.07));
-
-  List<String> _terms(PlanItem plan) {
-    final t = <String>[
-      if (plan.validityMonthly || plan.monthlyPrice > 0) 'monthly',
-      if (plan.validityQuarterly || plan.quarterlyPrice > 0) 'quarterly',
-      if (plan.validityHalfYearly || plan.halfYearlyPrice > 0) 'halfYearly',
-      if (plan.validityYearly || plan.yearlyPrice > 0) 'yearly',
-    ];
-    return t.isEmpty ? ['monthly'] : t;
   }
 
   String _dataLabel(PlanItem plan) {

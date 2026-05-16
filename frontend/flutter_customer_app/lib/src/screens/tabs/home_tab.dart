@@ -1,5 +1,6 @@
 import 'dart:math' as math;
-import 'dart:ui';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -8,12 +9,15 @@ import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../widgets/pressable_scale.dart';
 import '../billing_payment_screen.dart';
-import '../booking_enquiry_screen.dart';
 import '../booking_payment_screen.dart';
 import '../lead_booking_flow_screen.dart';
-import '../notifications_screen.dart';
 import '../plan_catalog_screen.dart';
 import '../public_plan_catalog_screen.dart';
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  HOME TAB — JustFiber Design System (see /design-system/MASTER.md)
+//  Pure black canvas, translucent surfaces, single purple accent, big type.
+// ─────────────────────────────────────────────────────────────────────────────
 
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key, required this.onNavigate});
@@ -27,84 +31,24 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
   late final AnimationController _staggerCtrl;
   late final AnimationController _ringCtrl;
   late final AnimationController _pulseCtrl;
-
-  // Staggered section animations
-  late final Animation<double> _topBarFade;
-  late final Animation<Offset> _topBarSlide;
-  late final Animation<double> _connectionFade;
-  late final Animation<Offset> _connectionSlide;
-  late final Animation<double> _heroFade;
-  late final Animation<Offset> _heroSlide;
-  late final Animation<double> _quickActionsFade;
-  late final Animation<Offset> _quickActionsSlide;
-  late final Animation<double> _billingFade;
-  late final Animation<Offset> _billingSlide;
-  late final Animation<double> _statsFade;
-  late final Animation<Offset> _statsSlide;
-
-  // Ring animation
   late final Animation<double> _ringProgress;
 
   @override
   void initState() {
     super.initState();
-
-    // Main stagger controller — 900ms total
     _staggerCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
-    );
-
-    // Ring fill controller — 1.2s
+    )..forward();
     _ringCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-
-    // Pulse controller for status dot
+      duration: const Duration(milliseconds: 1400),
+    )..forward();
     _pulseCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
-
-    _ringProgress = CurvedAnimation(
-      parent: _ringCtrl,
-      curve: Curves.easeOutCubic,
-    );
-
-    // Build staggered animations
-    _topBarFade = _buildFade(0.0, 0.35);
-    _topBarSlide = _buildSlide(0.0, 0.35);
-    _connectionFade = _buildFade(0.1, 0.45);
-    _connectionSlide = _buildSlide(0.1, 0.45);
-    _heroFade = _buildFade(0.2, 0.55);
-    _heroSlide = _buildSlide(0.2, 0.55);
-    _quickActionsFade = _buildFade(0.35, 0.7);
-    _quickActionsSlide = _buildSlide(0.35, 0.7);
-    _billingFade = _buildFade(0.5, 0.85);
-    _billingSlide = _buildSlide(0.5, 0.85);
-    _statsFade = _buildFade(0.6, 1.0);
-    _statsSlide = _buildSlide(0.6, 1.0);
-
-    _staggerCtrl.forward();
-    _ringCtrl.forward();
-  }
-
-  Animation<double> _buildFade(double begin, double end) {
-    return CurvedAnimation(
-      parent: _staggerCtrl,
-      curve: Interval(begin, end, curve: Curves.easeOut),
-    );
-  }
-
-  Animation<Offset> _buildSlide(double begin, double end) {
-    return Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _staggerCtrl,
-      curve: Interval(begin, end, curve: Curves.easeOutCubic),
-    ));
+    _ringProgress = CurvedAnimation(parent: _ringCtrl, curve: Curves.easeOutCubic);
   }
 
   @override
@@ -115,6 +59,19 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
     super.dispose();
   }
 
+  Animation<double> _fade(double s, double e) => CurvedAnimation(
+        parent: _staggerCtrl,
+        curve: Interval(s, e, curve: Curves.easeOut),
+      );
+
+  Animation<Offset> _slide(double s, double e) => Tween<Offset>(
+        begin: const Offset(0, 0.06),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: _staggerCtrl,
+        curve: Interval(s, e, curve: Curves.easeOutCubic),
+      ));
+
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
@@ -123,38 +80,40 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
     final usagePct = dashboard.totalGb > 0
         ? (dashboard.usedGb / dashboard.totalGb).clamp(0.0, 1.0)
         : 0.0;
-    final isOnline = dashboard.serviceStatus.toLowerCase().contains('active') ||
-        dashboard.serviceStatus.isEmpty;
+    final isOnline =
+        dashboard.serviceStatus.toLowerCase().contains('active') ||
+            dashboard.serviceStatus.isEmpty;
+    final isNewUser =
+        appState.connections.isEmpty && appState.jazeBilling?.summary == null;
 
     return RefreshIndicator(
       onRefresh: appState.refresh,
-      color: kPrimary,
-      backgroundColor: kSurface,
+      color: kAccent,
+      backgroundColor: const Color(0xFF0A0A14),
       child: ListView(
         padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 8,
-          bottom: 120,
+          top: MediaQuery.of(context).padding.top + 16,
+          bottom: 140,
         ),
         children: [
-          // ── Top Bar ──────────────────────────────────────────────
+          // ── Top Bar ─────────────────────────────────────────
           SlideTransition(
-            position: _topBarSlide,
+            position: _slide(0.0, 0.35),
             child: FadeTransition(
-              opacity: _topBarFade,
+              opacity: _fade(0.0, 0.35),
               child: _TopBar(name: dashboard.customerName),
             ),
           ),
-
           const SizedBox(height: 20),
 
-          // ── Connection Switcher (when multiple connections) ─────
+          // ── Connection switcher ───────────────────────────────
           if (appState.connections.length > 1)
             SlideTransition(
-              position: _connectionSlide,
+              position: _slide(0.1, 0.45),
               child: FadeTransition(
-                opacity: _connectionFade,
+                opacity: _fade(0.1, 0.45),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 16),
                   child: _ConnectionSwitcher(
                     connections: appState.connections,
                     selectedId: appState.selectedCustomerId,
@@ -164,18 +123,18 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
               ),
             ),
 
-          // ── Plan Hero Card ─────────────────────────────────────
+          // ── Plan hero card (full-bleed accent gradient + glassy panel) ─
           SlideTransition(
-            position: _heroSlide,
+            position: _slide(0.15, 0.5),
             child: FadeTransition(
-              opacity: _heroFade,
+              opacity: _fade(0.15, 0.5),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                child: appState.connections.isEmpty &&
-                        appState.jazeBilling?.summary == null
-                    ? _NewUserSection(
+                padding: const EdgeInsets.symmetric(horizontal: 22),
+                child: isNewUser
+                    ? _NewUserHero(
                         mobile: appState.session?.mobile ?? '',
                         pendingBooking: appState.pendingPaymentBooking,
+                        pulseCtrl: _pulseCtrl,
                         onViewPlans: () async {
                           await Navigator.of(context).push(MaterialPageRoute(
                               builder: (_) => const PublicPlanCatalogScreen()));
@@ -188,12 +147,11 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                           await appState.refresh();
                         },
                         onPayBooking: appState.pendingPaymentBooking != null
-                            ? () => _openPayBooking(
-                                context, appState, appState.pendingPaymentBooking!)
+                            ? () => _openPayBooking(context, appState,
+                                appState.pendingPaymentBooking!)
                             : null,
-                        pulseCtrl: _pulseCtrl,
                       )
-                    : _PlanHeroCard(
+                    : _PlanHero(
                         planName: appState.jazeBilling?.summary
                                         ?.currentPlanName.isNotEmpty ==
                                     true
@@ -204,7 +162,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                         activeDays: dashboard.activeDays,
                         nextBillDate: billing.nextBillDate,
                         pulseCtrl: _pulseCtrl,
-                        onViewPlans: () => Navigator.of(context).push(
+                        onUpgrade: () => Navigator.of(context).push(
                           MaterialPageRoute(
                               builder: (_) => const PlanCatalogScreen()),
                         ),
@@ -212,61 +170,38 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
               ),
             ),
           ),
+          const SizedBox(height: 22),
 
-          const SizedBox(height: 16),
-
-          // ── Data Usage Card ────────────────────────────────────
-          if (appState.connections.isNotEmpty ||
-              appState.jazeBilling?.summary != null)
+          // ── Data usage card (translucent surface, accent ring) ─────
+          if (!isNewUser)
             SlideTransition(
-              position: _heroSlide,
+              position: _slide(0.25, 0.6),
               child: FadeTransition(
-                opacity: _heroFade,
+                opacity: _fade(0.25, 0.6),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  padding: const EdgeInsets.symmetric(horizontal: 22),
                   child: _DataUsageCard(
                     usedGb: dashboard.usedGb,
                     totalGb: dashboard.totalGb,
                     usagePct: usagePct,
                     ringAnimation: _ringProgress,
-                    downloadMbps:
-                        appState.jazeBilling?.summary?.downloadMbps ?? 0,
-                    uploadMbps:
-                        appState.jazeBilling?.summary?.uploadMbps ?? 0,
+                    daysLeft: dashboard.activeDays,
                   ),
                 ),
               ),
             ),
+          if (!isNewUser) const SizedBox(height: 22),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 22),
 
-          // ── Quick Actions ──────────────────────────────────────
-          SlideTransition(
-            position: _quickActionsSlide,
-            child: FadeTransition(
-              opacity: _quickActionsFade,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                child: _QuickActionsRow(
-                  onPayBill: () => _openPayBill(context, appState),
-                  onWifi: () => widget.onNavigate(2),
-                  onSupport: () => widget.onNavigate(3),
-                  onProfile: () => widget.onNavigate(4),
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // ── Pending Payment Booking ────────────────────────────
+          // ── Pending payment booking ───────────────────────────
           if (appState.pendingPaymentBooking != null) ...[
             SlideTransition(
-              position: _billingSlide,
+              position: _slide(0.4, 0.75),
               child: FadeTransition(
-                opacity: _billingFade,
+                opacity: _fade(0.4, 0.75),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  padding: const EdgeInsets.symmetric(horizontal: 22),
                   child: _PaymentTicketCard(
                     booking: appState.pendingPaymentBooking!,
                     onPayNow: () => _openPayBooking(
@@ -275,18 +210,18 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 22),
           ],
 
-          // ── Billing Due Strip ─────────────────────────────────
+          // ── Billing due (translucent + accent text, NOT a colored block) ─
           if (billing.hasActionableDue) ...[
             SlideTransition(
-              position: _billingSlide,
+              position: _slide(0.4, 0.75),
               child: FadeTransition(
-                opacity: _billingFade,
+                opacity: _fade(0.4, 0.75),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  child: _BillingStrip(
+                  padding: const EdgeInsets.symmetric(horizontal: 22),
+                  child: _BillingDueRow(
                     dueAmount: billing.actionableDueAmount,
                     nextBillDate: billing.nextBillDate,
                     onPay: () => _openPayBill(context, appState),
@@ -294,101 +229,84 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 28),
           ],
 
-          // ── Get Started Section ────────────────────────────────
+          // ── Explore section — two modern pill buttons ──────
           SlideTransition(
-            position: _billingSlide,
+            position: _slide(0.5, 0.85),
             child: FadeTransition(
-              opacity: _billingFade,
+              opacity: _fade(0.5, 0.85),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 2, bottom: 12),
-                      child: Text(
-                        'GET STARTED',
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: kMuted,
-                          letterSpacing: 1.6,
-                        ),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _GetStartedCard(
-                            icon: Icons.grid_view_rounded,
-                            title: 'View Plans',
-                            subtitle: 'Browse plans',
-                            onTap: () async {
-                              await Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (_) =>
-                                          const PublicPlanCatalogScreen()));
-                              await appState.refresh();
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _GetStartedCard(
-                            icon: Icons.calendar_month_rounded,
-                            title: 'Book Install',
-                            subtitle: 'Schedule setup',
-                            onTap: () async {
-                              await Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (_) => LeadBookingFlowScreen(
-                                          initialMobile:
-                                              appState.session?.mobile)));
-                              await appState.refresh();
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // ── Stats Row ─────────────────────────────────────────
-          SlideTransition(
-            position: _statsSlide,
-            child: FadeTransition(
-              opacity: _statsFade,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
+                padding: const EdgeInsets.symmetric(horizontal: 22),
                 child: Row(
                   children: [
                     Expanded(
-                      child: _StatTile(
-                        icon: Icons.event_repeat_rounded,
-                        label: 'Renewal In',
-                        value: dashboard.activeDays > 0
-                            ? '${dashboard.activeDays}'
-                            : '—',
-                        unit: dashboard.activeDays > 0 ? 'days' : '',
+                      child: PressableScale(
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      const PublicPlanCatalogScreen()));
+                          await appState.refresh();
+                        },
+                        haptic: true,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: kAccent,
+                            borderRadius: BorderRadius.circular(kRButton),
+                            boxShadow: [
+                              BoxShadow(
+                                color: kAccent.withValues(alpha: 0.4),
+                                blurRadius: 14,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Text(
+                              'View Plans',
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: _StatTile(
-                        icon: Icons.devices_rounded,
-                        label: 'Devices',
-                        value: appState.connectedDevices.isEmpty
-                            ? '—'
-                            : '${appState.connectedDevices.length}',
-                        unit: 'connected',
+                      child: PressableScale(
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) => LeadBookingFlowScreen(
+                                      initialMobile:
+                                          appState.session?.mobile)));
+                          await appState.refresh();
+                        },
+                        haptic: true,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: kSurface,
+                            borderRadius: BorderRadius.circular(kRButton),
+                            border: Border.all(color: kBorderSoft),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Book Install',
+                              style: GoogleFonts.inter(
+                                color: kText,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -401,14 +319,14 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
     );
   }
 
+  // ─── Actions ─────────────────────────────────────────────────────────────
   Future<void> _openPayBill(BuildContext context, AppState appState) async {
     final messenger = ScaffoldMessenger.of(context);
     final order = await appState.loadBillingPaymentOrder();
     if (!context.mounted) return;
     if (order == null) {
       messenger.showSnackBar(SnackBar(
-          content:
-              Text(appState.error ?? 'Unable to create payment order')));
+          content: Text(appState.error ?? 'Unable to create payment order')));
       return;
     }
     await Navigator.of(context).push(MaterialPageRoute(
@@ -440,82 +358,51 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
   }
 }
 
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════════════════════════
-// ─── TOP BAR (Modern Glass) ──────────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+//  TOP BAR — time-based greeting + name (no avatar, no notification icon)
+// ═══════════════════════════════════════════════════════════════════════════
 
 class _TopBar extends StatelessWidget {
   const _TopBar({required this.name});
   final String name;
 
+  String _greeting() {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
   @override
   Widget build(BuildContext context) {
     final first = name.split(' ').first;
-    final initials = name.isNotEmpty
-        ? name.trim().split(' ').map((w) => w.isNotEmpty ? w[0] : '').take(2).join().toUpperCase()
-        : '?';
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-      child: Row(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Sleek dark avatar container
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1E), // Charcoal
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-            ),
-            child: Center(
-              child: Text(
-                initials,
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+          Text(
+            _greeting(),
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: kTextMuted,
+              letterSpacing: 0.2,
             ),
           ),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Welcome back',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFF6B7280), // Gray 500
-                ),
-              ),
-              Text(
-                first.isEmpty ? 'Guest' : first,
-                style: GoogleFonts.inter(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                  letterSpacing: -0.5,
-                  height: 1.2,
-                ),
-              ),
-            ],
-          ),
-          const Spacer(),
-          // Action button (like the screenshot's top-right elements)
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1E),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          const SizedBox(height: 2),
+          Text(
+            first.isEmpty ? 'Guest' : first,
+            style: GoogleFonts.inter(
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              color: kText,
+              letterSpacing: -0.6,
+              height: 1.1,
             ),
-            child: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 22),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -523,18 +410,19 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ─── PLAN HERO CARD (Modern Mesh & Glass) ────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+//  PLAN HERO — Premium: brand mark + glassy info strip
+// ═══════════════════════════════════════════════════════════════════════════
 
-class _PlanHeroCard extends StatelessWidget {
-  const _PlanHeroCard({
+class _PlanHero extends StatefulWidget {
+  const _PlanHero({
     required this.planName,
     required this.isOnline,
     required this.activeDays,
     required this.nextBillDate,
     required this.pulseCtrl,
-    required this.onViewPlans,
+    required this.onUpgrade,
   });
 
   final String planName;
@@ -542,135 +430,270 @@ class _PlanHeroCard extends StatelessWidget {
   final int activeDays;
   final String nextBillDate;
   final AnimationController pulseCtrl;
-  final VoidCallback onViewPlans;
+  final VoidCallback onUpgrade;
+
+  @override
+  State<_PlanHero> createState() => _PlanHeroState();
+}
+
+class _PlanHeroState extends State<_PlanHero> {
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(kRCard),
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [kAccent, kAccentDeep, Color(0xFF2D0566)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            stops: [0.0, 0.6, 1.0],
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -100,
+              top: -100,
+              child: Container(
+                width: 280,
+                height: 280,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      Colors.white.withValues(alpha: 0.15),
+                      Colors.white.withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // ─── Foreground content (single Column, no overlapping Positioned) ─
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Top section
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 22, 22, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Top row: brand pill + status pill
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(kRPill),
+                              border: Border.all(
+                                  color:
+                                      Colors.white.withValues(alpha: 0.22)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.verified_rounded,
+                                    color: Colors.white, size: 12),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'JustFiber',
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Spacer(),
+                          _StatusPill(
+                              isOnline: widget.isOnline,
+                              pulseCtrl: widget.pulseCtrl),
+                        ],
+                      ),
+
+                      const SizedBox(height: 28),
+
+                      // Eyebrow
+                      Text(
+                        'CURRENT PLAN',
+                        style: GoogleFonts.inter(
+                          color: Colors.white.withValues(alpha: 0.7),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.6,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Plan name — large and breathable
+                      Text(
+                        widget.planName.isEmpty
+                            ? 'No active plan'
+                            : widget.planName,
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.6,
+                          height: 1.15,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Bottom info strip + Upgrade CTA — own row in flow, no overlap
+                Container(
+                  padding:
+                      const EdgeInsets.fromLTRB(22, 16, 14, 16),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.28),
+                    border: Border(
+                      top: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.10),
+                          width: 1),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (widget.activeDays > 0)
+                              Row(
+                                children: [
+                                  const Icon(Icons.schedule_rounded,
+                                      color: Colors.white70, size: 13),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    '${widget.activeDays} days left',
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            if (widget.nextBillDate.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                'Renews ${_fmtDate(widget.nextBillDate)}',
+                                style: GoogleFonts.inter(
+                                  color: Colors.white
+                                      .withValues(alpha: 0.65),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      PressableScale(
+                        onTap: widget.onUpgrade,
+                        haptic: true,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 18, vertical: 11),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(kRButton),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Upgrade',
+                                style: GoogleFonts.inter(
+                                  color: kAccentDeep,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(Icons.arrow_forward_rounded,
+                                  color: kAccentDeep, size: 16),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.isOnline, required this.pulseCtrl});
+  final bool isOnline;
+  final AnimationController pulseCtrl;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E), // Dark Charcoal
-        borderRadius: BorderRadius.circular(40), // Very high border radius
-        border: Border.all(color: Colors.white.withValues(alpha: 0.03)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
-            blurRadius: 30,
-            offset: const Offset(0, 20),
-          ),
-        ],
+        color: Colors.white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(kRPill),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Sleek minimalist status indicator
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2A2A2A),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: isOnline ? const Color(0xFF8224E3) : const Color(0xFFEF4444), // Primary Purple or Red
-                        shape: BoxShape.circle,
-                      ),
+          AnimatedBuilder(
+            animation: pulseCtrl,
+            builder: (_, __) {
+              final scale = 1.0 + 0.5 * pulseCtrl.value;
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: 8 * scale,
+                    height: 8 * scale,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: (isOnline ? kSuccess : kDanger)
+                          .withValues(alpha: 0.45 * (1 - pulseCtrl.value)),
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      isOnline ? 'Connected' : 'Offline',
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              if (activeDays > 0)
-                Text(
-                  '$activeDays days left',
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF6B7280),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
                   ),
-                ),
-            ],
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isOnline ? kSuccess : kDanger,
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
-
-          const SizedBox(height: 32),
-
+          const SizedBox(width: 8),
           Text(
-            'Current Plan',
-            style: GoogleFonts.inter(
-              color: const Color(0xFF6B7280),
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 4),
-          // Large typography
-          Text(
-            planName.isEmpty ? 'No active plan' : planName,
+            isOnline ? 'Connected' : 'Offline',
             style: GoogleFonts.inter(
               color: Colors.white,
-              fontSize: 34,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -1,
-              height: 1.1,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-
-          if (nextBillDate.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text(
-              'Renews ${_fmtDate(nextBillDate)}',
-              style: GoogleFonts.inter(
-                color: const Color(0xFF6B7280),
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-
-          const SizedBox(height: 32),
-
-          // High-contrast primary color button
-          SizedBox(
-            width: double.infinity,
-            child: PressableScale(
-              onTap: onViewPlans,
-              haptic: true,
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF8224E3), // User's requested primary color
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Center(
-                  child: Text(
-                    'Upgrade Plan',
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
             ),
           ),
         ],
@@ -679,9 +702,9 @@ class _PlanHeroCard extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ─── DATA USAGE CARD (Modern Glass Layout) ────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+//  DATA USAGE CARD — premium ring + clean used/total stats
+// ═══════════════════════════════════════════════════════════════════════════
 
 class _DataUsageCard extends StatelessWidget {
   const _DataUsageCard({
@@ -689,193 +712,175 @@ class _DataUsageCard extends StatelessWidget {
     required this.totalGb,
     required this.usagePct,
     required this.ringAnimation,
-    this.downloadMbps = 0,
-    this.uploadMbps = 0,
+    required this.daysLeft,
   });
 
   final double usedGb, totalGb, usagePct;
   final Animation<double> ringAnimation;
-  final int downloadMbps;
-  final int uploadMbps;
+  final int daysLeft;
 
   @override
   Widget build(BuildContext context) {
     final isUnlimited = totalGb <= 0;
 
     return Container(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E), // Dark Charcoal
-        borderRadius: BorderRadius.circular(40),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.03)),
+        color: kSurface,
+        borderRadius: BorderRadius.circular(kRCard),
+        border: Border.all(color: kBorderSoft),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Top row: eyebrow + cycle pill
           Row(
             children: [
-              // Clean technical Usage ring
+              Text(
+                'DATA USAGE',
+                style: GoogleFonts.inter(
+                  color: kTextMuted,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.6,
+                ),
+              ),
+              const Spacer(),
+              if (daysLeft > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: kAccentSoft,
+                    borderRadius: BorderRadius.circular(kRPill),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.event_rounded,
+                          color: kAccent, size: 11),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$daysLeft days',
+                        style: GoogleFonts.inter(
+                          color: kAccent,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Main ring + value row
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
               AnimatedBuilder(
                 animation: ringAnimation,
                 builder: (_, __) => SizedBox(
-                  width: 90,
-                  height: 90,
+                  width: 92,
+                  height: 92,
                   child: CustomPaint(
+                    // For unlimited plans, ring stays empty (track only).
+                    // For metered plans, ring fills with usage percentage.
                     painter: _UsageRingPainter(
-                      progress: isUnlimited ? 0.0 : usagePct * ringAnimation.value,
-                      strokeWidth: 10.0, // Thicker stroke
+                      progress:
+                          isUnlimited ? 0.0 : usagePct * ringAnimation.value,
+                      strokeWidth: 9,
                     ),
                     child: Center(
                       child: isUnlimited
-                          ? const Icon(Icons.all_inclusive_rounded, color: Color(0xFF8224E3), size: 28)
-                          : Text(
-                              '${(usagePct * 100 * ringAnimation.value).toStringAsFixed(0)}%',
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w800,
-                              ),
+                          ? const Icon(Icons.all_inclusive_rounded,
+                                    color: kAccent, size: 26)
+                          : Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  (usagePct * 100 * ringAnimation.value)
+                                      .toStringAsFixed(0),
+                                  style: GoogleFonts.inter(
+                                    color: kText,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.6,
+                                    height: 1,
+                                  ),
+                                ),
+                                Text(
+                                  '%',
+                                  style: GoogleFonts.inter(
+                                    color: kTextMuted,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
                             ),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 24),
-              // Data info
+              const SizedBox(width: 18),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Data Consumption',
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF6B7280),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.baseline,
                       textBaseline: TextBaseline.alphabetic,
                       children: [
                         Text(
-                          isUnlimited ? '∞' : usedGb.toStringAsFixed(1),
+                          usedGb.toStringAsFixed(1),
                           style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 36,
+                            color: kText,
+                            fontSize: 30,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: -1.5,
-                            height: 1.0,
+                            letterSpacing: -0.8,
+                            height: 1,
                           ),
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          isUnlimited ? 'Unlimited' : 'GB',
+                          'GB used',
                           style: GoogleFonts.inter(
-                            color: const Color(0xFF6B7280),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                            color: kTextMuted,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
                     ),
-                    if (!isUnlimited) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'Total ${totalGb.toStringAsFixed(0)} GB',
-                        style: GoogleFonts.inter(
-                          color: const Color(0xFF6B7280),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isUnlimited
+                          ? 'Unlimited plan'
+                          : '${(totalGb - usedGb).clamp(0, totalGb).toStringAsFixed(1)} GB left',
+                      style: GoogleFonts.inter(
+                        color: kTextMuted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
                       ),
-                    ],
+                    ),
                   ],
                 ),
               ),
             ],
           ),
 
-          // Speed row
-          if (downloadMbps > 0 || uploadMbps > 0) ...[
-            const SizedBox(height: 28),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF141414), // Even darker for contrast
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // Download
-                  _SpeedWidget(icon: Icons.download_rounded, color: const Color(0xFF8224E3), value: downloadMbps, label: 'Down'),
-                  Container(width: 1, height: 30, color: const Color(0xFF2A2A2A)),
-                  // Upload
-                  _SpeedWidget(icon: Icons.upload_rounded, color: const Color(0xFF8224E3), value: uploadMbps, label: 'Up'),
-                ],
-              ),
-            ),
-          ],
+          // (Speed pills removed — speed shown elsewhere via plan/services screens)
         ],
       ),
     );
   }
 }
 
-class _SpeedWidget extends StatelessWidget {
-  const _SpeedWidget({required this.icon, required this.color, required this.value, required this.label});
-  final IconData icon;
-  final Color color;
-  final int value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: const BoxDecoration(
-            color: Color(0xFF1E1E1E),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: color, size: 16),
-        ),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '$value Mbps',
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                color: const Color(0xFF6B7280),
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ─── USAGE RING CUSTOM PAINTER (Clean Flat) ──────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════════
-
 class _UsageRingPainter extends CustomPainter {
-  _UsageRingPainter({required this.progress, this.strokeWidth = 10.0});
+  _UsageRingPainter({required this.progress, this.strokeWidth = 9});
   final double progress;
   final double strokeWidth;
 
@@ -884,136 +889,73 @@ class _UsageRingPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width - strokeWidth) / 2;
 
-    // Background ring — solid dark grey
-    final bgPaint = Paint()
-      ..color = const Color(0xFF2A2A2A)
+    // Track — translucent white, no second color
+    final track = Paint()
+      ..color = const Color(0x14FFFFFF)
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
-    canvas.drawCircle(center, radius, bgPaint);
+    canvas.drawCircle(center, radius, track);
 
-    // Progress ring — Primary Purple
     if (progress > 0) {
       final rect = Rect.fromCircle(center: center, radius: radius);
-
-      final progressPaint = Paint()
-        ..color = const Color(0xFF8224E3)
+      // Subtle gradient on the arc — accent → light purple → accent
+      // (single hue family, no rainbow)
+      final shader = ui.Gradient.sweep(
+        center,
+        const [
+          kAccent,
+          Color(0xFFB87BF0),
+          kAccent,
+        ],
+        const [0.0, 0.5, 1.0],
+        TileMode.clamp,
+        -math.pi / 2,
+        3 * math.pi / 2,
+      );
+      final paint = Paint()
+        ..shader = shader
         ..style = PaintingStyle.stroke
         ..strokeWidth = strokeWidth
         ..strokeCap = StrokeCap.round;
+      // Soft glow under the arc
+      final glow = Paint()
+        ..color = kAccent.withValues(alpha: 0.4)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth * 1.6
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+      final sweep = 2 * math.pi * progress;
+      canvas.drawArc(rect, -math.pi / 2, sweep, false, glow);
+      canvas.drawArc(rect, -math.pi / 2, sweep, false, paint);
 
-      final sweepAngle = 2 * math.pi * progress;
-      canvas.drawArc(rect, -math.pi / 2, sweepAngle, false, progressPaint); // Solid ring
+      // Tip dot
+      final tipAngle = -math.pi / 2 + sweep;
+      final tipOffset = Offset(
+        center.dx + radius * math.cos(tipAngle),
+        center.dy + radius * math.sin(tipAngle),
+      );
+      final tipPaint = Paint()..color = Colors.white;
+      canvas.drawCircle(tipOffset, strokeWidth / 2 + 1.5, tipPaint);
+      final tipInner = Paint()..color = kAccent;
+      canvas.drawCircle(tipOffset, strokeWidth / 2 - 1, tipInner);
     }
   }
 
   @override
-  bool shouldRepaint(_UsageRingPainter oldDelegate) => oldDelegate.progress != progress;
+  bool shouldRepaint(_UsageRingPainter o) => o.progress != progress;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ─── QUICK ACTIONS ROW (Modern Glass Tiles) ──────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+//  BILLING DUE ROW — translucent + accent text + Pay CTA
+// ═══════════════════════════════════════════════════════════════════════════
 
-class _QuickActionsRow extends StatelessWidget {
-  const _QuickActionsRow({
-    required this.onPayBill,
-    required this.onWifi,
-    required this.onSupport,
-    required this.onProfile,
-  });
-
-  final VoidCallback onPayBill;
-  final VoidCallback onWifi;
-  final VoidCallback onSupport;
-  final VoidCallback onProfile;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        _QuickActionItem(
-          icon: Icons.account_balance_wallet_rounded,
-          label: 'Pay',
-          onTap: onPayBill,
-        ),
-        _QuickActionItem(
-          icon: Icons.wifi_rounded,
-          label: 'Wi-Fi',
-          onTap: onWifi,
-        ),
-        _QuickActionItem(
-          icon: Icons.support_agent_rounded,
-          label: 'Support',
-          onTap: onSupport,
-        ),
-        _QuickActionItem(
-          icon: Icons.person_rounded,
-          label: 'Profile',
-          onTap: onProfile,
-        ),
-      ],
-    );
-  }
-}
-
-class _QuickActionItem extends StatelessWidget {
-  const _QuickActionItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return PressableScale(
-      onTap: onTap,
-      haptic: true,
-      child: Column(
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1E), // Solid dark charcoal
-              borderRadius: BorderRadius.circular(24), // High border radius, almost circular
-              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-            ),
-            child: Center(
-              child: Icon(icon, color: Colors.white, size: 26),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              color: const Color(0xFF9CA3AF),
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ─── BILLING STRIP (Airtel style — accent colored) ───────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════════
-
-class _BillingStrip extends StatelessWidget {
-  const _BillingStrip({
+class _BillingDueRow extends StatelessWidget {
+  const _BillingDueRow({
     required this.dueAmount,
     required this.nextBillDate,
     required this.onPay,
   });
-
   final double dueAmount;
   final String nextBillDate;
   final VoidCallback onPay;
@@ -1021,66 +963,91 @@ class _BillingStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.fromLTRB(18, 16, 14, 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF8224E3).withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFF8224E3).withValues(alpha: 0.3),
-        ),
+        color: kSurface,
+        borderRadius: BorderRadius.circular(kRSurface),
+        border: Border.all(color: kAccentSoft),
       ),
       child: Row(
         children: [
-          // Amount info
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: kAccentSoft,
+              borderRadius: BorderRadius.circular(kRSmall),
+            ),
+            child: const Icon(Icons.receipt_long_rounded,
+                color: kAccent, size: 18),
+          ),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Amount Due',
+                  'BILL DUE',
                   style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: const Color(0xFFB8C0CC),
-                    fontWeight: FontWeight.w500,
+                    fontSize: 10,
+                    color: kTextMuted,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.4,
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  '₹${dueAmount.toStringAsFixed(0)}',
-                  style: GoogleFonts.inter(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                if (nextBillDate.isNotEmpty)
-                  Text(
-                    'Due ${_fmtDate(nextBillDate)}',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: const Color(0xFFB8C0CC),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      '₹${dueAmount.toStringAsFixed(0)}',
+                      style: GoogleFonts.inter(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: kText,
+                        letterSpacing: -0.5,
+                      ),
                     ),
-                  ),
+                    if (nextBillDate.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        '· due ${_fmtDate(nextBillDate)}',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: kTextMuted,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ],
             ),
           ),
-          // Pay Now button
           PressableScale(
             onTap: onPay,
             haptic: true,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
               decoration: BoxDecoration(
-                color: const Color(0xFF8224E3),
-                borderRadius: BorderRadius.circular(10),
+                color: kAccent,
+                borderRadius: BorderRadius.circular(kRSmall),
+                boxShadow: [
+                  BoxShadow(
+                    color: kAccent.withValues(alpha: 0.45),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
               child: Text(
-                'Pay Now',
+                'Pay',
                 style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
                   fontSize: 13,
-                  color: Colors.white,
+                  color: kText,
                 ),
               ),
             ),
@@ -1091,9 +1058,9 @@ class _BillingStrip extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ─── PAYMENT TICKET CARD ──────────────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+//  PAYMENT TICKET CARD — pending booking
+// ═══════════════════════════════════════════════════════════════════════════
 
 class _PaymentTicketCard extends StatelessWidget {
   const _PaymentTicketCard({required this.booking, required this.onPayNow});
@@ -1104,36 +1071,34 @@ class _PaymentTicketCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1845),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color(0xFF8224E3).withValues(alpha: 0.3),
-        ),
+        color: kSurface,
+        borderRadius: BorderRadius.circular(kRCard),
+        border: Border.all(color: kAccentSoft),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Status pill
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: const Color(0xFF8224E3).withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(999),
+              color: kAccentSoft,
+              borderRadius: BorderRadius.circular(kRPill),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(Icons.schedule_rounded,
-                    color: Color(0xFFA855F7), size: 12),
+                    color: kAccent, size: 12),
                 const SizedBox(width: 4),
                 Text(
                   'Payment Pending',
                   style: GoogleFonts.inter(
-                    color: const Color(0xFFA855F7),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                    color: kAccent,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.3,
                   ),
                 ),
               ],
@@ -1143,7 +1108,7 @@ class _PaymentTicketCard extends StatelessWidget {
           Text(
             booking.planName.isNotEmpty ? booking.planName : 'Your Plan',
             style: GoogleFonts.inter(
-              color: Colors.white,
+              color: kText,
               fontSize: 20,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.3,
@@ -1152,10 +1117,7 @@ class _PaymentTicketCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'Booking #${booking.bookingNumber}',
-            style: GoogleFonts.inter(
-              color: const Color(0xFFB8C0CC),
-              fontSize: 12,
-            ),
+            style: GoogleFonts.inter(color: kTextMuted, fontSize: 12),
           ),
           const SizedBox(height: 16),
           Row(
@@ -1166,10 +1128,7 @@ class _PaymentTicketCard extends StatelessWidget {
                   children: [
                     Text(
                       'Amount',
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFFB8C0CC),
-                        fontSize: 11,
-                      ),
+                      style: GoogleFonts.inter(color: kTextMuted, fontSize: 11),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -1177,7 +1136,7 @@ class _PaymentTicketCard extends StatelessWidget {
                           ? '₹${booking.amount.toInt()}'
                           : 'TBD',
                       style: GoogleFonts.inter(
-                        color: Colors.white,
+                        color: kText,
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
                       ),
@@ -1190,10 +1149,7 @@ class _PaymentTicketCard extends StatelessWidget {
                 children: [
                   Text(
                     'Duration',
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFFB8C0CC),
-                      fontSize: 11,
-                    ),
+                    style: GoogleFonts.inter(color: kTextMuted, fontSize: 11),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -1201,7 +1157,7 @@ class _PaymentTicketCard extends StatelessWidget {
                         ? booking.durationLabel
                         : '${booking.durationMonths} month',
                     style: GoogleFonts.inter(
-                      color: Colors.white,
+                      color: kText,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                     ),
@@ -1211,180 +1167,36 @@ class _PaymentTicketCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
-          // Pay button
-          SizedBox(
-            width: double.infinity,
-            child: PressableScale(
-              onTap: onPayNow,
-              haptic: true,
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF8224E3),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text(
-                    booking.amount > 0
-                        ? 'Pay Now  ₹${booking.amount.toInt()}'
-                        : 'Pay Now',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ─── GET STARTED CARDS (Airtel style — clean dark navy) ──────────────────────
-// ═══════════════════════════════════════════════════════════════════════════════
-
-class _GetStartedCard extends StatelessWidget {
-  const _GetStartedCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title, subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return PressableScale(
-      onTap: onTap,
-      haptic: true,
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF2A1B5E), Color(0xFF1E1845)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF8224E3).withValues(alpha: 0.25)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
+          PressableScale(
+            onTap: onPayNow,
+            haptic: true,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 15),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [const Color(0xFF8224E3), const Color(0xFF8224E3).withValues(alpha: 0.6)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(10),
+                color: kAccent,
+                borderRadius: BorderRadius.circular(kRButton),
+                boxShadow: [
+                  BoxShadow(
+                    color: kAccent.withValues(alpha: 0.5),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
-              child: Icon(icon, color: Colors.white, size: 20),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              title,
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: GoogleFonts.inter(
-                color: const Color(0xFFB8C0CC),
-                fontSize: 11,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ─── STAT TILE (Airtel style — small info tiles) ─────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════════
-
-class _StatTile extends StatelessWidget {
-  const _StatTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.unit,
-  });
-
-  final IconData icon;
-  final String label, value, unit;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF2A1B5E), Color(0xFF1E1845)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF8224E3).withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: const Color(0xFFA855F7), size: 18),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                value,
-                style: GoogleFonts.inter(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  letterSpacing: -0.5,
-                  height: 1.0,
-                ),
-              ),
-              if (unit.isNotEmpty) ...[
-                const SizedBox(width: 4),
-                Text(
-                  unit,
+              child: Center(
+                child: Text(
+                  booking.amount > 0
+                      ? 'Pay Now  ₹${booking.amount.toInt()}'
+                      : 'Pay Now',
                   style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFFB8C0CC),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: kText,
+                    letterSpacing: 0.2,
                   ),
                 ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFFB8C0CC),
+              ),
             ),
           ),
         ],
@@ -1393,12 +1205,12 @@ class _StatTile extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ─── NEW USER SECTION (when no connections) ──────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+//  NEW USER HERO — when no connections yet
+// ═══════════════════════════════════════════════════════════════════════════
 
-class _NewUserSection extends StatelessWidget {
-  const _NewUserSection({
+class _NewUserHero extends StatelessWidget {
+  const _NewUserHero({
     required this.mobile,
     required this.pendingBooking,
     required this.onViewPlans,
@@ -1417,84 +1229,130 @@ class _NewUserSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasPending = pendingBooking != null;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Welcome card
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E1845),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                hasPending ? 'Almost Connected!' : 'Welcome to JustFiber',
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                  height: 1.2,
-                ),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(kRCard),
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [kAccent, kAccentDeep],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              const SizedBox(height: 8),
-              if (mobile.isNotEmpty)
-                Text(
-                  'Logged in as +91 $mobile',
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFFB8C0CC),
-                    fontSize: 13,
-                  ),
-                ),
-              const SizedBox(height: 6),
-              Text(
-                hasPending
-                    ? 'Complete your payment to confirm your installation.'
-                    : 'Choose a plan and book your installation to get connected.',
-                style: GoogleFonts.inter(
-                  color: const Color(0xFFB8C0CC),
-                  fontSize: 12,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 20),
-              // CTA button
-              if (!hasPending)
-                SizedBox(
-                  width: double.infinity,
-                  child: PressableScale(
-                    onTap: onViewPlans,
-                    haptic: true,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF8224E3),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'View Plans',
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  right: -80,
+                  top: -80,
+                  child: Container(
+                    width: 220,
+                    height: 220,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.06),
                     ),
                   ),
                 ),
-            ],
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        hasPending
+                            ? 'Almost connected'
+                            : 'Welcome to JustFiber',
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.5,
+                          height: 1.15,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (mobile.isNotEmpty)
+                        Text(
+                          '+91 $mobile',
+                          style: GoogleFonts.inter(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      const SizedBox(height: 6),
+                      Text(
+                        hasPending
+                            ? 'Complete payment to confirm your installation.'
+                            : 'Pick a plan and book your installation to get connected.',
+                        style: GoogleFonts.inter(
+                          color: Colors.white.withValues(alpha: 0.85),
+                          fontSize: 13,
+                          height: 1.5,
+                        ),
+                      ),
+                      if (!hasPending) ...[
+                        const SizedBox(height: 20),
+                        PressableScale(
+                          onTap: onViewPlans,
+                          haptic: true,
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(kRButton),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'Browse Plans',
+                                style: GoogleFonts.inter(
+                                  color: kAccentDeep,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        PressableScale(
+                          onTap: onBookNow,
+                          haptic: true,
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(kRButton),
+                              border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.4)),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'Book Installation',
+                                style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-
-        // Payment ticket if pending
         if (hasPending) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           _PaymentTicketCard(
             booking: pendingBooking!,
             onPayNow: onPayBooking ?? () {},
@@ -1505,9 +1363,9 @@ class _NewUserSection extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ─── CONNECTION SWITCHER ──────────────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+//  CONNECTION SWITCHER
+// ═══════════════════════════════════════════════════════════════════════════
 
 class _ConnectionSwitcher extends StatelessWidget {
   const _ConnectionSwitcher({
@@ -1523,7 +1381,7 @@ class _ConnectionSwitcher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 40,
+      height: 38,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: connections.length,
@@ -1537,16 +1395,12 @@ class _ConnectionSwitcher extends StatelessWidget {
             },
             child: Container(
               padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? const Color(0xFF8224E3).withValues(alpha: 0.15)
-                    : const Color(0xFF1E1845),
-                borderRadius: BorderRadius.circular(999),
+                color: isSelected ? kAccentSoft : kSurface,
+                borderRadius: BorderRadius.circular(kRPill),
                 border: Border.all(
-                  color: isSelected
-                      ? const Color(0xFF8224E3).withValues(alpha: 0.5)
-                      : const Color(0xFF2D2D44),
+                  color: isSelected ? kAccent : kBorderSoft,
                 ),
               ),
               child: Row(
@@ -1555,9 +1409,7 @@ class _ConnectionSwitcher extends StatelessWidget {
                   Icon(
                     Icons.router_rounded,
                     size: 14,
-                    color: isSelected
-                        ? const Color(0xFFA855F7)
-                        : const Color(0xFFB8C0CC),
+                    color: isSelected ? kAccent : kTextMuted,
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -1565,10 +1417,8 @@ class _ConnectionSwitcher extends StatelessWidget {
                         ? conn.address
                         : conn.customerId,
                     style: GoogleFonts.inter(
-                      color: isSelected
-                          ? Colors.white
-                          : const Color(0xFFB8C0CC),
-                      fontWeight: FontWeight.w600,
+                      color: isSelected ? kText : kTextDim,
+                      fontWeight: FontWeight.w700,
                       fontSize: 12,
                     ),
                     maxLines: 1,
@@ -1577,7 +1427,7 @@ class _ConnectionSwitcher extends StatelessWidget {
                   if (isSelected) ...[
                     const SizedBox(width: 6),
                     const Icon(Icons.check_circle_rounded,
-                        color: Color(0xFFA855F7), size: 14),
+                        color: kAccent, size: 14),
                   ],
                 ],
               ),
@@ -1589,9 +1439,9 @@ class _ConnectionSwitcher extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ─── UTILITIES ────────────────────────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════════════════════════════════════
 
 String _fmtDate(String raw) {
   try {

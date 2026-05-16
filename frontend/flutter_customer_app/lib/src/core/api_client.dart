@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -726,6 +726,12 @@ class ApiClient {
             validityHalfYearly:
                 _asMap(map['validityOptions'])['halfYearly'] == true,
             validityYearly: _asMap(map['validityOptions'])['yearly'] == true,
+            ottApps: _asList(map['ottApps']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
+            routerIncluded: map['routerIncluded'] == true,
+            bannerImageUrl: ((_asMap(map['merchandising']))['bannerImageUrl'] ?? '').toString(),
+            merchandisingSubtitle: ((_asMap(map['merchandising']))['subtitle'] ?? '').toString(),
+            merchandisingBadges: _asList((_asMap(map['merchandising']))['badges']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
+            recommended: (_asMap(map['merchandising']))['recommended'] == true,
           );
         })
         .where((item) => item.planCode.isNotEmpty)
@@ -1352,6 +1358,12 @@ class ApiClient {
             validityHalfYearly:
                 _asMap(map['validityOptions'])['halfYearly'] == true,
             validityYearly: _asMap(map['validityOptions'])['yearly'] == true,
+            ottApps: _asList(map['ottApps']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
+            routerIncluded: map['routerIncluded'] == true,
+            bannerImageUrl: ((_asMap(map['merchandising']))['bannerImageUrl'] ?? '').toString(),
+            merchandisingSubtitle: ((_asMap(map['merchandising']))['subtitle'] ?? '').toString(),
+            merchandisingBadges: _asList((_asMap(map['merchandising']))['badges']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
+            recommended: (_asMap(map['merchandising']))['recommended'] == true,
           );
         })
         .where((item) => item.planCode.isNotEmpty)
@@ -1630,3 +1642,4 @@ class ApiClient {
 extension _FirstOrNull<T> on List<T> {
   T? get firstOrNull => isEmpty ? null : first;
 }
+

@@ -1,6 +1,8 @@
 import argon2 from "argon2";
 import { Router } from "express";
 import { z } from "zod";
+import { existsSync, mkdirSync } from "fs";
+import { join, extname } from "path";
 import { asyncHandler } from "../../common/asyncHandler.js";
 import { ok } from "../../common/response.js";
 import { adminCanAccessAllZones, assertAdminZoneAccess, assertMainAdminAccess, requireAuth, requirePermission } from "../../common/auth.js";
@@ -119,7 +121,11 @@ const planSchema = z.object({
   merchandising: z.object({
     featured: z.boolean().optional(),
     recommended: z.boolean().optional(),
-    spotlightLabel: z.string().optional()
+    spotlightLabel: z.string().optional(),
+    bannerImageUrl: z.string().optional(),
+    subtitle: z.string().optional(),
+    badges: z.array(z.string()).optional(),
+    highlightFeatures: z.array(z.string()).optional()
   }).optional(),
   visibleInCustomerApp: z.boolean().optional(),
   visibleInSalesApp: z.boolean().optional(),
@@ -519,6 +525,122 @@ adminCatalogRouter.delete(
       throw new ApiError(404, "Plan not found");
     }
     return ok(res, { deleted: true, plan });
+  })
+);
+
+// ── Plan banner image upload ──────────────────────────────────────────────────
+
+const BANNER_UPLOAD_DIR = join(process.cwd(), "public", "uploads", "plan-banners");
+if (!existsSync(BANNER_UPLOAD_DIR)) {
+  mkdirSync(BANNER_UPLOAD_DIR, { recursive: true });
+}
+
+adminCatalogRouter.post(
+  "/catalog/plans/:planCode/banner",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const existing = await PlanCatalog.findOne({ planCode: req.params.planCode, archivedAt: { $exists: false } });
+    if (!existing) {
+      throw new ApiError(404, "Plan not found");
+    }
+
+    // Parse multipart form data manually using built-in approach
+    const contentType = req.headers["content-type"] || "";
+    if (!contentType.includes("multipart/form-data")) {
+      throw new ApiError(400, "Expected multipart/form-data");
+    }
+
+    // Collect raw body chunks
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
+    }
+    const body = Buffer.concat(chunks);
+
+    // Extract boundary from content-type
+    const boundaryMatch = contentType.match(/boundary=(.+)/);
+    if (!boundaryMatch) {
+      throw new ApiError(400, "Missing boundary in multipart request");
+    }
+    const boundary = boundaryMatch[1].replace(/;.*$/, "").trim();
+    const boundaryBuffer = Buffer.from(`--${boundary}`);
+
+    // Find the file part
+    const parts = [];
+    let start = 0;
+    while (true) {
+      const idx = body.indexOf(boundaryBuffer, start);
+      if (idx === -1) break;
+      if (start > 0) {
+        parts.push(body.slice(start, idx - 2)); // -2 for \r\n before boundary
+      }
+      start = idx + boundaryBuffer.length + 2; // +2 for \r\n after boundary
+    }
+
+    let fileBuffer = null;
+    let fileName = "banner";
+    for (const part of parts) {
+      const headerEnd = part.indexOf("\r\n\r\n");
+      if (headerEnd === -1) continue;
+      const headers = part.slice(0, headerEnd).toString();
+      if (headers.includes('name="banner"')) {
+        fileBuffer = part.slice(headerEnd + 4);
+        const fnMatch = headers.match(/filename="([^"]+)"/);
+        if (fnMatch) fileName = fnMatch[1];
+        break;
+      }
+    }
+
+    if (!fileBuffer || fileBuffer.length === 0) {
+      throw new ApiError(400, "No banner file provided");
+    }
+
+    const ext = extname(fileName) || ".jpg";
+    const savedName = `${req.params.planCode}-${Date.now()}${ext}`;
+    const { writeFileSync } = await import("fs");
+    writeFileSync(join(BANNER_UPLOAD_DIR, savedName), fileBuffer);
+
+    const bannerImageUrl = `/uploads/plan-banners/${savedName}`;
+    await PlanCatalog.findOneAndUpdate(
+      { planCode: req.params.planCode },
+      { $set: { "merchandising.bannerImageUrl": bannerImageUrl } }
+    );
+
+    return ok(res, { bannerImageUrl });
+  })
+);
+
+// ── Plan template (merchandising) update ──────────────────────────────────────
+
+adminCatalogRouter.patch(
+  "/catalog/plans/:planCode/template",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const existing = await PlanCatalog.findOne({ planCode: req.params.planCode, archivedAt: { $exists: false } });
+    if (!existing) {
+      throw new ApiError(404, "Plan not found");
+    }
+
+    const { subtitle, badges, highlightFeatures, spotlightLabel, featured, recommended } = req.body || {};
+    const update = {};
+    if (subtitle !== undefined) update["merchandising.subtitle"] = subtitle;
+    if (Array.isArray(badges)) update["merchandising.badges"] = badges;
+    if (Array.isArray(highlightFeatures)) update["merchandising.highlightFeatures"] = highlightFeatures;
+    if (spotlightLabel !== undefined) update["merchandising.spotlightLabel"] = spotlightLabel;
+    if (featured !== undefined) update["merchandising.featured"] = featured;
+    if (recommended !== undefined) update["merchandising.recommended"] = recommended;
+
+    if (Object.keys(update).length === 0) {
+      throw new ApiError(400, "No template fields provided");
+    }
+
+    const plan = await PlanCatalog.findOneAndUpdate(
+      { planCode: req.params.planCode, archivedAt: { $exists: false } },
+      { $set: update },
+      { new: true }
+    ).lean();
+
+    return ok(res, plan?.merchandising || {});
   })
 );
 

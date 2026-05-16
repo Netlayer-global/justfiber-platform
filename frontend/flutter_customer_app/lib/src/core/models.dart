@@ -442,6 +442,12 @@ class PlanItem {
     required this.validityQuarterly,
     required this.validityHalfYearly,
     required this.validityYearly,
+    this.ottApps = const [],
+    this.routerIncluded = false,
+    this.bannerImageUrl = '',
+    this.merchandisingSubtitle = '',
+    this.merchandisingBadges = const [],
+    this.recommended = false,
   });
 
   final String planCode;
@@ -468,6 +474,13 @@ class PlanItem {
   final bool validityQuarterly;
   final bool validityHalfYearly;
   final bool validityYearly;
+  // Merchandising / template fields
+  final List<String> ottApps;
+  final bool routerIncluded;
+  final String bannerImageUrl;
+  final String merchandisingSubtitle;
+  final List<String> merchandisingBadges;
+  final bool recommended;
 }
 
 class PendingPlanChange {

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import type { Plan } from '@/lib/types'
-import { Loader, RefreshCw, Trash2, X } from 'lucide-react'
+import { Loader, RefreshCw, Trash2, X, Upload, Image as ImageIcon } from 'lucide-react'
 import { toast } from 'sonner'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -21,6 +21,13 @@ interface EditFormState {
   visibleInCustomerApp: boolean
   visibleInSalesApp: boolean
   active: boolean
+  // Merchandising / template fields
+  subtitle: string
+  badges: string
+  highlightFeatures: string
+  spotlightLabel: string
+  featured: boolean
+  recommended: boolean
 }
 
 // ─── Duration label helper ────────────────────────────────────────────────────
@@ -59,6 +66,7 @@ export default function PlansPage() {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<Plan | null>(null)
+  const [uploadingBanner, setUploadingBanner] = useState(false)
 
   // ─── Fetch plans ──────────────────────────────────────────────────────────
 
@@ -116,6 +124,12 @@ export default function PlansPage() {
       visibleInCustomerApp: plan.visibleInCustomerApp !== false,
       visibleInSalesApp: plan.visibleInSalesApp !== false,
       active: plan.status !== 'inactive',
+      subtitle: plan.merchandising?.subtitle || '',
+      badges: (plan.merchandising?.badges || []).join(', '),
+      highlightFeatures: (plan.merchandising?.highlightFeatures || []).join(', '),
+      spotlightLabel: plan.merchandising?.spotlightLabel || '',
+      featured: plan.merchandising?.featured || false,
+      recommended: plan.merchandising?.recommended || false,
     })
   }
 
@@ -139,6 +153,15 @@ export default function PlansPage() {
         visibleInCustomerApp: editForm.visibleInCustomerApp,
         visibleInSalesApp: editForm.visibleInSalesApp,
         status: editForm.active ? 'active' : 'inactive',
+        merchandising: {
+          ...editingPlan.merchandising,
+          subtitle: editForm.subtitle,
+          badges: editForm.badges.split(',').map(s => s.trim()).filter(Boolean),
+          highlightFeatures: editForm.highlightFeatures.split(',').map(s => s.trim()).filter(Boolean),
+          spotlightLabel: editForm.spotlightLabel,
+          featured: editForm.featured,
+          recommended: editForm.recommended,
+        },
       })
       if (res.success) {
         toast.success('Plan updated')
@@ -172,6 +195,39 @@ export default function PlansPage() {
       toast.error('Failed to delete plan')
     } finally {
       setDeleting(false)
+    }
+  }
+
+  async function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!editingPlan || !e.target.files?.[0]) return
+    setUploadingBanner(true)
+    try {
+      const planId = editingPlan.planCode || editingPlan.id
+      const res = await adminAPI.uploadPlanBanner(planId, e.target.files[0])
+      if (res.success) {
+        toast.success('Banner uploaded')
+        fetchPlans()
+        // Update the editing plan with new banner URL
+        if (res.data?.bannerImageUrl) {
+          setEditingPlan((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  merchandising: {
+                    ...prev.merchandising,
+                    bannerImageUrl: res.data!.bannerImageUrl,
+                  },
+                }
+              : prev
+          )
+        }
+      } else {
+        toast.error(res.error || 'Failed to upload banner')
+      }
+    } catch {
+      toast.error('Failed to upload banner')
+    } finally {
+      setUploadingBanner(false)
     }
   }
 
@@ -453,6 +509,157 @@ export default function PlansPage() {
                     />
                   </button>
                 </label>
+              </div>
+
+              {/* ── Merchandising / Template Section ─────────────────── */}
+              <div className="border-t pt-4 mt-4">
+                <h4 className="text-sm font-semibold text-gray-800 mb-3">
+                  Plan Template (Customer App)
+                </h4>
+
+                {/* Banner Image Upload */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Banner Image
+                  </label>
+                  {editingPlan.merchandising?.bannerImageUrl && (
+                    <div className="mb-2 rounded-lg overflow-hidden border border-gray-200">
+                      <img
+                        src={editingPlan.merchandising.bannerImageUrl}
+                        alt="Plan banner"
+                        className="w-full h-24 object-cover"
+                      />
+                    </div>
+                  )}
+                  <label className="flex items-center gap-2 cursor-pointer rounded-lg border border-dashed border-gray-300 px-4 py-3 hover:border-blue-400 hover:bg-blue-50 transition-colors">
+                    {uploadingBanner ? (
+                      <Loader className="h-4 w-4 animate-spin text-gray-400" />
+                    ) : (
+                      <Upload className="h-4 w-4 text-gray-400" />
+                    )}
+                    <span className="text-sm text-gray-600">
+                      {uploadingBanner ? 'Uploading...' : 'Upload banner image'}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleBannerUpload}
+                      disabled={uploadingBanner}
+                    />
+                  </label>
+                </div>
+
+                {/* Subtitle */}
+                <div className="mb-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Subtitle
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.subtitle}
+                    onChange={(e) =>
+                      setEditForm((f) => ({ ...f, subtitle: e.target.value }))
+                    }
+                    className="input w-full"
+                    placeholder="e.g. High-speed fiber for your home"
+                  />
+                </div>
+
+                {/* Badges */}
+                <div className="mb-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Badges (comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.badges}
+                    onChange={(e) =>
+                      setEditForm((f) => ({ ...f, badges: e.target.value }))
+                    }
+                    className="input w-full"
+                    placeholder="e.g. Recommended, Unlimited Data"
+                  />
+                </div>
+
+                {/* Highlight Features */}
+                <div className="mb-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Highlight Features (comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.highlightFeatures}
+                    onChange={(e) =>
+                      setEditForm((f) => ({ ...f, highlightFeatures: e.target.value }))
+                    }
+                    className="input w-full"
+                    placeholder="e.g. 300 Mbps Speed, Router Included"
+                  />
+                </div>
+
+                {/* Spotlight Label */}
+                <div className="mb-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Spotlight Label
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.spotlightLabel}
+                    onChange={(e) =>
+                      setEditForm((f) => ({ ...f, spotlightLabel: e.target.value }))
+                    }
+                    className="input w-full"
+                    placeholder="e.g. Top Seller, Best Value"
+                  />
+                </div>
+
+                {/* Featured & Recommended toggles */}
+                <div className="space-y-3">
+                  <label className="flex items-center justify-between cursor-pointer">
+                    <span className="text-sm text-gray-700">Featured</span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={editForm.featured}
+                      onClick={() =>
+                        setEditForm((f) => ({ ...f, featured: !f.featured }))
+                      }
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        editForm.featured ? 'bg-purple-600' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          editForm.featured ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </label>
+
+                  <label className="flex items-center justify-between cursor-pointer">
+                    <span className="text-sm text-gray-700">Recommended</span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={editForm.recommended}
+                      onClick={() =>
+                        setEditForm((f) => ({ ...f, recommended: !f.recommended }))
+                      }
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        editForm.recommended ? 'bg-purple-600' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          editForm.recommended
+                            ? 'translate-x-6'
+                            : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </label>
+                </div>
               </div>
             </div>
 

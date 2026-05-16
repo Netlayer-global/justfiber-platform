@@ -93,88 +93,155 @@ class _TrackingHeroHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF13051F), Color(0xFF3B0D7A), Color(0xFFA855F7)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: -60,
-            right: -50,
-            child: Container(
-              width: 220,
-              height: 220,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(colors: [
-                  Colors.white.withValues(alpha: 0.07),
-                  Colors.transparent,
-                ]),
-              ),
-            ),
-          ),
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 8, 24),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                        color: Colors.white, size: 20),
+    return SafeArea(
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(22, 16, 22, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Back + title + refresh
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.of(context).maybePop(),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: kSurface,
+                      borderRadius: BorderRadius.circular(kRSmall),
+                      border: Border.all(color: kBorderSoft),
+                    ),
+                    child: const Icon(Icons.arrow_back_rounded,
+                        color: kText, size: 18),
                   ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 12),
-                        Text(
-                          'Connection Tracking',
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.6,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          latestBooking == null
-                              ? 'No active booking'
-                              : 'Booking #${latestBooking.bookingNumber}',
-                          style: GoogleFonts.inter(
-                            color: Colors.white60,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    'Track Service',
+                    style: GoogleFonts.inter(
+                      color: kText,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.4,
                     ),
                   ),
-                  IconButton(
-                    onPressed: busy ? null : onRefresh,
-                    icon: busy
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
+                ),
+                GestureDetector(
+                  onTap: busy ? null : onRefresh,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: kSurface,
+                      borderRadius: BorderRadius.circular(kRSmall),
+                      border: Border.all(color: kBorderSoft),
+                    ),
+                    child: busy
+                        ? const Padding(
+                            padding: EdgeInsets.all(10),
                             child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2),
+                                color: kAccent, strokeWidth: 2),
                           )
                         : const Icon(Icons.refresh_rounded,
-                            color: Colors.white),
+                            color: kText, size: 18),
                   ),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+
+            // Hero card — accent gradient with booking info
+            ClipRRect(
+              borderRadius: BorderRadius.circular(kRCard),
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [kAccent, kAccentDeep],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    Positioned(
+                      right: -60,
+                      top: -60,
+                      child: Container(
+                        width: 180,
+                        height: 180,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withValues(alpha: 0.06),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(22),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.18),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                      color: Colors.white
+                                          .withValues(alpha: 0.25)),
+                                ),
+                                child: const Icon(
+                                    Icons.local_shipping_rounded,
+                                    color: Colors.white,
+                                    size: 22),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Installation Tracking',
+                                      style: GoogleFonts.inter(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: -0.3,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      latestBooking == null
+                                          ? 'No active booking'
+                                          : 'Booking #${latestBooking.bookingNumber}',
+                                      style: GoogleFonts.inter(
+                                        color: Colors.white
+                                            .withValues(alpha: 0.85),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

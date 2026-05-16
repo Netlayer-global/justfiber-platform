@@ -2036,10 +2036,43 @@ export const adminAPI = {
         visibleInSalesApp: data.visibleInSalesApp,
         active: data.status ? data.status !== 'inactive' : undefined,
         sortOrder: data.sortOrder,
+        merchandising: data.merchandising,
       }),
     }),
   deletePlan: (id: string) =>
     request(`/api/v1/admin/catalog/plans/${id}`, { method: 'DELETE' }),
+
+  uploadPlanBanner: async (planCode: string, file: File): Promise<ApiResponse<{ bannerImageUrl: string }>> => {
+    const formData = new FormData()
+    formData.append('banner', file)
+    const token = getAuthToken()
+    const headers: Record<string, string> = {}
+    if (token) headers['Authorization'] = `Bearer ${token}`
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/api/v1/admin/catalog/plans/${planCode}/banner`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      })
+      const data = await response.json()
+      return { success: response.ok, data: data?.data || data, error: data?.error || data?.message }
+    } catch {
+      return { success: false, error: 'Failed to upload banner' }
+    }
+  },
+
+  updatePlanTemplate: (planCode: string, template: {
+    subtitle?: string
+    badges?: string[]
+    highlightFeatures?: string[]
+    spotlightLabel?: string
+    featured?: boolean
+    recommended?: boolean
+  }) =>
+    request(`/api/v1/admin/catalog/plans/${planCode}/template`, {
+      method: 'PATCH',
+      body: JSON.stringify(template),
+    }),
 
   // Customers
   getCustomers: async (

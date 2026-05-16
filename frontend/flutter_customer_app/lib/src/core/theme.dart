@@ -2,21 +2,53 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// JustFiber Premium Dark Theme
-// Palette
-const kBg = Color(0xFF000000); // pure black
-const kSurface = Color(0xFF0C0C18); // card dark
-const kSurface2 = Color(0xFF111120); // elevated card
-const kPrimary = Color(0xFFA855F7); // bright Wi-Fi purple
-const kPrimaryLight = Color(0xFFD8B4FE); // soft glow purple
-const kAccentCyan = Color(0xFF22D3EE); // network accent
-const kText = Color(0xFFFFFFFF); // primary text
-const kMuted = Color(0xFFB8ACCC); // muted secondary text
-const kBorder = Color(0x1FFFFFFF); // subtle glass border
+// ─────────────────────────────────────────────────────────────────────────────
+//  JustFiber Design System — see /design-system/MASTER.md
+//  Discipline: ONE accent (purple), translucent white surfaces, big typography.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Surfaces
+const kBg = Color(0xFF000000); // pure black canvas
+const kSurface = Color(0x1AFFFFFF); // 10% white — default card
+const kSurfaceHigh = Color(0x14FFFFFF); // 8% white — elevated overlays
+const kSurfaceLow = Color(0x0AFFFFFF); // 4% white — inputs, recessed wells
+const kBorderSoft = Color(0x14FFFFFF); // 8% white — card borders
+const kBorderHard = Color(0x33FFFFFF); // 20% white — focused borders
 const kDivider = Color(0x0AFFFFFF);
 
+// Single accent — JustFiber purple. Never add a second accent.
+const kAccent = Color(0xFF8224E3);
+const kAccentDeep = Color(0xFF5B10A0); // gradient end (only for hero)
+const kAccentSoft = Color(0x338224E3); // 20% purple tint
+
+// Backwards-compatible aliases (kept so existing imports don't break)
+const kPrimary = kAccent;
+const kPrimaryLight = Color(0xFFD8B4FE);
+const kAccentCyan = kAccent; // collapsed: no second accent
+const kSurface2 = kSurfaceHigh;
+const kBorder = kBorderSoft;
+
+// Text — pure white at controlled opacities (NO gray hex codes anywhere)
+const kText = Color(0xFFFFFFFF);
+const kTextDim = Color(0xCCFFFFFF); // 80%
+const kTextMuted = Color(0x80FFFFFF); // 50%
+const kTextFaint = Color(0x4DFFFFFF); // 30%
+
+// Backwards-compatible alias
+const kMuted = kTextMuted;
+
+// Status (used sparingly — only true status meaning)
+const kSuccess = Color(0xFF34D399);
+const kDanger = Color(0xFFEF4444);
+
+// Radius family — see MASTER.md §5
+const kRCard = 28.0;
+const kRSurface = 20.0;
+const kRButton = 18.0;
+const kRSmall = 14.0;
+const kRPill = 999.0;
+
 ThemeData buildJustFiberTheme() {
-  // System chrome
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
@@ -29,8 +61,8 @@ ThemeData buildJustFiberTheme() {
   return ThemeData(
     brightness: Brightness.dark,
     colorScheme: const ColorScheme.dark(
-      primary: kPrimary,
-      secondary: kAccentCyan,
+      primary: kAccent,
+      secondary: kAccent, // collapsed — single accent rule
       surface: kSurface,
       onSurface: kText,
       onPrimary: kText,
@@ -47,111 +79,147 @@ ThemeData buildJustFiberTheme() {
       ),
       titleTextStyle: GoogleFonts.inter(
         fontSize: 17,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w800,
         color: kText,
+        letterSpacing: -0.3,
       ),
     ),
     cardColor: kSurface,
     textTheme: baseText.copyWith(
-      headlineLarge: GoogleFonts.inter(fontSize: 36, fontWeight: FontWeight.w800, color: kText, height: 1.05, letterSpacing: -1.2),
-      headlineMedium: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.w800, color: kText, height: 1.1, letterSpacing: -0.8),
-      headlineSmall: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w700, color: kText, letterSpacing: -0.5),
-      titleLarge: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700, color: kText),
-      titleMedium: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: kText),
-      bodyLarge: GoogleFonts.inter(fontSize: 15, color: kText, height: 1.6),
-      bodyMedium: GoogleFonts.inter(fontSize: 13, color: kMuted, height: 1.55),
-      labelMedium: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: kMuted, letterSpacing: 1.2),
-      labelSmall: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w700, color: kMuted, letterSpacing: 1.5),
+      // Display & headlines
+      headlineLarge: GoogleFonts.inter(
+          fontSize: 32,
+          fontWeight: FontWeight.w800,
+          color: kText,
+          height: 1.1,
+          letterSpacing: -0.8),
+      headlineMedium: GoogleFonts.inter(
+          fontSize: 24,
+          fontWeight: FontWeight.w800,
+          color: kText,
+          height: 1.15,
+          letterSpacing: -0.5),
+      headlineSmall: GoogleFonts.inter(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: kText,
+          letterSpacing: -0.3),
+      titleLarge: GoogleFonts.inter(
+          fontSize: 17, fontWeight: FontWeight.w700, color: kText),
+      titleMedium: GoogleFonts.inter(
+          fontSize: 15, fontWeight: FontWeight.w600, color: kText),
+      bodyLarge:
+          GoogleFonts.inter(fontSize: 15, color: kText, height: 1.55),
+      bodyMedium:
+          GoogleFonts.inter(fontSize: 14, color: kTextDim, height: 1.55),
+      labelMedium: GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          color: kTextMuted,
+          letterSpacing: 1.6),
+      labelSmall: GoogleFonts.inter(
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          color: kTextMuted,
+          letterSpacing: 1.6),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: kSurface2,
+      fillColor: kSurfaceLow,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: kBorder),
+        borderRadius: BorderRadius.circular(kRSmall),
+        borderSide: const BorderSide(color: kBorderSoft),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: kBorder),
+        borderRadius: BorderRadius.circular(kRSmall),
+        borderSide: const BorderSide(color: kBorderSoft),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: kPrimary, width: 1.5),
+        borderRadius: BorderRadius.circular(kRSmall),
+        borderSide: const BorderSide(color: kAccent, width: 1.4),
       ),
-      hintStyle: GoogleFonts.inter(color: kMuted, fontSize: 14),
-      labelStyle: GoogleFonts.inter(color: kMuted, fontSize: 14),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      hintStyle: GoogleFonts.inter(color: kTextFaint, fontSize: 14),
+      labelStyle: GoogleFonts.inter(color: kTextMuted, fontSize: 14),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: kPrimary,
+        backgroundColor: kAccent,
         foregroundColor: kText,
         elevation: 0,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14, letterSpacing: -0.2),
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(kRButton)),
+        textStyle: GoogleFonts.inter(
+            fontWeight: FontWeight.w800, fontSize: 14, letterSpacing: 0.2),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: kText,
-        side: const BorderSide(color: kBorder),
+        side: const BorderSide(color: kBorderSoft),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(kRButton)),
+        textStyle: GoogleFonts.inter(
+            fontWeight: FontWeight.w700, fontSize: 14),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: kPrimaryLight,
-        textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
-      ),
-    ),
-    dropdownMenuTheme: DropdownMenuThemeData(
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: kSurface2,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: kBorder)),
+        foregroundColor: kAccent,
+        textStyle:
+            GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13),
       ),
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: kSurface2,
+      backgroundColor: kSurface,
       contentTextStyle: GoogleFonts.inter(color: kText, fontSize: 13),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: kBorder),
+        borderRadius: BorderRadius.circular(kRSmall),
+        side: const BorderSide(color: kBorderSoft),
       ),
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: kSurface,
-      selectedItemColor: kPrimaryLight,
-      unselectedItemColor: kMuted,
+      backgroundColor: kBg,
+      selectedItemColor: kAccent,
+      unselectedItemColor: kTextMuted,
       showUnselectedLabels: true,
       type: BottomNavigationBarType.fixed,
       elevation: 0,
-      selectedLabelStyle: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700),
-      unselectedLabelStyle: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600),
+      selectedLabelStyle:
+          GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800),
+      unselectedLabelStyle:
+          GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600),
     ),
     dividerColor: kDivider,
-    dividerTheme: const DividerThemeData(color: kDivider, thickness: 1, space: 1),
+    dividerTheme: const DividerThemeData(
+        color: kDivider, thickness: 1, space: 1),
     dialogTheme: DialogThemeData(
-      backgroundColor: kSurface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      backgroundColor: const Color(0xFF0A0A14),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(kRCard)),
     ),
     bottomSheetTheme: const BottomSheetThemeData(
-      backgroundColor: kSurface,
-      modalBackgroundColor: kSurface,
+      backgroundColor: Color(0xFF0A0A14),
+      modalBackgroundColor: Color(0xFF0A0A14),
     ),
     popupMenuTheme: PopupMenuThemeData(
-      color: kSurface2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: kBorder)),
+      color: const Color(0xFF0A0A14),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(kRSmall),
+        side: const BorderSide(color: kBorderSoft),
+      ),
     ),
     chipTheme: ChipThemeData(
-      backgroundColor: kSurface2,
-      labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: kText),
-      side: const BorderSide(color: kBorder),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+      backgroundColor: kSurface,
+      labelStyle: GoogleFonts.inter(
+          fontSize: 12, fontWeight: FontWeight.w700, color: kText),
+      side: const BorderSide(color: kBorderSoft),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(kRPill)),
     ),
   );
 }

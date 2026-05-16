@@ -15,7 +15,7 @@ class PlanCatalogScreen extends StatefulWidget {
 }
 
 class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
-  String effectiveMode = 'immediate';
+  String effectiveMode = 'immediate'; // Always immediate (mode switcher removed)
   String billingTerm = 'monthly';
   int step = 0;
   bool hydratedDraft = false;
@@ -167,14 +167,8 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                 padding: const EdgeInsets.fromLTRB(18, 18, 18, 32),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    // Stepper
-                    _stepper(),
-                    const SizedBox(height: 18),
-
                     // ── Step 0: Plan selection ─────────────────────────
                     if (step == 0) ...[
-                      _modeSwitcher(),
-                      const SizedBox(height: 14),
                       if (appState.planChangeDraft != null) ...[
                         _card(
                           child: Column(
@@ -414,209 +408,345 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     );
   }
 
-  // ── Stepper ──────────────────────────────────────────────────────────
-
-  Widget _stepper() {
-    const labels = ['Plan', 'Duration', 'Checkout'];
-    return _card(
-      child: Column(
-        children: [
-          Row(
-            children: List.generate(labels.length, (i) {
-              final active = i <= step;
-              return Expanded(
-                child: Container(
-                  height: 4,
-                  margin: EdgeInsets.only(
-                      left: i == 0 ? 0 : 4,
-                      right: i == labels.length - 1 ? 0 : 4),
-                  decoration: BoxDecoration(
-                    color: active ? kPrimary : kBorder,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-              );
-            }),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: List.generate(labels.length, (i) {
-              final active = i == step;
-              final complete = i < step;
-              return Expanded(
-                child: Column(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: active || complete
-                            ? kPrimary
-                            : kPrimary.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                            color: active || complete
-                                ? kPrimary
-                                : kPrimary.withValues(alpha: 0.2)),
-                      ),
-                      child: Icon(
-                        complete ? Icons.check_rounded : Icons.circle,
-                        size: complete ? 16 : 10,
-                        color:
-                            active || complete ? Colors.white : kPrimaryLight,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      labels[i],
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 11,
-                        color: active || complete ? Colors.white : kMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Mode switcher ────────────────────────────────────────────────────
-
-  Widget _modeSwitcher() => _card(
-        child: Row(children: [
-          Expanded(child: _modeBtn('immediate', 'Switch now')),
-          const SizedBox(width: 8),
-          Expanded(child: _modeBtn('next_cycle', 'Next cycle')),
-        ]),
-      );
-
-  Widget _modeBtn(String value, String label) {
-    final active = effectiveMode == value;
-    return PressableScale(
-      onTap: () => setState(() => effectiveMode = value),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: active ? kPrimary.withValues(alpha: 0.18) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-              color: active ? kPrimary.withValues(alpha: 0.5) : kBorder),
-        ),
-        alignment: Alignment.center,
-        child: Text(label,
-            style: GoogleFonts.inter(
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-                color: active ? kPrimaryLight : kMuted)),
-      ),
-    );
-  }
+  // ── Mode switcher (removed — always immediate) ────────────────────────
 
   // ── Plan card ────────────────────────────────────────────────────────
 
   Widget _planCard(PlanItem plan, double currentRecurring, AppState appState) {
     final premium = _isPremium(plan);
-    return _card(
+    final badges = <String>[
+      if (premium) 'Recommended',
+      if (plan.dataPolicy == 'unlimited') 'Unlimited Data',
+      if (plan.routerIncluded) 'Router Included',
+    ];
+    final subtitle = plan.merchandisingSubtitle.isNotEmpty
+        ? plan.merchandisingSubtitle
+        : '${plan.speedMbps.toStringAsFixed(0)} Mbps Fiber Broadband';
+    final bannerUrl = plan.bannerImageUrl;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.circular(kRCard),
+        border: Border.all(color: kBorderSoft),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          // ── Banner area (image or gradient placeholder) ──────
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(28)),
+            child: Container(
+              height: 160,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: premium
+                      ? [kAccent, kAccentDeep]
+                      : [const Color(0xFF1A1A2E), const Color(0xFF0F0F1A)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Banner image if available
+                  if (bannerUrl.isNotEmpty)
+                    Image.network(
+                      bannerUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    ),
+                  // Gradient overlay for text readability
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.6),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Speed badge on banner
+                  Positioned(
+                    left: 16,
+                    bottom: 14,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(kRPill),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.bolt_rounded,
+                              color: Colors.white, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${plan.speedMbps.toStringAsFixed(0)} Mbps',
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Wi-Fi icon (decorative, top-right)
+                  if (bannerUrl.isEmpty)
+                    Positioned(
+                      right: 20,
+                      top: 30,
+                      child: Icon(
+                        Icons.wifi_rounded,
+                        color: Colors.white.withValues(alpha: 0.15),
+                        size: 80,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Content below banner ────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Badges row
+                if (badges.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: badges
+                          .map((b) => Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: kAccentSoft,
+                                  borderRadius:
+                                      BorderRadius.circular(kRPill),
+                                ),
+                                child: Text(
+                                  b,
+                                  style: GoogleFonts.inter(
+                                    color: kAccent,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ))
+                          .toList(),
+                    ),
+                  ),
+
+                // Plan name
+                Text(
+                  plan.name,
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 20,
+                    color: kText,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.inter(
+                    color: kTextMuted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Price + Speed + Data row
+                Row(
                   children: [
-                    Wrap(spacing: 6, runSpacing: 6, children: [
-                      _pill(premium ? 'Recommended' : 'Broadband', premium),
-                      _pill(_terms(plan).map(_termShort).join(' · '), false),
-                    ]),
-                    const SizedBox(height: 12),
-                    Text(plan.name,
-                        style: GoogleFonts.inter(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 20,
-                            color: Colors.white,
-                            letterSpacing: -0.3)),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Rs ${plan.monthlyPrice.toStringAsFixed(0)} / month',
-                      style: GoogleFonts.inter(
-                          color: kPrimaryLight,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                '₹${plan.monthlyPrice.toStringAsFixed(0)}',
+                                style: GoogleFonts.inter(
+                                  color: kText,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              Text(
+                                '/mo',
+                                style: GoogleFonts.inter(
+                                  color: kTextMuted,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (plan.pricesExcludeGst)
+                            Text(
+                              '+GST',
+                              style: GoogleFonts.inter(
+                                color: kTextFaint,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    _InfoChip(
+                      value: '${plan.speedMbps.toStringAsFixed(0)}',
+                      label: 'Mbps',
+                    ),
+                    const SizedBox(width: 12),
+                    _InfoChip(
+                      value: _dataLabel(plan),
+                      label: 'Data',
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: kPrimary.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: kPrimary.withValues(alpha: 0.3)),
+
+                // OTT apps row (if any)
+                if (plan.ottApps.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      ...plan.ottApps.take(4).map((app) => Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: kSurfaceLow,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: kBorderSoft),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  app.length > 2
+                                      ? app.substring(0, 2).toUpperCase()
+                                      : app.toUpperCase(),
+                                  style: GoogleFonts.inter(
+                                    color: kTextDim,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )),
+                      if (plan.ottApps.length > 4)
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: kSurfaceLow,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: kBorderSoft),
+                          ),
+                          child: Center(
+                            child: Text(
+                              '+${plan.ottApps.length - 4}',
+                              style: GoogleFonts.inter(
+                                color: kTextMuted,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+
+                const SizedBox(height: 16),
+
+                // Action buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: PressableScale(
+                        onTap: () => _previewPlan(plan, appState),
+                        haptic: true,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          decoration: BoxDecoration(
+                            color: kSurfaceLow,
+                            borderRadius: BorderRadius.circular(kRSmall),
+                            border: Border.all(color: kBorderSoft),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'View Details',
+                              style: GoogleFonts.inter(
+                                color: kAccent,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: PressableScale(
+                        onTap: () => _selectPlan(plan, appState),
+                        haptic: true,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          decoration: BoxDecoration(
+                            color: kAccent,
+                            borderRadius: BorderRadius.circular(kRSmall),
+                            boxShadow: [
+                              BoxShadow(
+                                color: kAccent.withValues(alpha: 0.4),
+                                blurRadius: 12,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Select Plan',
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                child: Icon(
-                  premium ? Icons.rocket_launch_rounded : Icons.wifi_rounded,
-                  color: kPrimaryLight,
-                  size: 24,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: kBg,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: kBorder),
-            ),
-            child: Row(
-              children: [
-                _metric(plan.speedMbps.toStringAsFixed(0), 'Mbps Down'),
-                _metricDiv(),
-                _metric(plan.uploadSpeedMbps.toStringAsFixed(0), 'Mbps Up'),
-                _metricDiv(),
-                _metric(_dataLabel(plan), 'Data'),
-                _metricDiv(),
-                _metric('${_terms(plan).length}', 'Terms'),
               ],
             ),
-          ),
-          const SizedBox(height: 14),
-          _row(
-              'Current plan cost',
-              currentRecurring > 0
-                  ? 'Rs ${currentRecurring.toStringAsFixed(0)}'
-                  : '—'),
-          _row('Durations', _terms(plan).map(_termLabel).join(' · '),
-              last: true),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => _previewPlan(plan, appState),
-                  child: const Text('View details'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () => _selectPlan(plan, appState),
-                  child: const Text('Select'),
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -1109,5 +1239,40 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
       default:
         return 'Billed monthly';
     }
+  }
+}
+
+
+// ── Info Chip (used in plan cards for speed/data) ─────────────────────────────
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({super.key, required this.value, required this.label});
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          value,
+          style: GoogleFonts.inter(
+            color: kText,
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.3,
+          ),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            color: kTextMuted,
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
   }
 }

@@ -4,6 +4,11 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_state.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
+import '../../widgets/pressable_scale.dart';
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  PROFILE — JustFiber Design System (see /design-system/MASTER.md)
+// ─────────────────────────────────────────────────────────────────────────────
 
 class ProfileTab extends StatelessWidget {
   const ProfileTab({super.key});
@@ -26,21 +31,51 @@ class ProfileTab extends StatelessWidget {
         ? conn!.fullName
         : dashboard.customerName;
     final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
-    final isActive = (conn?.status.toLowerCase().contains('active') ?? false) ||
-        billing.paymentStatus.toLowerCase().contains('paid') ||
-        billing.paymentStatus.isEmpty;
+    final isActive =
+        (conn?.status.toLowerCase().contains('active') ?? false) ||
+            billing.paymentStatus.toLowerCase().contains('paid') ||
+            billing.paymentStatus.isEmpty;
 
     return ListView(
-      padding: EdgeInsets.zero,
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 16,
+        bottom: 120,
+      ),
       children: [
-        // ── Hero Card (matches Home style) ─────────────────────────
+        // ── Headline ─────────────────────────────────────────
         Padding(
-          padding: EdgeInsets.only(
-            top: MediaQuery.of(context).padding.top + 18,
-            left: 18,
-            right: 18,
+          padding: const EdgeInsets.symmetric(horizontal: 22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Profile',
+                style: GoogleFonts.inter(
+                  color: kText,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.6,
+                  height: 1.1,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Account & connection details',
+                style: GoogleFonts.inter(
+                  color: kTextMuted,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
-          child: _ProfileHeroCard(
+        ),
+        const SizedBox(height: 22),
+
+        // ── Profile hero card ──────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 22),
+          child: _ProfileHero(
             name: name,
             initial: initial,
             planName: billing.currentPlan,
@@ -55,164 +90,141 @@ class ProfileTab extends StatelessWidget {
             connectionId: conn?.customerId ?? '',
             connectionAddress: conn?.address ?? '',
             totalConnections: appState.connections.length,
-            connectionIndex:
-                appState.connections.indexWhere((c) => c.customerId == appState.selectedCustomerId),
+            connectionIndex: appState.connections.indexWhere(
+                (c) => c.customerId == appState.selectedCustomerId),
           ),
         ),
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 28),
 
-        // ── Personal Details ───────────────────────────────────────
+        // ── Personal Details ───────────────────────────────────
         _Section(
-          icon: Icons.person_outline_rounded,
           title: 'PERSONAL DETAILS',
-          child: Column(
-            children: [
-              _InfoRow(label: 'Full Name', value: name),
-              _InfoRow(
-                label: 'Mobile',
-                value: conn?.mobile.isNotEmpty == true
-                    ? conn!.mobile
-                    : (appState.session?.mobile ?? '—'),
-              ),
-              if (conn?.email.isNotEmpty == true)
-                _InfoRow(label: 'Email', value: conn!.email),
-              if (conn?.address.isNotEmpty == true)
-                _InfoRow(label: 'Address', value: conn!.address, last: true)
-              else
-                const _InfoRow(label: 'Address', value: '—', last: true),
-            ],
-          ),
+          rows: [
+            _row('Full Name', name),
+            _row(
+              'Mobile',
+              conn?.mobile.isNotEmpty == true
+                  ? conn!.mobile
+                  : (appState.session?.mobile ?? '—'),
+            ),
+            if (conn?.email.isNotEmpty == true) _row('Email', conn!.email),
+            _row(
+              'Address',
+              conn?.address.isNotEmpty == true ? conn!.address : '—',
+            ),
+          ],
         ),
-
         const SizedBox(height: 14),
 
-        // ── Account Info ───────────────────────────────────────────
+        // ── Account Info ───────────────────────────────────────
         _Section(
-          icon: Icons.badge_outlined,
           title: 'ACCOUNT',
-          child: Column(
-            children: [
-              if (conn?.customerId.isNotEmpty == true)
-                _InfoRow(label: 'Customer ID', value: conn!.customerId),
-              if (conn?.serviceId.isNotEmpty == true)
-                _InfoRow(label: 'Service ID', value: conn!.serviceId),
-              if (conn?.accountNumber.isNotEmpty == true)
-                _InfoRow(label: 'Account No.', value: conn!.accountNumber),
-              _InfoRow(
-                label: 'Bill Cycle',
-                value: billing.billCycle.isEmpty ? '—' : billing.billCycle,
-              ),
-              _InfoRow(
-                label: 'Bill Mode',
-                value: billing.billMode.isEmpty ? '—' : billing.billMode,
-                last: true,
-              ),
-            ],
-          ),
+          rows: [
+            if (conn?.customerId.isNotEmpty == true)
+              _row('Customer ID', conn!.customerId),
+            if (conn?.serviceId.isNotEmpty == true)
+              _row('Service ID', conn!.serviceId),
+            if (conn?.accountNumber.isNotEmpty == true)
+              _row('Account No.', conn!.accountNumber),
+            _row(
+              'Bill Cycle',
+              billing.billCycle.isEmpty ? '—' : billing.billCycle,
+            ),
+            _row(
+              'Bill Mode',
+              billing.billMode.isEmpty ? '—' : billing.billMode,
+            ),
+          ],
         ),
-
         const SizedBox(height: 14),
 
-        // ── Current Plan ───────────────────────────────────────────
+        // ── Current Plan ───────────────────────────────────────
         _Section(
-          icon: Icons.wifi_rounded,
           title: 'CURRENT PLAN',
-          child: Column(
-            children: [
-              _InfoRow(
-                label: 'Plan',
-                value: billing.currentPlan.isEmpty ? '—' : billing.currentPlan,
-              ),
-              _InfoRow(
-                label: 'Amount',
-                value: billing.recurringAmount > 0
-                    ? 'Rs ${billing.recurringAmount.toStringAsFixed(0)}/mo'
-                    : billing.dueAmount > 0
-                        ? 'Rs ${billing.dueAmount.toStringAsFixed(0)}'
-                        : '—',
-              ),
-              _InfoRow(
-                label: 'Next Renewal',
-                value: billing.nextBillDate.isEmpty
-                    ? '—'
-                    : _fmtDate(billing.nextBillDate),
-              ),
-              _InfoRow(
-                label: 'Generated',
-                value: billing.generatedDate.isEmpty
-                    ? '—'
-                    : _fmtDate(billing.generatedDate),
-              ),
-              _InfoRow(
-                label: 'Last Payment',
-                value: billing.lastPaymentAmount > 0
-                    ? 'Rs ${billing.lastPaymentAmount.toStringAsFixed(0)}'
-                    : '—',
-                last: true,
-              ),
-            ],
-          ),
+          rows: [
+            _row('Plan',
+                billing.currentPlan.isEmpty ? '—' : billing.currentPlan),
+            _row(
+              'Amount',
+              billing.recurringAmount > 0
+                  ? '₹${billing.recurringAmount.toStringAsFixed(0)}/mo'
+                  : billing.dueAmount > 0
+                      ? '₹${billing.dueAmount.toStringAsFixed(0)}'
+                      : '—',
+            ),
+            _row(
+              'Next Renewal',
+              billing.nextBillDate.isEmpty
+                  ? '—'
+                  : _fmtDate(billing.nextBillDate),
+            ),
+            _row(
+              'Last Payment',
+              billing.lastPaymentAmount > 0
+                  ? '₹${billing.lastPaymentAmount.toStringAsFixed(0)}'
+                  : '—',
+            ),
+          ],
         ),
 
         if (appState.connections.length > 1) ...[
           const SizedBox(height: 14),
-          _Section(
-            icon: Icons.swap_horiz_rounded,
-            title: 'MY CONNECTIONS',
-            child: Column(
-              children: appState.connections.asMap().entries.map((entry) {
-                final i = entry.key;
-                final c = entry.value;
-                final isSelected = c.customerId == appState.selectedCustomerId;
-                return _ConnectionRow(
-                  connection: c,
-                  isSelected: isSelected,
-                  isLast: i == appState.connections.length - 1,
-                  onTap: isSelected
-                      ? null
-                      : () => appState.selectConnection(c.customerId),
-                );
-              }).toList(),
-            ),
+          _ConnectionsSection(
+            connections: appState.connections,
+            selectedId: appState.selectedCustomerId,
+            onSelect: appState.selectConnection,
           ),
         ],
 
-        const SizedBox(height: 28),
+        const SizedBox(height: 22),
 
-        // ── Logout ─────────────────────────────────────────────────
+        // ── Logout ─────────────────────────────────────────────
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-          child: OutlinedButton.icon(
-            onPressed: appState.logout,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFFFF6B6B),
-              side: const BorderSide(color: Color(0x44FF6B6B)),
-              backgroundColor: const Color(0x0DFF6B6B),
+          padding: const EdgeInsets.symmetric(horizontal: 22),
+          child: PressableScale(
+            onTap: appState.logout,
+            haptic: true,
+            child: Container(
+              width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-            ),
-            icon: const Icon(Icons.logout_rounded, size: 18),
-            label: Text(
-              'Logout',
-              style:
-                  GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14),
+              decoration: BoxDecoration(
+                color: kSurface,
+                borderRadius: BorderRadius.circular(kRButton),
+                border: Border.all(color: kBorderSoft),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.logout_rounded,
+                      color: kDanger, size: 18),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Logout',
+                    style: GoogleFonts.inter(
+                      color: kDanger,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-
-
-        const SizedBox(height: 100),
       ],
     );
   }
+
+  static MapEntry<String, String> _row(String k, String v) => MapEntry(k, v);
 }
 
-// ─── Profile Hero Card ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+//  PROFILE HERO — simple accent gradient (matches services page)
+// ═══════════════════════════════════════════════════════════════════════════
 
-class _ProfileHeroCard extends StatelessWidget {
-  const _ProfileHeroCard({
+class _ProfileHero extends StatelessWidget {
+  const _ProfileHero({
     required this.name,
     required this.initial,
     required this.planName,
@@ -236,376 +248,167 @@ class _ProfileHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF8224E3),
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: const Color(0x55D8B4FE)),
-      ),
-      child: Stack(
-        children: [
-          // Decorative orb
-          Positioned(
-            top: -50,
-            right: -40,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    Colors.white.withValues(alpha: 0.07),
-                    Colors.transparent,
-                  ],
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(kRCard),
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [kAccent, kAccentDeep],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -60,
+              top: -60,
+              child: Container(
+                width: 180,
+                height: 180,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.06),
                 ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(22),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Status pills row
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.2)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 7,
-                            height: 7,
-                            decoration: BoxDecoration(
-                              color: isActive
-                                  ? const Color(0xFF4ADE80)
-                                  : const Color(0xFFEF4444),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            statusLabel,
-                            style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
+            Padding(
+              padding: const EdgeInsets.all(22),
+              child: Row(
+                children: [
+                  // Avatar
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.3)),
+                    ),
+                    child: Center(
+                      child: Text(
+                        initial,
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
-                    if (totalConnections > 1 && connectionIndex >= 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.2)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.swap_horiz_rounded,
-                                color: Colors.white, size: 12),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Connection ${connectionIndex + 1} of $totalConnections',
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-
-                const SizedBox(height: 18),
-
-                // Avatar + name row
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Avatar
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFD8B4FE), Color(0xFF7C3AED)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: kPrimary.withValues(alpha: 0.4),
-                            blurRadius: 16,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Text(
-                          initial,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name.isEmpty ? 'Your Account' : name,
                           style: GoogleFonts.inter(
                             color: Colors.white,
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.4,
+                            height: 1.15,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            name.isEmpty ? 'Your Account' : name,
-                            style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.5,
-                              height: 1.15,
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Container(
+                              width: 7,
+                              height: 7,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isActive ? kSuccess : kDanger,
+                              ),
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          if (planName.isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                const Icon(Icons.wifi_rounded,
-                                    color: Colors.white70, size: 12),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    planName,
-                                    style: GoogleFonts.inter(
-                                      color: Colors.white70,
-                                      fontSize: 12,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                            const SizedBox(width: 6),
+                            Text(
+                              statusLabel,
+                              style: GoogleFonts.inter(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            if (planName.isNotEmpty) ...[
+                              const SizedBox(width: 10),
+                              Flexible(
+                                child: Text(
+                                  planName,
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white
+                                        .withValues(alpha: 0.75),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ],
-                          if (connectionId.isNotEmpty) ...[
-                            const SizedBox(height: 3),
-                            Row(
-                              children: [
-                                const Icon(Icons.badge_outlined,
-                                    color: Colors.white60, size: 11),
-                                const SizedBox(width: 4),
-                                Flexible(
-                                  child: Text(
-                                    connectionId,
-                                    style: GoogleFonts.inter(
-                                      color: Colors.white60,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.2,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                          if (connectionAddress.isNotEmpty) ...[
-                            const SizedBox(height: 3),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Icon(Icons.location_on_outlined,
-                                    color: Colors.white54, size: 11),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    connectionAddress,
-                                    style: GoogleFonts.inter(
-                                      color: Colors.white54,
-                                      fontSize: 11,
-                                      height: 1.3,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-
-                const SizedBox(height: 22),
-
-                // Stats row
-                Row(
-                  children: [
-                    _HeroStat(
-                      label: 'Amount Due',
-                      value: 'Rs ${dueAmount.toStringAsFixed(0)}',
-                      valueColor: dueAmount > 0
-                          ? const Color(0xFFFBBF24)
-                          : const Color(0xFF4ADE80),
-                    ),
-                    _heroDivider(),
-                    _HeroStat(
-                      label: 'Tickets',
-                      value: '$ticketCount',
-                    ),
-                    _heroDivider(),
-                    _HeroStat(
-                      label: 'Status',
-                      value: connStatus.isEmpty ? 'Active' : connStatus,
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
-
-  Widget _heroDivider() => Container(
-        width: 1,
-        height: 30,
-        margin: const EdgeInsets.symmetric(horizontal: 14),
-        color: Colors.white.withValues(alpha: 0.2),
-      );
 }
 
-class _HeroStat extends StatelessWidget {
-  const _HeroStat({
-    required this.label,
-    required this.value,
-    this.valueColor,
-  });
-
-  final String label, value;
-  final Color? valueColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          value,
-          style: GoogleFonts.inter(
-            color: valueColor ?? Colors.white,
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.3,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            color: Colors.white54,
-            fontSize: 10,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-String _fmtDate(String raw) {
-  try {
-    final dt = DateTime.parse(raw);
-    const m = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    return '${m[dt.month - 1]} ${dt.day}, ${dt.year}';
-  } catch (_) {
-    final t = raw.indexOf('T');
-    return t > 0 ? raw.substring(0, t) : raw;
-  }
-}
-
-// ─── Supporting Widgets ────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+//  SECTION (info card with rows)
+// ═══════════════════════════════════════════════════════════════════════════
 
 class _Section extends StatelessWidget {
-  const _Section(
-      {required this.icon, required this.title, required this.child});
-  final IconData icon;
+  const _Section({required this.title, required this.rows});
   final String title;
-  final Widget child;
+  final List<MapEntry<String, String>> rows;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(icon, size: 13, color: kMuted),
-              const SizedBox(width: 6),
-              Text(
-                title,
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: kMuted,
-                  letterSpacing: 1.1,
-                ),
+          Padding(
+            padding: const EdgeInsets.only(left: 2, bottom: 12),
+            child: Text(
+              title,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: kTextMuted,
+                letterSpacing: 1.6,
               ),
-            ],
+            ),
           ),
-          const SizedBox(height: 10),
           Container(
-            width: double.infinity,
             decoration: BoxDecoration(
               color: kSurface,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: kBorder),
+              borderRadius: BorderRadius.circular(kRCard),
+              border: Border.all(color: kBorderSoft),
             ),
-            child: child,
+            child: Column(
+              children: List.generate(rows.length, (i) {
+                final isLast = i == rows.length - 1;
+                return _InfoRow(
+                  label: rows[i].key,
+                  value: rows[i].value,
+                  last: isLast,
+                );
+              }),
+            ),
           ),
         ],
       ),
@@ -614,7 +417,11 @@ class _Section extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.value, this.last = false});
+  const _InfoRow({
+    required this.label,
+    required this.value,
+    this.last = false,
+  });
   final String label, value;
   final bool last;
 
@@ -623,7 +430,7 @@ class _InfoRow extends StatelessWidget {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -633,7 +440,7 @@ class _InfoRow extends StatelessWidget {
                   label,
                   style: GoogleFonts.inter(
                     fontSize: 13,
-                    color: kMuted,
+                    color: kTextMuted,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -644,8 +451,8 @@ class _InfoRow extends StatelessWidget {
                   textAlign: TextAlign.right,
                   style: GoogleFonts.inter(
                     fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    color: kText,
                   ),
                 ),
               ),
@@ -653,13 +460,70 @@ class _InfoRow extends StatelessWidget {
           ),
         ),
         if (!last)
-          const Divider(
-            color: kBorder,
-            height: 1,
-            indent: 18,
-            endIndent: 18,
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 18),
+            child: Divider(color: kBorderSoft, height: 1, thickness: 1),
           ),
       ],
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CONNECTIONS LIST
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _ConnectionsSection extends StatelessWidget {
+  const _ConnectionsSection({
+    required this.connections,
+    required this.selectedId,
+    required this.onSelect,
+  });
+  final List<CustomerConnection> connections;
+  final String? selectedId;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 2, bottom: 12),
+            child: Text(
+              'MY CONNECTIONS',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: kTextMuted,
+                letterSpacing: 1.6,
+              ),
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: kSurface,
+              borderRadius: BorderRadius.circular(kRCard),
+              border: Border.all(color: kBorderSoft),
+            ),
+            child: Column(
+              children: List.generate(connections.length, (i) {
+                final c = connections[i];
+                final isSelected = c.customerId == selectedId;
+                final isLast = i == connections.length - 1;
+                return _ConnectionRow(
+                  connection: c,
+                  isSelected: isSelected,
+                  isLast: isLast,
+                  onTap: isSelected ? null : () => onSelect(c.customerId),
+                );
+              }),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -679,33 +543,32 @@ class _ConnectionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+    return Column(
+      children: [
+        PressableScale(
+          onTap: onTap,
+          haptic: true,
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             child: Row(
               children: [
                 Container(
-                  width: 36,
-                  height: 36,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? kPrimary.withValues(alpha: 0.15)
-                        : kBg,
-                    borderRadius: BorderRadius.circular(10),
+                    color: isSelected ? kAccentSoft : kSurfaceLow,
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                        color: isSelected
-                            ? kPrimary.withValues(alpha: 0.4)
-                            : kBorder),
+                        color: isSelected ? kAccent : kBorderSoft),
                   ),
-                  child: Icon(Icons.wifi_rounded,
-                      size: 17,
-                      color: isSelected ? kPrimaryLight : Colors.white38),
+                  child: Icon(
+                    Icons.wifi_rounded,
+                    size: 18,
+                    color: isSelected ? kAccent : kTextMuted,
+                  ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -717,50 +580,23 @@ class _ConnectionRow extends StatelessWidget {
                                 ? connection.fullName
                                 : connection.customerId),
                         style: GoogleFonts.inter(
-                          color: Colors.white,
+                          color: kText,
                           fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                          height: 1.3,
+                          fontSize: 14,
                         ),
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 3),
-                      Row(
-                        children: [
-                          const Icon(Icons.badge_outlined,
-                              size: 10, color: kMuted),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              connection.customerId,
-                              style: GoogleFonts.inter(
-                                color: kMuted,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.3,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (connection.planName.isNotEmpty) ...[
-                            Text(' · ',
-                                style: GoogleFonts.inter(
-                                    color: kMuted, fontSize: 10)),
-                            Flexible(
-                              child: Text(
-                                connection.planName,
-                                style: GoogleFonts.inter(
-                                  color: kMuted,
-                                  fontSize: 10,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ],
+                      Text(
+                        connection.customerId,
+                        style: GoogleFonts.inter(
+                          color: kTextMuted,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
@@ -768,29 +604,66 @@ class _ConnectionRow extends StatelessWidget {
                 if (isSelected)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 9, vertical: 4),
+                        horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: kPrimary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(999),
-                      border:
-                          Border.all(color: kPrimary.withValues(alpha: 0.3)),
+                      color: kAccentSoft,
+                      borderRadius: BorderRadius.circular(kRPill),
                     ),
-                    child: Text('Active',
-                        style: GoogleFonts.inter(
-                            color: kPrimaryLight,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700)),
+                    child: Text(
+                      'Active',
+                      style: GoogleFonts.inter(
+                        color: kAccent,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   )
                 else
-                  const Icon(Icons.chevron_right_rounded,
-                      color: Colors.white24, size: 18),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: kSurfaceLow,
+                      borderRadius: BorderRadius.circular(kRPill),
+                      border: Border.all(color: kBorderSoft),
+                    ),
+                    child: Text(
+                      'Switch',
+                      style: GoogleFonts.inter(
+                        color: kTextMuted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
-          if (!isLast)
-            const Divider(color: kBorder, height: 1, indent: 18, endIndent: 18),
-        ],
-      ),
+        ),
+        if (!isLast)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 18),
+            child: Divider(color: kBorderSoft, height: 1, thickness: 1),
+          ),
+      ],
     );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════════════════════════════════════
+
+String _fmtDate(String raw) {
+  try {
+    final dt = DateTime.parse(raw);
+    const m = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return '${m[dt.month - 1]} ${dt.day}, ${dt.year}';
+  } catch (_) {
+    final t = raw.indexOf('T');
+    return t > 0 ? raw.substring(0, t) : raw;
   }
 }

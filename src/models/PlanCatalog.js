@@ -76,7 +76,12 @@ const planCatalogSchema = new mongoose.Schema(
     merchandising: {
       featured: { type: Boolean, default: false },
       recommended: { type: Boolean, default: false },
-      spotlightLabel: String
+      spotlightLabel: String,
+      // Plan card template (displayed in customer/sales apps)
+      bannerImageUrl: String, // uploaded image URL (router/device photo)
+      subtitle: String, // e.g. "Enjoy the benefits of Wi-Fi + OTTs"
+      badges: { type: [String], default: [] }, // e.g. ["25+ OTTs", "Unlimited Data"]
+      highlightFeatures: { type: [String], default: [] }, // e.g. ["300 Mbps Speed", "₹350 worth DTH"]
     },
     visibleInCustomerApp: { type: Boolean, default: true },
     visibleInSalesApp: { type: Boolean, default: true },

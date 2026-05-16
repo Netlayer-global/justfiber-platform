@@ -144,6 +144,10 @@ export interface Plan {
     featured?: boolean
     recommended?: boolean
     spotlightLabel?: string
+    bannerImageUrl?: string
+    subtitle?: string
+    badges?: string[]
+    highlightFeatures?: string[]
   }
   planScope?: 'global' | 'zone'
   zoneContext?: {

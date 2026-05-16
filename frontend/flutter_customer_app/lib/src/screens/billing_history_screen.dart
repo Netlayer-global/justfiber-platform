@@ -9,15 +9,12 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../core/app_state.dart';
 import '../core/models.dart';
-import '../core/payment_constants.dart';
 import '../core/theme.dart';
 import '../widgets/pressable_scale.dart';
 import 'document_viewer_screen.dart';
 import 'all_invoices_screen.dart';
 import 'billing_payment_screen.dart';
-import 'payment_webview_screen.dart';
 import 'payments_history_screen.dart';
-import 'support_history_screen.dart';
 
 /// Tracks the state of the post-payment billing refresh.
 enum _BillingRefreshState {
@@ -334,16 +331,6 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
                               MaterialPageRoute(
                                   builder: (_) =>
                                       const PaymentsHistoryScreen()),
-                            ),
-                          ),
-                          const Divider(color: kBorder, height: 1),
-                          _linkRow(
-                            icon: Icons.headset_mic_rounded,
-                            label: 'Billing Support',
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                  builder: (_) =>
-                                      const SupportHistoryScreen()),
                             ),
                             last: true,
                           ),
@@ -822,152 +809,193 @@ class _BillingHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
     return Padding(
-      padding: EdgeInsets.fromLTRB(18, topPad + 16, 18, 20),
+      padding: EdgeInsets.fromLTRB(22, topPad + 16, 22, 20),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Main due card ──────────────────────────────────────────
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
-              color: const Color(0xFF8224E3),
-              borderRadius: BorderRadius.circular(26),
-              border: Border.all(color: const Color(0x55A855F7)),
+          // ── Title ──────────────────────────────────────────────
+          Text(
+            'Billing',
+            style: GoogleFonts.inter(
+              color: kText,
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.6,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Status pill row
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
+          ),
+          const SizedBox(height: 18),
+
+          // ── Hero card — accent gradient with due/plan info ─────
+          ClipRRect(
+            borderRadius: BorderRadius.circular(kRCard),
+            child: Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [kAccent, kAccentDeep],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Stack(
+                children: [
+                  Positioned(
+                    right: -60,
+                    top: -60,
+                    child: Container(
+                      width: 180,
+                      height: 180,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.2)),
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.06),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 7,
-                            height: 7,
-                            decoration: BoxDecoration(
-                              color: hasDue
-                                  ? const Color(0xFFFBBF24)
-                                  : const Color(0xFF4ADE80),
-                              shape: BoxShape.circle,
-                            ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(22),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Status pill
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(kRPill),
+                            border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.22)),
                           ),
-                          const SizedBox(width: 5),
-                          Text(
-                            hasDue ? 'Payment Due' : 'All Clear',
-                            style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 7,
+                                height: 7,
+                                decoration: BoxDecoration(
+                                  color: hasDue
+                                      ? const Color(0xFFFBBF24)
+                                      : kSuccess,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                hasDue ? 'Payment Due' : 'No Due',
+                                style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      'BILLING',
-                      style: GoogleFonts.inter(
-                        color: Colors.white60,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 18),
-
-                // Amount + subtitle
-                Text(
-                  useJaze
-                      ? (hasDue
-                          ? 'Rs ${jazeSummary?.outstanding.toStringAsFixed(0) ?? "0"}'
-                          : 'All Clear')
-                      : (hasDue
-                          ? 'Rs ${billing.dueAmount.toStringAsFixed(0)}'
-                          : (billing.currentPlan.isEmpty ? 'All Clear' : billing.currentPlan)),
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: hasDue ? 48 : 32,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: hasDue ? -2 : -0.5,
-                    height: 1,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  useJaze
-                      ? (jazeSummary?.expiryDate.isNotEmpty ?? false
-                          ? 'Expires ${_fmtDate(jazeSummary!.expiryDate)}'
-                          : 'No expiry date')
-                      : (billing.nextBillDate.isEmpty
-                          ? 'No outstanding dues'
-                          : (hasDue
-                              ? 'Due by ${_fmtDate(billing.nextBillDate)}'
-                              : 'Next bill ${_fmtDate(billing.nextBillDate)}')),
-                  style: GoogleFonts.inter(
-                    color: Colors.white60,
-                    fontSize: 13,
-                  ),
-                ),
-                if (!hasDue && useJaze && (jazeSummary?.currentPlanName.isNotEmpty == true)) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    jazeSummary!.currentPlanName,
-                    style: GoogleFonts.inter(
-                      color: Colors.white54,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-                if (!hasDue && !useJaze && billing.recurringAmount > 0) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Rs ${billing.recurringAmount.toStringAsFixed(0)}/mo · ${billing.billMode}',
-                    style: GoogleFonts.inter(
-                      color: Colors.white54,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: 20),
-
-                // Buttons
-                Row(
-                  children: [
-                    if (hasDue) ...[
-                      Expanded(
-                        child: _GradientBtn(
-                          label: 'Pay Now',
-                          onTap: onPayNow,
-                          filled: true,
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                    ],
-                    Expanded(
-                      child: _GradientBtn(
-                        label: 'History',
-                        onTap: onHistory,
-                        filled: false,
-                      ),
+                        const SizedBox(height: 18),
+
+                        // Amount
+                        Text(
+                          useJaze
+                              ? (hasDue
+                                  ? '₹${jazeSummary?.outstanding.abs().toStringAsFixed(0) ?? "0"}'
+                                  : 'No Due')
+                              : (hasDue
+                                  ? '₹${billing.dueAmount.abs().toStringAsFixed(0)}'
+                                  : 'No Due'),
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: hasDue ? 40 : 28,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: hasDue ? -1.5 : -0.5,
+                            height: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          useJaze
+                              ? (jazeSummary?.expiryDate.isNotEmpty ?? false
+                                  ? 'Expires ${_fmtDate(jazeSummary!.expiryDate)}'
+                                  : (jazeSummary?.currentPlanName ?? ''))
+                              : (billing.nextBillDate.isEmpty
+                                  ? 'No outstanding dues'
+                                  : (hasDue
+                                      ? 'Due by ${_fmtDate(billing.nextBillDate)}'
+                                      : 'Next bill ${_fmtDate(billing.nextBillDate)}')),
+                          style: GoogleFonts.inter(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Buttons
+                        Row(
+                          children: [
+                            if (hasDue) ...[
+                              Expanded(
+                                child: PressableScale(
+                                  onTap: onPayNow,
+                                  haptic: true,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 14),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius:
+                                          BorderRadius.circular(kRButton),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        'Pay Now',
+                                        style: GoogleFonts.inter(
+                                          color: kAccentDeep,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                            ],
+                            Expanded(
+                              child: PressableScale(
+                                onTap: onHistory,
+                                haptic: true,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 14),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        Colors.white.withValues(alpha: 0.15),
+                                    borderRadius:
+                                        BorderRadius.circular(kRButton),
+                                    border: Border.all(
+                                        color: Colors.white
+                                            .withValues(alpha: 0.3)),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'History',
+                                      style: GoogleFonts.inter(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
 
@@ -979,7 +1007,7 @@ class _BillingHeader extends StatelessWidget {
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
               decoration: BoxDecoration(
                 color: const Color(0xFF2A0A0A),
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(kRSurface),
                 border: Border.all(color: const Color(0x55FF6B6B)),
               ),
               child: Row(
@@ -990,7 +1018,7 @@ class _BillingHeader extends StatelessWidget {
                   Expanded(
                     child: Text(
                       billing.lastSuspensionWarningAt.isNotEmpty
-                          ? 'Suspension warning — clear dues immediately to avoid disconnection.'
+                          ? 'Suspension warning — clear dues to avoid disconnection.'
                           : 'Overdue reminder — please pay to keep service active.',
                       style: GoogleFonts.inter(
                         color: const Color(0xFFFF8A8A),
@@ -1004,79 +1032,6 @@ class _BillingHeader extends StatelessWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _GradientBtn extends StatefulWidget {
-  const _GradientBtn({
-    required this.label,
-    required this.onTap,
-    required this.filled,
-  });
-
-  final String label;
-  final VoidCallback? onTap;
-  final bool filled;
-
-  @override
-  State<_GradientBtn> createState() => _GradientBtnState();
-}
-
-class _GradientBtnState extends State<_GradientBtn>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 90));
-    _scale = Tween<double>(begin: 1.0, end: 0.96)
-        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: widget.onTap != null ? (_) => _ctrl.forward() : null,
-      onTapUp: (_) => _ctrl.reverse(),
-      onTapCancel: () => _ctrl.reverse(),
-      onTap: widget.onTap,
-      child: ScaleTransition(
-        scale: _scale,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            color: widget.filled ? Colors.white : Colors.white.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(14),
-            border: widget.filled
-                ? null
-                : Border.all(color: Colors.white.withValues(alpha: 0.3)),
-          ),
-          child: Center(
-            child: Text(
-              widget.label,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                color: widget.filled
-                    ? (widget.onTap == null
-                        ? Colors.white54
-                        : const Color(0xFF3B0D7A))
-                    : Colors.white,
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -1397,28 +1352,39 @@ class _PaymentReceiptCard extends StatelessWidget {
   }
 
   Widget _row2(String label, String value, {bool mono = false}) {
-    return Row(
-      children: [
-        Text(label,
-            style: GoogleFonts.inter(
-                fontSize: 12, color: kMuted, fontWeight: FontWeight.w500)),
-        const Spacer(),
-        Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.right,
-            style: mono
-                ? GoogleFonts.robotoMono(
-                    fontSize: 11,
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w500)
-                : GoogleFonts.inter(
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(label,
+                style: GoogleFonts.inter(
                     fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white),
+                    color: kMuted,
+                    fontWeight: FontWeight.w500)),
           ),
-        ),
-      ],
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: mono
+                  ? GoogleFonts.robotoMono(
+                      fontSize: 11,
+                      color: Colors.white70,
+                      fontWeight: FontWeight.w500)
+                  : GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1966,7 +1932,7 @@ class _JazeInvoiceCard extends StatelessWidget {
                 ),
               ),
               Text(
-                'Rs ${invoice.amount.toStringAsFixed(0)}',
+                'Rs ${invoice.amount.abs().toStringAsFixed(0)}',
                 style: GoogleFonts.inter(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,
@@ -1993,10 +1959,10 @@ class _JazeInvoiceCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _invoiceDetail('Base Amount', 'Rs ${invoice.baseAmount.toStringAsFixed(0)}'),
+                child: _invoiceDetail('Base Amount', 'Rs ${invoice.baseAmount.abs().toStringAsFixed(0)}'),
               ),
               Expanded(
-                child: _invoiceDetail('Tax', 'Rs ${invoice.taxAmount.toStringAsFixed(0)}'),
+                child: _invoiceDetail('Tax', 'Rs ${invoice.taxAmount.abs().toStringAsFixed(0)}'),
               ),
             ],
           ),
