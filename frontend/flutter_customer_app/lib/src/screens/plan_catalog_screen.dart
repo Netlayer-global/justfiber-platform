@@ -1347,10 +1347,12 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
   Future<void> _loadCheckout(AppState appState, {bool quiet = false}) async {
     if (selectedPlan == null) return;
     setState(() => loadingCheckout = true);
+    // Always send "monthly" as billingTerm since each plan document IS its own duration
+    // The plan's monthlyPrice contains the full price for that billing period
     final nextPreview = await appState.previewPlanChange(
         planCode: selectedPlan!.planCode,
         effectiveMode: effectiveMode,
-        billingTerm: billingTerm);
+        billingTerm: 'monthly');
     if (!mounted) return;
     setState(() {
       preview = nextPreview;
@@ -1378,7 +1380,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     final request = await appState.requestPlanChange(
         planCode: selectedPlan!.planCode,
         effectiveMode: effectiveMode,
-        billingTerm: billingTerm);
+        billingTerm: 'monthly');
     if (!mounted) return;
     final result = appState.lastPlanChangeResult;
     if (result == null) {
