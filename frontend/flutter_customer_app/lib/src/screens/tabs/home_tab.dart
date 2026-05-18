@@ -250,78 +250,47 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
               opacity: _fade(0.5, 0.85),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 22),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: PressableScale(
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                              MaterialPageRoute(
-                                  builder: (_) => LeadBookingFlowScreen(
-                                      initialMobile:
-                                          appState.session?.mobile)));
-                          await appState.refresh();
-                        },
-                        haptic: true,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          decoration: BoxDecoration(
-                            color: kAccent,
-                            borderRadius: BorderRadius.circular(kRButton),
-                            boxShadow: [
-                              BoxShadow(
-                                color: kAccent.withValues(alpha: 0.4),
-                                blurRadius: 14,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Text(
-                              'View Plans',
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
+                child: PressableScale(
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => LeadBookingFlowScreen(
+                                initialMobile:
+                                    appState.session?.mobile)));
+                    await appState.refresh();
+                  },
+                  haptic: true,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      color: kAccent,
+                      borderRadius: BorderRadius.circular(kRButton),
+                      boxShadow: [
+                        BoxShadow(
+                          color: kAccent.withValues(alpha: 0.4),
+                          blurRadius: 14,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Browse Plans & Book',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.arrow_forward_rounded,
+                            color: Colors.white, size: 18),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: PressableScale(
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                              MaterialPageRoute(
-                                  builder: (_) => LeadBookingFlowScreen(
-                                      initialMobile:
-                                          appState.session?.mobile)));
-                          await appState.refresh();
-                        },
-                        haptic: true,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          decoration: BoxDecoration(
-                            color: kSurface,
-                            borderRadius: BorderRadius.circular(kRButton),
-                            border: Border.all(color: kBorderSoft),
-                          ),
-                          child: Center(
-                            child: Text(
-                              'Book Install',
-                              style: GoogleFonts.inter(
-                                color: kText,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
