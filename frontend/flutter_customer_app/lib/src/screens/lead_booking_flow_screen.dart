@@ -567,18 +567,21 @@ class _LeadBookingFlowScreenState extends State<LeadBookingFlowScreen> {
   }
 
   Widget _durationStep(dynamic selectedPlan) {
-    // Build durations from ALL plans in the same speed group (not just the selected one)
+    // Build durations from ALL plans in the same speed group
     final appState = AppStateScope.of(context);
     final allPlans = appState.plans;
-    int selectedSpeed = selectedPlan != null
-        ? (selectedPlan.speedMbps as num).round()
-        : 0;
-    if (selectedSpeed == 0 && selectedPlan != null) {
-      final match = RegExp(r'(\d+)\s*[Mm]').firstMatch(selectedPlan.name as String);
-      if (match != null) selectedSpeed = int.tryParse(match.group(1)!) ?? 0;
+    
+    // Determine speed of selected plan
+    int selectedSpeed = 0;
+    if (selectedPlan != null) {
+      selectedSpeed = (selectedPlan.speedMbps as num).round();
+      if (selectedSpeed == 0) {
+        final match = RegExp(r'(\d+)\s*[Mm]').firstMatch(selectedPlan.name as String);
+        if (match != null) selectedSpeed = int.tryParse(match.group(1)!) ?? 0;
+      }
     }
 
-    // Get all plans in this speed group
+    // Get all plans in this speed group (same logic as _planStep grouping)
     final groupPlans = allPlans.where((p) {
       int speed = p.speedMbps.round();
       if (speed == 0) {
@@ -587,7 +590,7 @@ class _LeadBookingFlowScreenState extends State<LeadBookingFlowScreen> {
       }
       return speed == selectedSpeed;
     }).toList()
-      ..sort((a, b) => a.monthlyPrice.compareTo(b.monthlyPrice));
+      ..sort((a, b) => a.billingPeriodMonths.compareTo(b.billingPeriodMonths));
 
     // Build duration options from group plans (each plan = one duration)
     final durations = <(int, String, double, String)>[]; // (months, label, price, planCode)
