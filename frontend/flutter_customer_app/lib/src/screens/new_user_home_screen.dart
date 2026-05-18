@@ -173,40 +173,47 @@ class NewUserHomeScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 14),
-                      // ── Plans Card ──────────────────────────────────
+                      // ── Browse Plans & Book (single unified button) ──
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: _ActionCard(
-                          icon: Icons.grid_view_rounded,
-                          iconColor: const Color(0xFF0EA5E9),
-                          title: 'View Plans',
-                          subtitle:
-                              'Browse all available fiber internet plans and pricing.',
-                          buttonLabel: 'Plans',
-                          onTap: () async {
-                            await Navigator.of(context).push(MaterialPageRoute(
-                                builder: (_) => const PublicPlanCatalogScreen()));
-                            await appState.refresh();
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      // ── Book Card ────────────────────────────────────
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: _ActionCard(
-                          icon: Icons.calendar_month_rounded,
-                          iconColor: const Color(0xFF10B981),
-                          title: 'Book Installation',
-                          subtitle:
-                              'Schedule your fiber installation at a time that works for you.',
-                          buttonLabel: 'Book Now',
+                        child: GestureDetector(
                           onTap: () async {
                             await Navigator.of(context).push(MaterialPageRoute(
                                 builder: (_) => LeadBookingFlowScreen(
                                     initialMobile: mobile)));
                             await appState.refresh();
                           },
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF8224E3),
+                              borderRadius: BorderRadius.circular(18),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF8224E3).withValues(alpha: 0.4),
+                                  blurRadius: 14,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Browse Plans & Book',
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Icon(Icons.arrow_forward_rounded,
+                                    color: Colors.white, size: 18),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 32),
