@@ -276,55 +276,273 @@ class _LeadBookingFlowScreenState extends State<LeadBookingFlowScreen> {
   }
 
   Widget _planStep(AppState appState, List<dynamic> plans) {
-    return _card(
-      title: 'Choose a plan',
-      subtitle: 'Pick the plan that suits your needs',
-      child: Column(
-        children: [
-          if (plans.isEmpty) ...[
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                  color: kSurface2,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: kPrimary.withValues(alpha: 0.2))),
+    // Group plans by speed — one card per speed tier
+    final speedMap = <int, List<dynamic>>{};
+    for (final p in plans) {
+      final speed = (p.speedMbps as num).round();
+      speedMap.putIfAbsent(speed, () => []).add(p);
+    }
+    final speedGroups = speedMap.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Choose a plan',
+          style: GoogleFonts.inter(
+            color: kText,
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.4,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Select the speed that suits your needs',
+          style: GoogleFonts.inter(
+            color: kTextMuted,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 18),
+        if (plans.isEmpty) ...[
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+                color: kSurface,
+                borderRadius: BorderRadius.circular(kRSurface),
+                border: Border.all(color: kBorderSoft)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Loading plans…',
+                    style: GoogleFonts.inter(
+                        color: kText, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 10),
+                _primaryBtn(
+                    label: 'Reload',
+                    onPressed: () async => await appState.refreshPlans()),
+              ],
+            ),
+          ),
+        ] else ...[
+          for (final entry in speedGroups) ...[
+            _speedGroupCard(entry.key, entry.value),
+            const SizedBox(height: 14),
+          ],
+        ],
+        const SizedBox(height: 8),
+        _primaryBtn(
+          label: 'Continue to Duration',
+          onPressed: _planCode != null
+              ? () {
+                  final sel = plans.cast<dynamic>().where(
+                        (p) => p.planCode == _planCode).firstOrNull;
+                  if (sel != null) {
+                    final durs = _durations(sel);
+                    _durationMonths = durs.first.$1;
+                    _durationLabel = durs.first.$2;
+                  }
+                  setState(() => step = 1);
+                }
+              : null,
+        ),
+      ],
+    );
+  }
+
+  Widget _speedGroupCard(int speedMbps, List<dynamic> plans) {
+    final representative = plans.first;
+    final isSelected = plans.any((p) => p.planCode == _planCode);
+    final bannerUrl = (representative.bannerImageUrl ?? '') as String;
+    final lowestPrice = plans
+        .map((p) => (p.monthlyPrice as num).toDouble())
+        .reduce((a, b) => a < b ? a : b);
+    final dataPolicy = (representative.dataPolicy ?? 'unlimited') as String;
+    final badges = <String>[
+      if (representative.recommended == true) 'Recommended',
+      if (dataPolicy == 'unlimited') 'Unlimited',
+      if (representative.routerIncluded == true) 'Router Included',
+    ];
+
+    return GestureDetector(
+      onTap: () {
+        // Select the first plan in this speed group (monthly)
+        setState(() => _planCode = representative.planCode as String);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          color: kSurface,
+          borderRadius: BorderRadius.circular(kRCard),
+          border: Border.all(
+            color: isSelected ? kAccent : kBorderSoft,
+            width: isSelected ? 1.5 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: kAccent.withValues(alpha: 0.25),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Banner image (if available)
+            if (bannerUrl.isNotEmpty)
+              ClipRRect(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(28)),
+                child: Image.network(
+                  bannerUrl,
+                  height: 120,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              ),
+
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Loading plans…',
-                      style: GoogleFonts.inter(
-                          color: Colors.white, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 10),
-                  _primaryBtn(
-                      label: 'Reload',
-                      onPressed: () async =>
-                          await appState.refreshPlans()),
+                  // Badges
+                  if (badges.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: badges
+                            .map((b) => Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: kAccentSoft,
+                                    borderRadius:
+                                        BorderRadius.circular(kRPill),
+                                  ),
+                                  child: Text(
+                                    b,
+                                    style: GoogleFonts.inter(
+                                      color: kAccent,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ))
+                            .toList(),
+                      ),
+                    ),
+
+                  // Price + Speed + Data row (Airtel style)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            '₹${lowestPrice.toStringAsFixed(0)}',
+                            style: GoogleFonts.inter(
+                              color: kText,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          Text(
+                            ' /m +GST',
+                            style: GoogleFonts.inter(
+                              color: kTextMuted,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      Column(
+                        children: [
+                          Text(
+                            '$speedMbps Mbps',
+                            style: GoogleFonts.inter(
+                              color: kText,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          Text(
+                            'Speed',
+                            style: GoogleFonts.inter(
+                              color: kTextMuted,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 16),
+                      Column(
+                        children: [
+                          Text(
+                            dataPolicy == 'unlimited'
+                                ? 'Unlimited'
+                                : dataPolicy.toUpperCase(),
+                            style: GoogleFonts.inter(
+                              color: kText,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          Text(
+                            'Internet',
+                            style: GoogleFonts.inter(
+                              color: kTextMuted,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  // Selected indicator
+                  if (isSelected) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: kAccentSoft,
+                        borderRadius: BorderRadius.circular(kRSmall),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '✓ Selected',
+                          style: GoogleFonts.inter(
+                            color: kAccent,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
-            const SizedBox(height: 14),
           ],
-          for (final plan in plans) ...[
-            _planTile(plan),
-            const SizedBox(height: 12),
-          ],
-          const SizedBox(height: 4),
-          _primaryBtn(
-            label: 'Continue to Duration',
-            onPressed: _planCode != null
-                ? () {
-                    final sel = plans.cast<dynamic>().where(
-                          (p) => p.planCode == _planCode).firstOrNull;
-                    if (sel != null) {
-                      final durs = _durations(sel);
-                      _durationMonths = durs.first.$1;
-                      _durationLabel = durs.first.$2;
-                    }
-                    setState(() => step = 1);
-                  }
-                : null,
-          ),
-        ],
+        ),
       ),
     );
   }
