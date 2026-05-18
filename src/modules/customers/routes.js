@@ -241,27 +241,40 @@ function resolvePlanChangeCycleMetrics(customer = {}, billingTerm = "monthly") {
     customer?.billingSnapshot?.durationMonths ||
     (billingTerm === "yearly" ? 12 : billingTerm === "halfYearly" ? 6 : billingTerm === "quarterly" ? 3 : 1)
   ) || 1;
-  const serviceStartDate = customer?.billingSnapshot?.serviceStartDate || customer?.createdAt || null;
+  const serviceStartDate = customer?.billingSnapshot?.serviceStartDate || customer?.billingSnapshot?.lastBillingDate || customer?.createdAt || null;
   const derivedNextBillingDate =
     customer?.billingSnapshot?.nextBillingDate ||
     customer?.expiryAt ||
     (serviceStartDate ? addMonths(new Date(serviceStartDate), configuredDurationMonths) : null);
-  const nextBillingMs = derivedNextBillingDate ? new Date(derivedNextBillingDate).getTime() : null;
-  const cycleDaysFromDates = nextBillingMs
-    ? Math.max(28, Math.ceil((nextBillingMs - (Date.now() - (configuredDurationMonths * 30 * 24 * 60 * 60 * 1000))) / (1000 * 60 * 60 * 24)))
-    : 0;
-  const cycleDays = Math.max(28, cycleDaysFromDates || configuredDurationMonths * 30);
-  const remainingDays = Math.max(0, Number(customer?.billingSnapshot?.remainingDays || 0));
-  const inferredRemainingDays = nextBillingMs && nextBillingMs > Date.now()
-    ? Math.max(0, Math.ceil((nextBillingMs - Date.now()) / (1000 * 60 * 60 * 24)))
-    : remainingDays;
-  const fallbackRemainingDays =
-    inferredRemainingDays || remainingDays || (nextBillingMs && nextBillingMs > Date.now() ? Math.min(cycleDays, configuredDurationMonths * 30) : 0);
-  const normalizedRemainingDays = Math.min(cycleDays, fallbackRemainingDays);
+
+  // Calculate cycle days from actual start to expiry
+  let cycleDays = configuredDurationMonths * 30;
+  if (serviceStartDate && derivedNextBillingDate) {
+    const startMs = new Date(serviceStartDate).getTime();
+    const endMs = new Date(derivedNextBillingDate).getTime();
+    if (endMs > startMs) {
+      cycleDays = Math.round((endMs - startMs) / (1000 * 60 * 60 * 24));
+    }
+  }
+  cycleDays = Math.max(28, cycleDays);
+
+  // Calculate remaining days from today to expiry
+  let remainingDays = 0;
+  if (derivedNextBillingDate) {
+    const expiryMs = new Date(derivedNextBillingDate).getTime();
+    if (expiryMs > Date.now()) {
+      remainingDays = Math.ceil((expiryMs - Date.now()) / (1000 * 60 * 60 * 24));
+    }
+  }
+  if (remainingDays === 0 && Number(customer?.billingSnapshot?.remainingDays || 0) > 0) {
+    remainingDays = Number(customer.billingSnapshot.remainingDays);
+  }
+  remainingDays = Math.min(cycleDays, Math.max(0, remainingDays));
+
   return {
     durationMonths: configuredDurationMonths,
     cycleDays,
-    remainingDays: normalizedRemainingDays
+    remainingDays
   };
 }
 
