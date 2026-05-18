@@ -369,8 +369,12 @@ class _LeadBookingFlowScreenState extends State<LeadBookingFlowScreen> {
 
     return GestureDetector(
       onTap: () {
-        // Select the first plan in this speed group (monthly)
+        // Select plan and go to duration step
         setState(() => _planCode = representative.planCode as String);
+        final durs = _durations(representative);
+        _durationMonths = durs.first.$1;
+        _durationLabel = durs.first.$2;
+        setState(() => step = 1);
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -516,28 +520,38 @@ class _LeadBookingFlowScreenState extends State<LeadBookingFlowScreen> {
                     ],
                   ),
 
-                  // Selected indicator
-                  if (isSelected) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: kAccentSoft,
-                        borderRadius: BorderRadius.circular(kRSmall),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '✓ Selected',
-                          style: GoogleFonts.inter(
-                            color: kAccent,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                          ),
+                  // Select Plan button (like upgrade screen)
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    decoration: BoxDecoration(
+                      color: isSelected ? kAccent : kSurface,
+                      borderRadius: BorderRadius.circular(kRSmall),
+                      border: isSelected
+                          ? null
+                          : Border.all(color: kBorderSoft),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: kAccent.withValues(alpha: 0.35),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Center(
+                      child: Text(
+                        isSelected ? '✓ Selected' : 'Select Plan',
+                        style: GoogleFonts.inter(
+                          color: isSelected ? Colors.white : kText,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
-                  ],
+                  ),
                 ],
               ),
             ),
