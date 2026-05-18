@@ -290,73 +290,151 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Review checkout',
+                            Text('Plan Summary',
                                 style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 16,
                                     color: Colors.white)),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 16),
                             _row('Plan', selectedPlan!.name),
                             _row('Speed',
                                 '${selectedPlan!.speedMbps.toStringAsFixed(0)} Mbps'),
                             _row('Duration', _termLabel(billingTerm)),
-                            _row(
-                                'Mode',
-                                effectiveMode == 'next_cycle'
-                                    ? 'Apply next cycle'
-                                    : 'Apply now'),
-                            _row('Price',
-                                'Rs ${_price(selectedPlan!, billingTerm).toStringAsFixed(0)}',
-                                last: true),
+                            const SizedBox(height: 12),
+                            Container(height: 1, color: kBorderSoft),
+                            const SizedBox(height: 12),
+                            // Price breakdown with GST
+                            Builder(builder: (_) {
+                              final basePrice = selectedPlan!.monthlyPrice;
+                              final gstRate = selectedPlan!.gstRate > 0
+                                  ? selectedPlan!.gstRate
+                                  : 18.0;
+                              final gstAmount = selectedPlan!.pricesExcludeGst
+                                  ? (basePrice * gstRate / 100)
+                                  : 0.0;
+                              final totalPrice = basePrice + gstAmount;
+                              return Column(
+                                children: [
+                                  _row('Base price',
+                                      '₹${basePrice.toStringAsFixed(0)}'),
+                                  if (selectedPlan!.pricesExcludeGst)
+                                    _row('GST (${gstRate.toStringAsFixed(0)}%)',
+                                        '₹${gstAmount.toStringAsFixed(0)}'),
+                                  _row('Total',
+                                      '₹${totalPrice.toStringAsFixed(0)}',
+                                      last: preview != null),
+                                ],
+                              );
+                            }),
                           ],
                         ),
                       ),
                       const SizedBox(height: 14),
-                      _card(
-                        child: preview == null
-                            ? Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8),
-                                child: Row(
+                      if (preview != null)
+                        _card(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Payment Summary',
+                                  style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 16,
+                                      color: Colors.white)),
+                              const SizedBox(height: 16),
+                              _row('Current plan price',
+                                  '₹${preview!.currentPrice.toStringAsFixed(0)}'),
+                              _row('New plan price',
+                                  '₹${preview!.nextPrice.toStringAsFixed(0)}'),
+                              if (preview!.adjustmentAmount != 0)
+                                _row(
+                                    preview!.adjustmentAmount > 0
+                                        ? 'Pro-rata adjustment'
+                                        : 'Credit adjustment',
+                                    '₹${preview!.adjustmentAmount.abs().toStringAsFixed(0)}'),
+                              const SizedBox(height: 8),
+                              Container(height: 1, color: kBorderSoft),
+                              const SizedBox(height: 8),
+                              if (preview!.payableNow > 0)
+                                Row(
                                   children: [
-                                    const SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: kPrimaryLight)),
-                                    const SizedBox(width: 12),
-                                    Text('Loading checkout summary...',
-                                        style: GoogleFonts.inter(
-                                            color: kMuted, fontSize: 13)),
+                                    Expanded(
+                                      child: Text('Amount payable',
+                                          style: GoogleFonts.inter(
+                                              color: Colors.white,
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w800)),
+                                    ),
+                                    Text(
+                                      '₹${preview!.payableNow.toStringAsFixed(0)}',
+                                      style: GoogleFonts.inter(
+                                          color: kAccent,
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: -0.5),
+                                    ),
+                                  ],
+                                )
+                              else if (preview!.creditAmount > 0)
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text('Credit to account',
+                                          style: GoogleFonts.inter(
+                                              color: Colors.white,
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w800)),
+                                    ),
+                                    Text(
+                                      '₹${preview!.creditAmount.toStringAsFixed(0)}',
+                                      style: GoogleFonts.inter(
+                                          color: kSuccess,
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: -0.5),
+                                    ),
+                                  ],
+                                )
+                              else
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text('No payment needed',
+                                          style: GoogleFonts.inter(
+                                              color: Colors.white,
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w800)),
+                                    ),
+                                    Text(
+                                      '₹0',
+                                      style: GoogleFonts.inter(
+                                          color: kSuccess,
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w900),
+                                    ),
                                   ],
                                 ),
-                              )
-                            : Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Pricing breakdown',
-                                      style: GoogleFonts.inter(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 15,
-                                          color: Colors.white)),
-                                  const SizedBox(height: 14),
-                                  _row('Current price',
-                                      'Rs ${preview!.currentPrice.toStringAsFixed(0)}'),
-                                  _row('Next price',
-                                      'Rs ${preview!.nextPrice.toStringAsFixed(0)}'),
-                                  _row('Adjustment',
-                                      'Rs ${preview!.adjustmentAmount.toStringAsFixed(0)}'),
-                                  if (preview!.payableNow > 0)
-                                    _row('Payable now',
-                                        'Rs ${preview!.payableNow.toStringAsFixed(0)}'),
-                                  if (preview!.creditAmount > 0)
-                                    _row('Credit',
-                                        'Rs ${preview!.creditAmount.toStringAsFixed(0)}',
-                                        last: true),
-                                ],
-                              ),
-                      ),
+                            ],
+                          ),
+                        )
+                      else
+                        _card(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Row(
+                              children: [
+                                const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2, color: kPrimaryLight)),
+                                const SizedBox(width: 12),
+                                Text('Calculating pricing...',
+                                    style: GoogleFonts.inter(
+                                        color: kMuted, fontSize: 13)),
+                              ],
+                            ),
+                          ),
+                        ),
                       const SizedBox(height: 14),
                       _card(
                         child: Column(
