@@ -713,7 +713,10 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
         ..sort((a, b) => a.billingPeriodMonths.compareTo(b.billingPeriodMonths));
       final representative = groupPlans.first;
       final isActive = groupPlans.any((p) =>
-          p.name == currentPlanName || p.planCode == currentPlanName);
+          p.name == currentPlanName ||
+          p.planCode == currentPlanName ||
+          currentPlanName.contains(p.name) ||
+          p.name.contains(currentPlanName));
       final bannerUrl = representative.bannerImageUrl;
       final lowestPrice = groupPlans
           .map((p) => p.monthlyPrice)
@@ -948,61 +951,160 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
 
   // ── Duration card ────────────────────────────────────────────────────
 
-  Widget _durationCard(PlanItem plan) => _card(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Select duration',
-                style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    color: Colors.white)),
-            const SizedBox(height: 6),
-            Text(
-              'Choose a billing term for ${plan.name}.',
-              style:
-                  GoogleFonts.inter(color: kMuted, height: 1.4, fontSize: 13),
-            ),
-            const SizedBox(height: 12),
-            Wrap(spacing: 8, runSpacing: 8, children: [
-              _pill('${plan.speedMbps.toStringAsFixed(0)} Mbps', true),
-              _pill(effectiveMode == 'next_cycle' ? 'Next cycle' : 'Apply now',
-                  false),
-            ]),
-            const SizedBox(height: 16),
-            ..._terms(plan).map((term) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _durationOption(plan, term),
-                )),
-            const SizedBox(height: 4),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: kBg,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: kBorder),
+  Widget _durationCard(PlanItem plan) {
+    // Get all plans in the same speed group for duration options
+    final appState = AppStateScope.of(context);
+    final allPlans = _availablePlans(appState);
+    int planSpeed = plan.speedMbps.round();
+    if (planSpeed == 0) {
+      final match = RegExp(r'(\d+)\s*[Mm]').firstMatch(plan.name);
+      if (match != null) planSpeed = int.tryParse(match.group(1)!) ?? 0;
+    }
+    final groupPlans = allPlans.where((p) {
+      int speed = p.speedMbps.round();
+      if (speed == 0) {
+        final match = RegExp(r'(\d+)\s*[Mm]').firstMatch(p.name);
+        if (match != null) speed = int.tryParse(match.group(1)!) ?? 0;
+      }
+      return speed == planSpeed;
+    }).toList()
+      ..sort((a, b) => a.billingPeriodMonths.compareTo(b.billingPeriodMonths));
+
+    // Build duration options from group
+    final durationOptions = <(String, PlanItem)>[]; // (term, plan)
+    for (final p in groupPlans) {
+      final months = p.billingPeriodMonths;
+      final term = months <= 1
+          ? 'monthly'
+          : months == 3
+              ? 'quarterly'
+              : months == 6
+                  ? 'halfYearly'
+                  : 'yearly';
+      durationOptions.add((term, p));
+    }
+    if (durationOptions.isEmpty) durationOptions.add(('monthly', plan));
+
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Select duration',
+              style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: Colors.white)),
+          const SizedBox(height: 6),
+          Text(
+            '$planSpeed Mbps — choose billing period',
+            style:
+                GoogleFonts.inter(color: kMuted, height: 1.4, fontSize: 13),
+          ),
+          const SizedBox(height: 16),
+          ...durationOptions.map((opt) {
+            final term = opt.$1;
+            final p = opt.$2;
+            final selected = billingTerm == term;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: PressableScale(
+                onTap: () => setState(() {
+                  billingTerm = term;
+                  selectedPlan = p; // Switch to the correct plan for this duration
+                }),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: selected ? kPrimary.withValues(alpha: 0.1) : kBg,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                        color: selected
+                            ? kPrimary.withValues(alpha: 0.4)
+                            : kBorder),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_termLabel(term),
+                                style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15,
+                                    color: Colors.white)),
+                            const SizedBox(height: 3),
+                            Text(_termBillingCaption(term),
+                                style: GoogleFonts.inter(
+                                    color: kPrimaryLight,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            'Rs ${p.monthlyPrice.toStringAsFixed(0)}',
+                            style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 16,
+                                color: selected ? kPrimaryLight : Colors.white),
+                          ),
+                          if (selected)
+                            Container(
+                              margin: const EdgeInsets.only(top: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: kPrimary,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text('Selected',
+                                  style: GoogleFonts.inter(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 10)),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Summary',
-                      style: GoogleFonts.inter(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                          color: Colors.white)),
-                  const SizedBox(height: 10),
-                  _row('Plan', plan.name),
-                  _row('Duration', _termLabel(billingTerm)),
-                  _row('Amount',
-                      'Rs ${_price(plan, billingTerm).toStringAsFixed(0)}'),
-                  _row('Billing', _termBillingCaption(billingTerm), last: true),
-                ],
-              ),
+            );
+          }),
+          const SizedBox(height: 4),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: kBg,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: kBorder),
             ),
-          ],
-        ),
-      );
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Summary',
+                    style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: Colors.white)),
+                const SizedBox(height: 10),
+                _row('Plan', '$planSpeed Mbps'),
+                _row('Duration', _termLabel(billingTerm)),
+                _row('Amount',
+                    'Rs ${(selectedPlan?.monthlyPrice ?? plan.monthlyPrice).toStringAsFixed(0)}'),
+                _row('Billing', _termBillingCaption(billingTerm), last: true),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _durationOption(PlanItem plan, String term) {
     final selected = billingTerm == term;
