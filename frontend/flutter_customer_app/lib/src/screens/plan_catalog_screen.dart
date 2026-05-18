@@ -250,11 +250,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                           ),
                         )
                       else
-                        ...plans.map((plan) => Padding(
-                              padding: const EdgeInsets.only(bottom: 14),
-                              child: _planCard(
-                                  plan, billing.recurringAmount, appState),
-                            )),
+                        ..._buildSpeedGroups(plans, billing.currentPlan, appState),
                     ]
 
                     // ── Step 1: Duration ───────────────────────────────
@@ -692,6 +688,262 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
         ],
       ),
     );
+  }
+
+  // ── Speed-grouped plan cards ─────────────────────────────────────────
+
+  List<Widget> _buildSpeedGroups(
+      List<PlanItem> plans, String currentPlanName, AppState appState) {
+    // Group by speed (same logic as booking flow)
+    final speedMap = <int, List<PlanItem>>{};
+    for (final p in plans) {
+      int speed = p.speedMbps.round();
+      if (speed == 0) {
+        final match = RegExp(r'(\d+)\s*[Mm]').firstMatch(p.name);
+        if (match != null) speed = int.tryParse(match.group(1)!) ?? 0;
+      }
+      speedMap.putIfAbsent(speed, () => []).add(p);
+    }
+    final groups = speedMap.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+
+    return groups.map((entry) {
+      final speedMbps = entry.key;
+      final groupPlans = entry.value
+        ..sort((a, b) => a.billingPeriodMonths.compareTo(b.billingPeriodMonths));
+      final representative = groupPlans.first;
+      final isActive = groupPlans.any((p) =>
+          p.name == currentPlanName || p.planCode == currentPlanName);
+      final bannerUrl = representative.bannerImageUrl;
+      final lowestPrice = groupPlans
+          .map((p) => p.monthlyPrice)
+          .reduce((a, b) => a < b ? a : b);
+      final badges = <String>[
+        if (isActive) 'Active Plan',
+        if (representative.recommended) 'Recommended',
+        if (representative.dataPolicy == 'unlimited') 'Unlimited',
+        if (representative.routerIncluded) 'Router Included',
+      ];
+
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: GestureDetector(
+          onTap: () => _selectSpeedGroup(groupPlans, appState),
+          child: Container(
+            decoration: BoxDecoration(
+              color: kSurface,
+              borderRadius: BorderRadius.circular(kRCard),
+              border: Border.all(
+                color: isActive ? kAccent : kBorderSoft,
+                width: isActive ? 1.5 : 1,
+              ),
+              boxShadow: isActive
+                  ? [
+                      BoxShadow(
+                        color: kAccent.withValues(alpha: 0.2),
+                        blurRadius: 14,
+                        offset: const Offset(0, 5),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Banner
+                if (bannerUrl.isNotEmpty)
+                  ClipRRect(
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(28)),
+                    child: Image.network(
+                      bannerUrl,
+                      height: 120,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Badges
+                      if (badges.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: badges
+                                .map((b) => Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: b == 'Active Plan'
+                                            ? kSuccess.withValues(alpha: 0.15)
+                                            : kAccentSoft,
+                                        borderRadius:
+                                            BorderRadius.circular(kRPill),
+                                      ),
+                                      child: Text(
+                                        b,
+                                        style: GoogleFonts.inter(
+                                          color: b == 'Active Plan'
+                                              ? kSuccess
+                                              : kAccent,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ))
+                                .toList(),
+                          ),
+                        ),
+                      // Price + Speed + Data
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                '₹${lowestPrice.toStringAsFixed(0)}',
+                                style: GoogleFonts.inter(
+                                  color: kText,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              Text(
+                                ' /m +GST',
+                                style: GoogleFonts.inter(
+                                  color: kTextMuted,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Spacer(),
+                          Column(
+                            children: [
+                              Text(
+                                '$speedMbps Mbps',
+                                style: GoogleFonts.inter(
+                                  color: kText,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              Text(
+                                'Speed',
+                                style: GoogleFonts.inter(
+                                  color: kTextMuted,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 16),
+                          Column(
+                            children: [
+                              Text(
+                                representative.dataPolicy == 'unlimited'
+                                    ? 'Unlimited'
+                                    : '${representative.dataLimitGb.toStringAsFixed(0)} GB',
+                                style: GoogleFonts.inter(
+                                  color: kText,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              Text(
+                                'Internet',
+                                style: GoogleFonts.inter(
+                                  color: kTextMuted,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      // Button
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        decoration: BoxDecoration(
+                          color: isActive ? kSurface : kAccent,
+                          borderRadius: BorderRadius.circular(kRSmall),
+                          border: isActive
+                              ? Border.all(color: kBorderSoft)
+                              : null,
+                          boxShadow: isActive
+                              ? null
+                              : [
+                                  BoxShadow(
+                                    color: kAccent.withValues(alpha: 0.35),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                        ),
+                        child: Center(
+                          child: Text(
+                            isActive ? 'Change Duration' : 'Select Plan',
+                            style: GoogleFonts.inter(
+                              color: isActive ? kText : Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }).toList();
+  }
+
+  void _selectSpeedGroup(List<PlanItem> groupPlans, AppState appState) {
+    final plan = groupPlans.first;
+    final terms = _buildGroupTerms(groupPlans);
+    setState(() {
+      selectedPlan = plan;
+      billingTerm = terms.first;
+      step = 1;
+      preview = null;
+    });
+    appState.savePlanChangeDraft(
+        planCode: plan.planCode,
+        planName: plan.name,
+        billingTerm: billingTerm,
+        effectiveMode: effectiveMode,
+        step: 1);
+  }
+
+  List<String> _buildGroupTerms(List<PlanItem> groupPlans) {
+    final terms = <String>{};
+    for (final p in groupPlans) {
+      final months = p.billingPeriodMonths;
+      if (months <= 1) terms.add('monthly');
+      else if (months == 3) terms.add('quarterly');
+      else if (months == 6) terms.add('halfYearly');
+      else if (months >= 12) terms.add('yearly');
+    }
+    if (terms.isEmpty) terms.add('monthly');
+    return terms.toList();
   }
 
   // ── Duration card ────────────────────────────────────────────────────
