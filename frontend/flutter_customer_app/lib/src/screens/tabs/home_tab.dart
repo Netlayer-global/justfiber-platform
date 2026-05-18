@@ -257,8 +257,9 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                         onTap: () async {
                           await Navigator.of(context).push(
                               MaterialPageRoute(
-                                  builder: (_) =>
-                                      const PublicPlanCatalogScreen()));
+                                  builder: (_) => LeadBookingFlowScreen(
+                                      initialMobile:
+                                          appState.session?.mobile)));
                           await appState.refresh();
                         },
                         haptic: true,

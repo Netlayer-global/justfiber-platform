@@ -62,6 +62,14 @@ class _LeadBookingFlowScreenState extends State<LeadBookingFlowScreen> {
   void initState() {
     super.initState();
     _mobileCtrl.text = widget.initialMobile ?? '';
+    // Load plans immediately since plan selection is step 0
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final appState = AppStateScope.of(context);
+      if (appState.plans.isEmpty) {
+        appState.refreshPlans();
+      }
+    });
   }
 
   @override
@@ -105,11 +113,11 @@ class _LeadBookingFlowScreenState extends State<LeadBookingFlowScreen> {
                   if (_submitted)
                     _successStep()
                   else if (step == 0)
-                    _detailsStep(appState)
-                  else if (step == 1)
                     _planStep(appState, plans)
-                  else if (step == 2)
+                  else if (step == 1)
                     _durationStep(selectedPlan)
+                  else if (step == 2)
+                    _detailsStep(appState)
                   else if (step == 3)
                     _reviewStep(appState, selectedPlan),
                 ],
@@ -255,18 +263,13 @@ class _LeadBookingFlowScreenState extends State<LeadBookingFlowScreen> {
 
           const SizedBox(height: 20),
           _primaryBtn(
-            label: 'Continue to Plans',
+            label: 'Review & Submit',
             onPressed: _validateDetails()
-                ? () async {
-                    final appState = AppStateScope.of(context);
-                    if (appState.plans.isEmpty) {
-                      await appState.refreshPlans();
-                    }
-                    if (!mounted) return;
-                    setState(() => step = 1);
-                  }
+                ? () => setState(() => step = 3)
                 : null,
           ),
+          const SizedBox(height: 10),
+          _backBtn('Back to Duration', () => setState(() => step = 1)),
         ],
       ),
     );
@@ -317,12 +320,10 @@ class _LeadBookingFlowScreenState extends State<LeadBookingFlowScreen> {
                       _durationMonths = durs.first.$1;
                       _durationLabel = durs.first.$2;
                     }
-                    setState(() => step = 2);
+                    setState(() => step = 1);
                   }
                 : null,
           ),
-          const SizedBox(height: 10),
-          _backBtn('Back to Details', () => setState(() => step = 0)),
         ],
       ),
     );
@@ -386,12 +387,16 @@ class _LeadBookingFlowScreenState extends State<LeadBookingFlowScreen> {
           const SizedBox(height: 16),
 
           _primaryBtn(
-            label: 'Continue to Review',
+            label: 'Continue',
             onPressed:
-                selectedPlan != null ? () => setState(() => step = 3) : null,
+                selectedPlan != null ? () {
+                  // Auto-fetch location when entering details step
+                  if (!_locationPicked && !_locationBusy) _fetchLocation();
+                  setState(() => step = 2);
+                } : null,
           ),
           const SizedBox(height: 10),
-          _backBtn('Back to Plans', () => setState(() => step = 1)),
+          _backBtn('Back to Plans', () => setState(() => step = 0)),
         ],
       ),
     );
@@ -453,7 +458,7 @@ class _LeadBookingFlowScreenState extends State<LeadBookingFlowScreen> {
             onPressed: _submitting ? null : () => _submit(appState, selectedPlan),
           ),
           const SizedBox(height: 10),
-          _backBtn('Back to Duration', () => setState(() => step = 2)),
+          _backBtn('Back to Details', () => setState(() => step = 2)),
         ],
       ),
     );
