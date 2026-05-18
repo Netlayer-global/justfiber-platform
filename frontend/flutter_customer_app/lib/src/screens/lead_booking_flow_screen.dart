@@ -279,7 +279,12 @@ class _LeadBookingFlowScreenState extends State<LeadBookingFlowScreen> {
     // Group plans by speed — one card per speed tier
     final speedMap = <int, List<dynamic>>{};
     for (final p in plans) {
-      final speed = (p.speedMbps as num).round();
+      int speed = (p.speedMbps as num).round();
+      // Fallback: parse speed from plan name if speedMbps is 0
+      if (speed == 0) {
+        final match = RegExp(r'(\d+)\s*[Mm]').firstMatch(p.name as String);
+        if (match != null) speed = int.tryParse(match.group(1)!) ?? 0;
+      }
       speedMap.putIfAbsent(speed, () => []).add(p);
     }
     final speedGroups = speedMap.entries.toList()

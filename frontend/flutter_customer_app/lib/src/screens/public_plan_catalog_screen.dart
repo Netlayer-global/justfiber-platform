@@ -251,7 +251,12 @@ class _PublicPlanCatalogScreenState extends State<PublicPlanCatalogScreen> {
   List<_SpeedGroup> _groupBySpeed(List<PlanItem> plans) {
     final map = <int, List<PlanItem>>{};
     for (final p in plans) {
-      final speed = p.speedMbps.round();
+      int speed = p.speedMbps.round();
+      // Fallback: parse speed from plan name if speedMbps is 0
+      if (speed == 0) {
+        final match = RegExp(r'(\d+)\s*[Mm]').firstMatch(p.name);
+        if (match != null) speed = int.tryParse(match.group(1)!) ?? 0;
+      }
       map.putIfAbsent(speed, () => []).add(p);
     }
     final groups = map.entries.map((e) {
