@@ -340,20 +340,22 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                                       fontWeight: FontWeight.w800,
                                       fontSize: 16,
                                       color: Colors.white)),
+                              const SizedBox(height: 6),
+                              Text(
+                                '${preview!.remainingDays} days remaining on current plan',
+                                style: GoogleFonts.inter(
+                                    color: kTextMuted,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500),
+                              ),
                               const SizedBox(height: 16),
-                              _row('Current plan price',
-                                  '₹${preview!.currentPrice.toStringAsFixed(0)}'),
-                              _row('New plan price',
-                                  '₹${preview!.nextPrice.toStringAsFixed(0)}'),
-                              if (preview!.adjustmentAmount != 0)
-                                _row(
-                                    preview!.adjustmentAmount > 0
-                                        ? 'Pro-rata adjustment'
-                                        : 'Credit adjustment',
-                                    '₹${preview!.adjustmentAmount.abs().toStringAsFixed(0)}'),
+                              _row('Current plan (₹${preview!.currentPrice.toStringAsFixed(0)})',
+                                  '- ₹${(preview!.currentPrice * preview!.remainingDays / 30).toStringAsFixed(0)} credit'),
+                              _row('New plan (₹${preview!.nextPrice.toStringAsFixed(0)})',
+                                  '₹${(preview!.nextPrice * preview!.remainingDays / 30).toStringAsFixed(0)} pro-rata'),
                               const SizedBox(height: 8),
                               Container(height: 1, color: kBorderSoft),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 12),
                               if (preview!.payableNow > 0)
                                 Row(
                                   children: [
@@ -368,7 +370,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                                       '₹${preview!.payableNow.toStringAsFixed(0)}',
                                       style: GoogleFonts.inter(
                                           color: kAccent,
-                                          fontSize: 20,
+                                          fontSize: 22,
                                           fontWeight: FontWeight.w900,
                                           letterSpacing: -0.5),
                                     ),
@@ -388,7 +390,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                                       '₹${preview!.creditAmount.toStringAsFixed(0)}',
                                       style: GoogleFonts.inter(
                                           color: kSuccess,
-                                          fontSize: 20,
+                                          fontSize: 22,
                                           fontWeight: FontWeight.w900,
                                           letterSpacing: -0.5),
                                     ),
@@ -408,7 +410,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                                       '₹0',
                                       style: GoogleFonts.inter(
                                           color: kSuccess,
-                                          fontSize: 20,
+                                          fontSize: 22,
                                           fontWeight: FontWeight.w900),
                                     ),
                                   ],
