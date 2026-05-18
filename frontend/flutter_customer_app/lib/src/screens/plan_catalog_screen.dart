@@ -286,16 +286,43 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
 
                     // ── Step 2: Checkout ───────────────────────────────
                     else if (step == 2 && selectedPlan != null) ...[
+                      // Current plan info card
                       _card(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Plan Summary',
+                            Text('Current Plan',
                                 style: GoogleFonts.inter(
                                     fontWeight: FontWeight.w800,
                                     fontSize: 16,
                                     color: Colors.white)),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 14),
+                            _row('Plan', billing.currentPlan.isEmpty ? '—' : billing.currentPlan),
+                            _row('Amount paid', billing.recurringAmount > 0
+                                ? '₹${billing.recurringAmount.toStringAsFixed(0)}'
+                                : '₹${billing.lastPaymentAmount.toStringAsFixed(0)}'),
+                            if (billing.generatedDate.isNotEmpty)
+                              _row('Activated', _fmtDate(billing.generatedDate)),
+                            if (billing.nextBillDate.isNotEmpty)
+                              _row('Expires', _fmtDate(billing.nextBillDate)),
+                            if (preview != null)
+                              _row('Days remaining', '${preview!.remainingDays} days', last: true),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // New plan summary
+                      _card(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('New Plan',
+                                style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 16,
+                                    color: Colors.white)),
+                            const SizedBox(height: 14),
                             _row('Plan', selectedPlan!.name),
                             _row('Speed',
                                 '${selectedPlan!.speedMbps.toStringAsFixed(0)} Mbps'),
@@ -303,7 +330,6 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                             const SizedBox(height: 12),
                             Container(height: 1, color: kBorderSoft),
                             const SizedBox(height: 12),
-                            // Price breakdown with GST
                             Builder(builder: (_) {
                               final basePrice = selectedPlan!.monthlyPrice;
                               final gstRate = selectedPlan!.gstRate > 0
@@ -322,7 +348,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                                         '₹${gstAmount.toStringAsFixed(0)}'),
                                   _row('Total',
                                       '₹${totalPrice.toStringAsFixed(0)}',
-                                      last: preview != null),
+                                      last: true),
                                 ],
                               );
                             }),
@@ -1615,6 +1641,17 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
         return 'Billed once for 12 months';
       default:
         return 'Billed monthly';
+    }
+  }
+
+  String _fmtDate(String raw) {
+    try {
+      final dt = DateTime.parse(raw);
+      const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return '${m[dt.month - 1]} ${dt.day}, ${dt.year}';
+    } catch (_) {
+      final t = raw.indexOf('T');
+      return t > 0 ? raw.substring(0, t) : raw;
     }
   }
 }
