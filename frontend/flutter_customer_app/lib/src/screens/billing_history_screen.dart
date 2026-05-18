@@ -84,7 +84,7 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
       backgroundColor: kBg,
       body: RefreshIndicator(
         color: kPrimary,
-        backgroundColor: kSurface,
+        backgroundColor: const Color(0xFF0A0A14),
         onRefresh: appState.refresh,
         child: isFirstLoad
             ? const _BillingShimmer()
@@ -120,7 +120,7 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
             // ── Bill Summary ─────────────────────────────────────────
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 4, 18, 0),
+                padding: const EdgeInsets.fromLTRB(22, 4, 22, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -354,9 +354,9 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
   Widget _sectionLabel(String text) => Text(
         text,
         style: GoogleFonts.inter(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          color: kMuted,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          color: kTextMuted,
           letterSpacing: 1.6,
         ),
       );
@@ -366,8 +366,8 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
         decoration: BoxDecoration(
           color: kSurface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: kBorder),
+          borderRadius: BorderRadius.circular(kRCard),
+          border: Border.all(color: kBorderSoft),
         ),
         child: child,
       );
@@ -384,7 +384,7 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
                   child: Text(label,
                       style: GoogleFonts.inter(
                           fontSize: 13,
-                          color: kMuted,
+                          color: kTextMuted,
                           fontWeight: FontWeight.w500)),
                 ),
                 const SizedBox(width: 8),
@@ -397,13 +397,13 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
                     style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white),
+                        color: kText),
                   ),
                 ),
               ],
             ),
           ),
-          if (!last) const Divider(color: kBorder, height: 1),
+          if (!last) const Divider(color: kBorderSoft, height: 1),
         ],
       );
 
@@ -419,16 +419,16 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
           padding: const EdgeInsets.symmetric(vertical: 15),
           child: Row(
             children: [
-              Icon(icon, size: 18, color: kPrimaryLight),
+              Icon(icon, size: 18, color: kAccent),
               const SizedBox(width: 12),
               Text(label,
                   style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white)),
+                      color: kText)),
               const Spacer(),
               const Icon(Icons.chevron_right_rounded,
-                  color: Color(0xFF3D3D5C), size: 20),
+                  color: kTextFaint, size: 20),
             ],
           ),
         ),

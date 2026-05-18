@@ -240,7 +240,7 @@ class _CheckoutPage extends StatelessWidget {
             child: Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF0C2A3F), Color(0xFF0369A1)],
+                  colors: [Color(0xFF1A0A2E), kAccent],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -255,7 +255,7 @@ class _CheckoutPage extends StatelessWidget {
                       IconButton(
                         onPressed: () => Navigator.of(context).maybePop(),
                         icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                            color: Colors.white, size: 20),
+                            color: kText, size: 20),
                       ),
                       const SizedBox(width: 4),
                       Expanded(
@@ -268,7 +268,7 @@ class _CheckoutPage extends StatelessWidget {
                                   ? 'Retry Payment'
                                   : 'Confirm & Pay',
                               style: GoogleFonts.inter(
-                                color: Colors.white,
+                                color: kText,
                                 fontSize: 22,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: -0.5,
@@ -278,7 +278,7 @@ class _CheckoutPage extends StatelessWidget {
                             Text(
                               'Booking #$bookingNumber',
                               style: GoogleFonts.inter(
-                                  color: Colors.white60, fontSize: 13),
+                                  color: kTextMuted, fontSize: 13),
                             ),
                           ],
                         ),
@@ -291,7 +291,7 @@ class _CheckoutPage extends StatelessWidget {
                             Text(
                               '₹${order.amount.toStringAsFixed(0)}',
                               style: GoogleFonts.inter(
-                                color: Colors.white,
+                                color: kText,
                                 fontSize: 28,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: -0.8,
@@ -300,7 +300,7 @@ class _CheckoutPage extends StatelessWidget {
                             Text(
                               'Amount due',
                               style: GoogleFonts.inter(
-                                  color: Colors.white54, fontSize: 11),
+                                  color: kTextMuted, fontSize: 11),
                             ),
                           ],
                         ),
@@ -334,14 +334,14 @@ class _CheckoutPage extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: kPrimary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(14),
+                      color: kAccent.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(kRSmall),
                       border:
-                          Border.all(color: kPrimary.withValues(alpha: 0.2)),
+                          Border.all(color: kAccent.withValues(alpha: 0.2)),
                     ),
                     child: Text(walletHint!,
                         style: GoogleFonts.inter(
-                            color: Colors.white, fontSize: 13, height: 1.4)),
+                            color: kText, fontSize: 13, height: 1.4)),
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -351,8 +351,8 @@ class _CheckoutPage extends StatelessWidget {
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: kSurface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: kBorder),
+                    borderRadius: BorderRadius.circular(kRSmall),
+                    border: Border.all(color: kBorderSoft),
                   ),
                   child: Row(
                     children: [
@@ -371,7 +371,7 @@ class _CheckoutPage extends StatelessWidget {
                         child: Text(
                           'Secured by Razorpay · PCI-DSS compliant payment gateway',
                           style: GoogleFonts.inter(
-                              color: kMuted, fontSize: 12, height: 1.4),
+                              color: kTextMuted, fontSize: 12, height: 1.4),
                         ),
                       ),
                     ],
@@ -393,10 +393,10 @@ class _CheckoutPage extends StatelessWidget {
             child: FilledButton(
               onPressed: onPay,
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF0EA5E9),
+                backgroundColor: kAccent,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18)),
+                    borderRadius: BorderRadius.circular(kRButton)),
               ),
               child: Text(
                 retryCount > 0
@@ -433,8 +433,8 @@ class _SummaryCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: kSurface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0x440EA5E9)),
+        borderRadius: BorderRadius.circular(kRCard),
+        border: Border.all(color: kBorderSoft),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -445,13 +445,13 @@ class _SummaryCard extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF0C2A3F), Color(0xFF0369A1)],
+                colors: [Color(0xFF1A0A2E), kAccent],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(22),
-                topRight: Radius.circular(22),
+                topLeft: Radius.circular(kRCard),
+                topRight: Radius.circular(kRCard),
               ),
             ),
             child: Column(
@@ -460,7 +460,7 @@ class _SummaryCard extends StatelessWidget {
                 Text(
                   'PLAN SELECTED',
                   style: GoogleFonts.inter(
-                    color: const Color(0xFF7DD3FC),
+                    color: kTextMuted,
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.4,
@@ -470,7 +470,7 @@ class _SummaryCard extends StatelessWidget {
                 Text(
                   planName.isNotEmpty ? planName : 'Fiber Broadband',
                   style: GoogleFonts.inter(
-                    color: Colors.white,
+                    color: kText,
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -0.5,
@@ -481,7 +481,7 @@ class _SummaryCard extends StatelessWidget {
                   Text(
                     durationLabel,
                     style: GoogleFonts.inter(
-                        color: Colors.white60, fontSize: 13),
+                        color: kTextMuted, fontSize: 13),
                   ),
                 ],
               ],
@@ -513,19 +513,19 @@ class _SummaryCard extends StatelessWidget {
           border: Border(
               bottom: last
                   ? BorderSide.none
-                  : const BorderSide(color: kBorder)),
+                  : const BorderSide(color: kBorderSoft)),
         ),
         child: Row(
           children: [
             Expanded(
                 child: Text(label,
-                    style: GoogleFonts.inter(color: kMuted, fontSize: 13))),
+                    style: GoogleFonts.inter(color: kTextMuted, fontSize: 13))),
             Flexible(
               child: Text(value,
                   textAlign: TextAlign.right,
                   style: GoogleFonts.inter(
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: kText,
                       fontSize: 13)),
             ),
           ],
@@ -560,7 +560,7 @@ class _LoadingPage extends StatelessWidget {
               Text(
                 message,
                 style: GoogleFonts.inter(
-                    color: Colors.white,
+                    color: kText,
                     fontSize: 18,
                     fontWeight: FontWeight.w800),
                 textAlign: TextAlign.center,
@@ -568,7 +568,7 @@ class _LoadingPage extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 sub,
-                style: GoogleFonts.inter(color: kMuted, fontSize: 13),
+                style: GoogleFonts.inter(color: kTextMuted, fontSize: 13),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -612,15 +612,15 @@ class _SuccessPage extends StatelessWidget {
                 width: 90,
                 height: 90,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF14532D), Color(0xFF16A34A)],
+                  gradient: LinearGradient(
+                    colors: [kSuccess.withValues(alpha: 0.3), kSuccess],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF22C55E).withValues(alpha: 0.35),
+                      color: kSuccess.withValues(alpha: 0.35),
                       blurRadius: 32,
                       spreadRadius: 4,
                     ),
@@ -635,7 +635,7 @@ class _SuccessPage extends StatelessWidget {
               Text(
                 'Payment Confirmed!',
                 style: GoogleFonts.inter(
-                  color: Colors.white,
+                  color: kText,
                   fontSize: 26,
                   fontWeight: FontWeight.w900,
                   letterSpacing: -0.5,
@@ -648,7 +648,7 @@ class _SuccessPage extends StatelessWidget {
               Text(
                 '₹${amount.toStringAsFixed(0)} received for\n${planName.isNotEmpty ? planName : 'your booking'}',
                 style: GoogleFonts.inter(
-                    color: Colors.white70, fontSize: 15, height: 1.5),
+                    color: kTextDim, fontSize: 15, height: 1.5),
                 textAlign: TextAlign.center,
               ),
 
@@ -656,7 +656,7 @@ class _SuccessPage extends StatelessWidget {
 
               Text(
                 'Booking #$bookingNumber',
-                style: GoogleFonts.inter(color: kMuted, fontSize: 13),
+                style: GoogleFonts.inter(color: kTextMuted, fontSize: 13),
               ),
 
               const SizedBox(height: 32),
@@ -667,9 +667,9 @@ class _SuccessPage extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: kSurface,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(kRSurface),
                   border: Border.all(
-                      color: const Color(0xFF22C55E).withValues(alpha: 0.2)),
+                      color: kSuccess.withValues(alpha: 0.2)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -677,26 +677,26 @@ class _SuccessPage extends StatelessWidget {
                     Text(
                       "What's next",
                       style: GoogleFonts.inter(
-                          color: Colors.white,
+                          color: kText,
                           fontWeight: FontWeight.w800,
                           fontSize: 15),
                     ),
                     const SizedBox(height: 14),
                     _step(
                       icon: Icons.check_circle_rounded,
-                      color: const Color(0xFF22C55E),
+                      color: kSuccess,
                       text: 'Payment received & booking confirmed',
                     ),
                     const SizedBox(height: 10),
                     _step(
                       icon: Icons.engineering_rounded,
-                      color: const Color(0xFF0EA5E9),
+                      color: kAccent,
                       text: 'Our team will schedule your installation',
                     ),
                     const SizedBox(height: 10),
                     _step(
                       icon: Icons.notifications_rounded,
-                      color: kPrimaryLight,
+                      color: kAccent,
                       text: 'You\'ll be notified when installer is on the way',
                     ),
                   ],
@@ -718,10 +718,10 @@ class _SuccessPage extends StatelessWidget {
                         fontSize: 15, fontWeight: FontWeight.w800),
                   ),
                   style: FilledButton.styleFrom(
-                    backgroundColor: kPrimary,
-                    foregroundColor: Colors.white,
+                    backgroundColor: kAccent,
+                    foregroundColor: kText,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
+                        borderRadius: BorderRadius.circular(kRButton)),
                   ),
                 ),
               ),
@@ -734,10 +734,10 @@ class _SuccessPage extends StatelessWidget {
                 child: OutlinedButton(
                   onPressed: onDone,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white70,
-                    side: const BorderSide(color: kBorder),
+                    foregroundColor: kTextDim,
+                    side: const BorderSide(color: kBorderSoft),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
+                        borderRadius: BorderRadius.circular(kRButton)),
                   ),
                   child: Text(
                     'Back to Home',
@@ -765,7 +765,7 @@ class _SuccessPage extends StatelessWidget {
           Expanded(
             child: Text(text,
                 style: GoogleFonts.inter(
-                    color: Colors.white70, fontSize: 13, height: 1.4)),
+                    color: kTextDim, fontSize: 13, height: 1.4)),
           ),
         ],
       );
@@ -815,7 +815,7 @@ class _FailurePage extends StatelessWidget {
         slivers: [
           SliverToBoxAdapter(
             child: Container(
-              color: const Color(0xFF7F1D1D),
+              color: kDanger.withValues(alpha: 0.15),
               child: SafeArea(
                 bottom: false,
                 child: Padding(
@@ -826,7 +826,7 @@ class _FailurePage extends StatelessWidget {
                       IconButton(
                         onPressed: () => Navigator.of(context).maybePop(),
                         icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                            color: Colors.white, size: 20),
+                            color: kText, size: 20),
                       ),
                       const SizedBox(width: 4),
                       Expanded(
@@ -837,7 +837,7 @@ class _FailurePage extends StatelessWidget {
                             Text(
                               'Payment Failed',
                               style: GoogleFonts.inter(
-                                color: Colors.white,
+                                color: kText,
                                 fontSize: 22,
                                 fontWeight: FontWeight.w900,
                               ),
@@ -846,7 +846,7 @@ class _FailurePage extends StatelessWidget {
                             Text(
                               'Booking #$bookingNumber',
                               style: GoogleFonts.inter(
-                                  color: Colors.white60, fontSize: 13),
+                                  color: kTextMuted, fontSize: 13),
                             ),
                           ],
                         ),
@@ -866,26 +866,26 @@ class _FailurePage extends StatelessWidget {
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
                     color: kSurface,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(kRSurface),
                     border: Border.all(
-                        color: const Color(0x44EF4444)),
+                        color: kDanger.withValues(alpha: 0.25)),
                   ),
                   child: Column(
                     children: [
-                      const Icon(Icons.error_outline_rounded,
-                          color: Color(0xFFFF8A8A), size: 40),
+                      Icon(Icons.error_outline_rounded,
+                          color: kDanger, size: 40),
                       const SizedBox(height: 14),
                       Text(
                         error,
                         style: GoogleFonts.inter(
-                            color: const Color(0xFFFF8A8A), fontSize: 14),
+                            color: kDanger, fontSize: 14),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 10),
                       Text(
                         _guidance(),
                         style: GoogleFonts.inter(
-                            color: kMuted, fontSize: 13, height: 1.4),
+                            color: kTextMuted, fontSize: 13, height: 1.4),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -899,8 +899,8 @@ class _FailurePage extends StatelessWidget {
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
                     color: kSurface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: kBorder),
+                    borderRadius: BorderRadius.circular(kRSurface),
+                    border: Border.all(color: kBorderSoft),
                   ),
                   child: Column(
                     children: [
@@ -909,7 +909,7 @@ class _FailurePage extends StatelessWidget {
                         child: FilledButton(
                           onPressed: onRetry,
                           style: FilledButton.styleFrom(
-                              backgroundColor: kPrimary),
+                              backgroundColor: kAccent),
                           child: Text(
                             'Retry payment',
                             style: GoogleFonts.inter(

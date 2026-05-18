@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../core/app_state.dart';
@@ -136,11 +137,12 @@ class _PublicPlanCatalogScreenState extends State<PublicPlanCatalogScreen> {
                     child: AspectRatio(
                       aspectRatio: 1080 / 400,
                       child: appState.banners.first.imageUrl.isNotEmpty
-                          ? Image.network(
-                              appState.banners.first.imageUrl,
+                          ? CachedNetworkImage(
+                              imageUrl: appState.banners.first.imageUrl,
                               fit: BoxFit.fill,
                               width: double.infinity,
-                              errorBuilder: (_, __, ___) =>
+                              placeholder: (_, __) => Container(color: kSurface),
+                              errorWidget: (_, __, ___) =>
                                   const SizedBox.shrink(),
                             )
                           : Container(
@@ -339,12 +341,13 @@ class _SpeedCard extends StatelessWidget {
               ClipRRect(
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(28)),
-                child: Image.network(
-                  bannerUrl,
+                child: CachedNetworkImage(
+                  imageUrl: bannerUrl,
                   height: 140,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  placeholder: (_, __) => Container(color: kSurface, height: 140),
+                  errorWidget: (_, __, ___) => const SizedBox.shrink(),
                 ),
               ),
 

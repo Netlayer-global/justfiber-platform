@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -1559,11 +1560,12 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                         children: [
                           // Banner image or gradient fallback
                           if (banner.imageUrl.isNotEmpty)
-                            Image.network(
-                              banner.imageUrl,
+                            CachedNetworkImage(
+                              imageUrl: banner.imageUrl,
                               fit: BoxFit.fill,
                               width: double.infinity,
-                              errorBuilder: (_, __, ___) =>
+                              placeholder: (_, __) => Container(color: kSurface),
+                              errorWidget: (_, __, ___) =>
                                   _bannerFallback(banner),
                             )
                           else

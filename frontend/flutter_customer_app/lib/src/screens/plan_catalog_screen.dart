@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../core/app_state.dart';
@@ -438,12 +439,13 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
             ClipRRect(
               borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(28)),
-              child: Image.network(
-                bannerUrl,
+              child: CachedNetworkImage(
+                imageUrl: bannerUrl,
                 height: 160,
                 width: double.infinity,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                placeholder: (_, __) => Container(color: kSurface, height: 160),
+                errorWidget: (_, __, ___) => const SizedBox.shrink(),
               ),
             ),
 
