@@ -567,12 +567,49 @@ class _LeadBookingFlowScreenState extends State<LeadBookingFlowScreen> {
   }
 
   Widget _durationStep(dynamic selectedPlan) {
-    final durations = selectedPlan == null
-        ? const [(1, '1 month')]
-        : _durations(selectedPlan);
-    final recurring = selectedPlan == null
-        ? 0.0
-        : _priceFor(selectedPlan, _durationMonths);
+    // Build durations from ALL plans in the same speed group (not just the selected one)
+    final appState = AppStateScope.of(context);
+    final allPlans = appState.plans;
+    int selectedSpeed = selectedPlan != null
+        ? (selectedPlan.speedMbps as num).round()
+        : 0;
+    if (selectedSpeed == 0 && selectedPlan != null) {
+      final match = RegExp(r'(\d+)\s*[Mm]').firstMatch(selectedPlan.name as String);
+      if (match != null) selectedSpeed = int.tryParse(match.group(1)!) ?? 0;
+    }
+
+    // Get all plans in this speed group
+    final groupPlans = allPlans.where((p) {
+      int speed = p.speedMbps.round();
+      if (speed == 0) {
+        final match = RegExp(r'(\d+)\s*[Mm]').firstMatch(p.name);
+        if (match != null) speed = int.tryParse(match.group(1)!) ?? 0;
+      }
+      return speed == selectedSpeed;
+    }).toList()
+      ..sort((a, b) => a.monthlyPrice.compareTo(b.monthlyPrice));
+
+    // Build duration options from group plans (each plan = one duration)
+    final durations = <(int, String, double, String)>[]; // (months, label, price, planCode)
+    for (final p in groupPlans) {
+      final months = p.billingPeriodMonths > 0 ? p.billingPeriodMonths : 1;
+      final label = months == 1
+          ? '1 month'
+          : months == 3
+              ? '3 months'
+              : months == 6
+                  ? '6 months'
+                  : months == 12
+                      ? '12 months'
+                      : '$months months';
+      durations.add((months.round(), label, p.monthlyPrice, p.planCode));
+    }
+    // Deduplicate by months (keep first/cheapest)
+    final seen = <int>{};
+    durations.retainWhere((d) => seen.add(d.$1));
+
+    if (durations.isEmpty) durations.add((1, '1 month', selectedPlan?.monthlyPrice ?? 0.0, _planCode ?? ''));
+
     final setup = selectedPlan == null
         ? 0.0
         : ((selectedPlan.otcCharge ?? 0) as num).toDouble() +
@@ -580,21 +617,20 @@ class _LeadBookingFlowScreenState extends State<LeadBookingFlowScreen> {
 
     return _card(
       title: 'Choose duration',
-      subtitle: selectedPlan == null
-          ? 'Select a plan first'
-          : 'Billing period for ${selectedPlan.name}',
+      subtitle: '$selectedSpeed Mbps plan — select billing period',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (final opt in durations) ...[
             _durationTile(
               label: opt.$2,
-              recurring: _priceFor(selectedPlan, opt.$1),
+              recurring: opt.$3,
               setup: setup,
               selected: _durationMonths == opt.$1,
               onTap: () => setState(() {
                 _durationMonths = opt.$1;
                 _durationLabel = opt.$2;
+                _planCode = opt.$4; // Switch to the correct plan for this duration
               }),
             ),
             const SizedBox(height: 10),
@@ -615,9 +651,9 @@ class _LeadBookingFlowScreenState extends State<LeadBookingFlowScreen> {
           const SizedBox(height: 8),
 
           _summaryBox([
-            ('Plan', selectedPlan?.name ?? '—'),
+            ('Plan', '$selectedSpeed Mbps · ${_durationLabel}'),
             ('Duration', _durationLabel),
-            ('Amount', 'Rs ${recurring.toStringAsFixed(0)}'),
+            ('Amount', 'Rs ${durations.where((d) => d.$1 == _durationMonths).firstOrNull?.$3.toStringAsFixed(0) ?? "—"}'),
             if (setup > 0) ('Setup', 'Rs ${setup.toStringAsFixed(0)}'),
             ('Preferred slot', _slotLabel),
           ]),
@@ -625,12 +661,10 @@ class _LeadBookingFlowScreenState extends State<LeadBookingFlowScreen> {
 
           _primaryBtn(
             label: 'Continue',
-            onPressed:
-                selectedPlan != null ? () {
-                  // Auto-fetch location when entering details step
-                  if (!_locationPicked && !_locationBusy) _fetchLocation();
-                  setState(() => step = 2);
-                } : null,
+            onPressed: () {
+              if (!_locationPicked && !_locationBusy) _fetchLocation();
+              setState(() => step = 2);
+            },
           ),
           const SizedBox(height: 10),
           _backBtn('Back to Plans', () => setState(() => step = 0)),

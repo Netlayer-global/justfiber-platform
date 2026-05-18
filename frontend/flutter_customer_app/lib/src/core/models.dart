@@ -442,6 +442,7 @@ class PlanItem {
     required this.validityQuarterly,
     required this.validityHalfYearly,
     required this.validityYearly,
+    this.billingPeriodMonths = 1,
     this.ottApps = const [],
     this.routerIncluded = false,
     this.bannerImageUrl = '',
@@ -474,6 +475,7 @@ class PlanItem {
   final bool validityQuarterly;
   final bool validityHalfYearly;
   final bool validityYearly;
+  final int billingPeriodMonths;
   // Merchandising / template fields
   final List<String> ottApps;
   final bool routerIncluded;

@@ -734,6 +734,7 @@ class ApiClient {
             validityHalfYearly:
                 _asMap(map['validityOptions'])['halfYearly'] == true,
             validityYearly: _asMap(map['validityOptions'])['yearly'] == true,
+            billingPeriodMonths: int.tryParse('${map['billingPeriodMonths'] ?? 1}') ?? 1,
             ottApps: _asList(map['ottApps']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
             routerIncluded: map['routerIncluded'] == true,
             bannerImageUrl: _resolveImageUrl(baseUrl, ((_asMap(map['merchandising']))['bannerImageUrl'] ?? '').toString()),
@@ -1366,6 +1367,7 @@ class ApiClient {
             validityHalfYearly:
                 _asMap(map['validityOptions'])['halfYearly'] == true,
             validityYearly: _asMap(map['validityOptions'])['yearly'] == true,
+            billingPeriodMonths: int.tryParse('${map['billingPeriodMonths'] ?? 1}') ?? 1,
             ottApps: _asList(map['ottApps']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
             routerIncluded: map['routerIncluded'] == true,
             bannerImageUrl: _resolveImageUrl(baseUrl, ((_asMap(map['merchandising']))['bannerImageUrl'] ?? '').toString()),
@@ -1650,5 +1652,6 @@ class ApiClient {
 extension _FirstOrNull<T> on List<T> {
   T? get firstOrNull => isEmpty ? null : first;
 }
+
 
 
