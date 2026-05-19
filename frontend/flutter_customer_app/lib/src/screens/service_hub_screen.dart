@@ -51,7 +51,7 @@ class ServiceHubScreen extends StatelessWidget {
                 top: 0,
                 left: 0,
                 right: 0,
-                height: MediaQuery.of(context).size.height * 0.55,
+                height: MediaQuery.of(context).size.height * 0.6,
                 child: Image.network(
                   appState.wifiHeroImageUrl,
                   fit: BoxFit.cover,
@@ -64,17 +64,19 @@ class ServiceHubScreen extends StatelessWidget {
                 top: 0,
                 left: 0,
                 right: 0,
-                height: MediaQuery.of(context).size.height * 0.55,
+                height: MediaQuery.of(context).size.height * 0.6,
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
                         kBg,
-                        kBg.withValues(alpha: 0.7),
+                        kBg.withValues(alpha: 0.9),
+                        kBg.withValues(alpha: 0.4),
                         Colors.transparent,
                         Colors.transparent,
+                        Colors.black.withValues(alpha: 0.3),
                       ],
-                      stops: const [0.0, 0.08, 0.35, 1.0],
+                      stops: const [0.0, 0.05, 0.25, 0.5, 0.8, 1.0],
                       begin: Alignment.bottomCenter,
                       end: Alignment.topCenter,
                     ),
@@ -108,27 +110,139 @@ class ServiceHubScreen extends StatelessWidget {
             // ── Hero card — Wi-Fi info overlay ──────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 22),
-              child: ClipRRect(
+              child: appState.wifiHeroImageUrl.isNotEmpty
+                  // No card — content floats directly on the background image
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Status row
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(kRPill),
+                                border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.22)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 7,
+                                    height: 7,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: isActive ? kSuccess : kDanger,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    isActive ? 'Active' : 'Offline',
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              '$connectedCount devices',
+                              style: GoogleFonts.inter(
+                                color: Colors.white.withValues(alpha: 0.8),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+
+                        // SSID label
+                        Text(
+                          'WI-FI NETWORK',
+                          style: GoogleFonts.inter(
+                            color: Colors.white.withValues(alpha: 0.6),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.6,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          ssid,
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
+                            height: 1.1,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          planName,
+                          style: GoogleFonts.inter(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 22),
+
+                        // Wi-Fi Settings CTA
+                        PressableScale(
+                          onTap: () => _push(
+                              context, appState, const WifiSettingsScreen()),
+                          haptic: true,
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(kRButton),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Wi-Fi Settings',
+                                  style: GoogleFonts.inter(
+                                    color: kAccentDeep,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Icon(Icons.arrow_forward_rounded,
+                                    color: kAccentDeep, size: 16),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  // Solid gradient card when no image
+                  : ClipRRect(
                 borderRadius: BorderRadius.circular(kRCard),
                 child: Container(
                   padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
-                    // Glass card when image is present, solid gradient otherwise
-                    gradient: appState.wifiHeroImageUrl.isNotEmpty
-                        ? null
-                        : const LinearGradient(
+                    gradient: const LinearGradient(
                             colors: [kAccent, kAccentDeep],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
-                    color: appState.wifiHeroImageUrl.isNotEmpty
-                        ? Colors.black.withValues(alpha: 0.2)
-                        : null,
                     borderRadius: BorderRadius.circular(kRCard),
-                    border: appState.wifiHeroImageUrl.isNotEmpty
-                        ? Border.all(
-                            color: Colors.white.withValues(alpha: 0.08))
-                        : null,
                   ),
                   child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
