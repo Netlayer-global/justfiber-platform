@@ -111,7 +111,7 @@ class ServiceHubScreen extends StatelessWidget {
               ),
 
               // Spacer to push content down — image visible in top half
-              SizedBox(height: screenHeight * 0.45),
+              SizedBox(height: screenHeight * 0.52),
 
               // ── Wi-Fi info overlay on image ──────────────────────
               Padding(
