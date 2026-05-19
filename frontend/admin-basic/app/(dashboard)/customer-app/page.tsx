@@ -8,6 +8,8 @@ import {
   Loader,
   Plus,
   Trash2,
+  Upload,
+  Wifi,
   X,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -78,6 +80,11 @@ export default function CustomerAppPage() {
   const [confirmDelete, setConfirmDelete] = useState<AppBanner | null>(null)
   const [deleting, setDeleting] = useState(false)
 
+  // ─── Wi-Fi Hero Image state ─────────────────────────────────────────────
+  const [wifiHeroUrl, setWifiHeroUrl] = useState('')
+  const [wifiHeroLoading, setWifiHeroLoading] = useState(true)
+  const [wifiHeroUploading, setWifiHeroUploading] = useState(false)
+
   // ─── Fetch banners ──────────────────────────────────────────────────────
 
   async function fetchBanners() {
@@ -98,7 +105,56 @@ export default function CustomerAppPage() {
 
   useEffect(() => {
     fetchBanners()
+    fetchWifiHero()
   }, [])
+
+  // ─── Wi-Fi Hero Image ─────────────────────────────────────────────────
+
+  async function fetchWifiHero() {
+    setWifiHeroLoading(true)
+    try {
+      const res = await adminAPI.getCustomerAppSettings()
+      if (res.success && res.data) {
+        const value = (res.data as any)?.value || res.data
+        setWifiHeroUrl(value.wifiHeroImageUrl || '')
+      }
+    } catch {
+      // ignore
+    } finally {
+      setWifiHeroLoading(false)
+    }
+  }
+
+  async function handleWifiHeroUpload(file: File) {
+    setWifiHeroUploading(true)
+    try {
+      const res = await adminAPI.uploadWifiHeroImage(file)
+      if (res.success && res.data?.wifiHeroImageUrl) {
+        setWifiHeroUrl(res.data.wifiHeroImageUrl)
+        toast.success('Wi-Fi hero image uploaded')
+      } else {
+        toast.error(res.error || 'Failed to upload image')
+      }
+    } catch {
+      toast.error('Upload failed')
+    } finally {
+      setWifiHeroUploading(false)
+    }
+  }
+
+  async function handleWifiHeroDelete() {
+    try {
+      const res = await adminAPI.deleteWifiHeroImage()
+      if (res.success) {
+        setWifiHeroUrl('')
+        toast.success('Wi-Fi hero image removed')
+      } else {
+        toast.error(res.error || 'Failed to remove image')
+      }
+    } catch {
+      toast.error('Failed to remove image')
+    }
+  }
 
   // ─── Modal handlers ─────────────────────────────────────────────────────
 
@@ -218,6 +274,96 @@ export default function CustomerAppPage() {
           <Plus className="h-4 w-4" />
           Add Banner
         </button>
+      </div>
+
+      {/* ─── Wi-Fi Hero Image Section ──────────────────────────────────── */}
+      <div className="rounded-xl border border-gray-200 bg-white p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-100">
+            <Wifi className="h-5 w-5 text-purple-700" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">Wi-Fi Hero Image</h2>
+            <p className="text-xs text-gray-500">
+              Background image for the Services/Wi-Fi page hero section in the customer app
+            </p>
+          </div>
+        </div>
+
+        {wifiHeroLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader className="h-5 w-5 animate-spin text-purple-600" />
+          </div>
+        ) : wifiHeroUrl ? (
+          <div className="relative group">
+            <div className="h-44 overflow-hidden rounded-xl bg-gray-900">
+              <img
+                src={wifiHeroUrl}
+                alt="Wi-Fi Hero"
+                className="h-full w-full object-cover opacity-90"
+              />
+              {/* Overlay preview */}
+              <div className="absolute inset-0 flex flex-col justify-end p-5 bg-gradient-to-t from-black/60 to-transparent rounded-xl">
+                <span className="text-white/70 text-[10px] font-bold tracking-widest uppercase">Wi-Fi Network</span>
+                <span className="text-white text-lg font-bold">MyNetwork_5G</span>
+                <span className="text-white/60 text-xs mt-0.5">Online · 4 devices</span>
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-3">
+              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
+                <Upload className="h-4 w-4" />
+                Replace Image
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleWifiHeroUpload(file)
+                  }}
+                />
+              </label>
+              <button
+                onClick={handleWifiHeroDelete}
+                className="flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                Remove
+              </button>
+            </div>
+          </div>
+        ) : (
+          <label className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 py-10 transition-colors hover:border-purple-400 hover:bg-purple-50">
+            {wifiHeroUploading ? (
+              <Loader className="h-8 w-8 animate-spin text-purple-600" />
+            ) : (
+              <Upload className="h-8 w-8 text-gray-400" />
+            )}
+            <div className="text-center">
+              <span className="text-sm font-medium text-gray-700">
+                {wifiHeroUploading ? 'Uploading...' : 'Upload Wi-Fi Hero Image'}
+              </span>
+              <p className="mt-1 text-xs text-gray-400">
+                Recommended: Dark purple glow router photo, 1080×600px
+              </p>
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={wifiHeroUploading}
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) handleWifiHeroUpload(file)
+              }}
+            />
+          </label>
+        )}
+      </div>
+
+      {/* ─── Banners Section ───────────────────────────────────────────── */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Promotional Banners</h2>
       </div>
 
       {/* Loading */}

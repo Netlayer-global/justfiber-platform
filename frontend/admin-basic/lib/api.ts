@@ -3515,4 +3515,26 @@ export const adminAPI = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+  uploadWifiHeroImage: async (file: File): Promise<ApiResponse<{ wifiHeroImageUrl: string }>> => {
+    const formData = new FormData()
+    formData.append('image', file)
+    const token = getAuthToken()
+    const headers: Record<string, string> = {}
+    if (token) headers['Authorization'] = `Bearer ${token}`
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/api/v1/admin/catalog/wifi-hero/upload`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      })
+      const data = await response.json()
+      return { success: response.ok, data: data?.data || data, error: data?.error || data?.message }
+    } catch {
+      return { success: false, error: 'Failed to upload Wi-Fi hero image' }
+    }
+  },
+  deleteWifiHeroImage: async () =>
+    request('/api/v1/admin/catalog/wifi-hero', { method: 'DELETE' }),
+  getCustomerAppSettings: async () =>
+    request<{ wifiHeroImageUrl: string }>('/api/v1/admin/configs/settings/customer_app'),
 }

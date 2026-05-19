@@ -125,125 +125,159 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                       const SizedBox(height: 22),
 
                       // Simple hero card — SSID + status + pause button
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [kAccent, kAccentDeep],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(kRCard),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.18),
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(
-                                        color: Colors.white.withValues(alpha: 0.25)),
-                                  ),
-                                  child: const Icon(Icons.wifi_rounded,
-                                      color: Colors.white, size: 26),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        ssidLabel,
-                                        style: GoogleFonts.inter(
-                                          color: Colors.white,
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing: -0.3,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          Container(
-                                            width: 7,
-                                            height: 7,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              color: wifi.paused
-                                                  ? const Color(0xFFFBBF24)
-                                                  : kSuccess,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            wifi.paused ? 'Paused' : 'Online',
-                                            style: GoogleFonts.inter(
-                                              color: Colors.white.withValues(alpha: 0.9),
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Text(
-                                            '$connectedCount devices',
-                                            style: GoogleFonts.inter(
-                                              color: Colors.white.withValues(alpha: 0.75),
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(kRCard),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [kAccent, kAccentDeep],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                            const SizedBox(height: 16),
-                            // Pause/Resume button
-                            PressableScale(
-                              onTap: () => _showPauseSheet(context, appState),
-                              haptic: true,
-                              child: Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(vertical: 13),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(kRSmall),
-                                  border: Border.all(
-                                      color: Colors.white.withValues(alpha: 0.25)),
+                            borderRadius: BorderRadius.circular(kRCard),
+                          ),
+                          child: Stack(
+                            children: [
+                              // Background hero image (admin-uploadable)
+                              if (appState.wifiHeroImageUrl.isNotEmpty)
+                                Positioned.fill(
+                                  child: Image.network(
+                                    appState.wifiHeroImageUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) =>
+                                        const SizedBox.shrink(),
+                                  ),
                                 ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      wifi.paused
-                                          ? Icons.play_arrow_rounded
-                                          : Icons.pause_rounded,
-                                      color: Colors.white,
-                                      size: 18,
+                              if (appState.wifiHeroImageUrl.isNotEmpty)
+                                Positioned.fill(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          Colors.black.withValues(alpha: 0.55),
+                                          Colors.black.withValues(alpha: 0.25),
+                                        ],
+                                        begin: Alignment.bottomCenter,
+                                        end: Alignment.topCenter,
+                                      ),
                                     ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      wifi.paused ? 'Resume Wi-Fi' : 'Pause Wi-Fi',
-                                      style: GoogleFonts.inter(
-                                        color: Colors.white,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          width: 48,
+                                          height: 48,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(alpha: 0.18),
+                                            borderRadius: BorderRadius.circular(14),
+                                            border: Border.all(
+                                                color: Colors.white.withValues(alpha: 0.25)),
+                                          ),
+                                          child: const Icon(Icons.wifi_rounded,
+                                              color: Colors.white, size: 26),
+                                        ),
+                                        const SizedBox(width: 14),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                ssidLabel,
+                                                style: GoogleFonts.inter(
+                                                  color: Colors.white,
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.w800,
+                                                  letterSpacing: -0.3,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                children: [
+                                                  Container(
+                                                    width: 7,
+                                                    height: 7,
+                                                    decoration: BoxDecoration(
+                                                      shape: BoxShape.circle,
+                                                      color: wifi.paused
+                                                          ? const Color(0xFFFBBF24)
+                                                          : kSuccess,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    wifi.paused ? 'Paused' : 'Online',
+                                                    style: GoogleFonts.inter(
+                                                      color: Colors.white.withValues(alpha: 0.9),
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Text(
+                                                    '$connectedCount devices',
+                                                    style: GoogleFonts.inter(
+                                                      color: Colors.white.withValues(alpha: 0.75),
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    // Pause/Resume button
+                                    PressableScale(
+                                      onTap: () => _showPauseSheet(context, appState),
+                                      haptic: true,
+                                      child: Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.symmetric(vertical: 13),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(kRSmall),
+                                          border: Border.all(
+                                              color: Colors.white.withValues(alpha: 0.25)),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              wifi.paused
+                                                  ? Icons.play_arrow_rounded
+                                                  : Icons.pause_rounded,
+                                              color: Colors.white,
+                                              size: 18,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              wifi.paused ? 'Resume Wi-Fi' : 'Pause Wi-Fi',
+                                              style: GoogleFonts.inter(
+                                                color: Colors.white,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -1191,12 +1225,14 @@ class _WifiHeroCard extends StatelessWidget {
     required this.blockedCount,
     required this.guestEnabled,
     required this.onPause,
+    this.heroImageUrl = '',
   });
 
   final String ssid, quality;
   final bool isPaused, guestEnabled;
   final int connectedCount, blockedCount;
   final VoidCallback onPause;
+  final String heroImageUrl;
 
   int _signalBars(String q) {
     final s = q.toLowerCase();
@@ -1235,6 +1271,35 @@ class _WifiHeroCard extends StatelessWidget {
       ),
       child: Stack(
         children: [
+          // Background hero image (admin-uploadable)
+          if (heroImageUrl.isNotEmpty)
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(26),
+                child: Image.network(
+                  heroImageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              ),
+            ),
+          // Dark overlay for readability when image is present
+          if (heroImageUrl.isNotEmpty)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(26),
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.black.withValues(alpha: 0.6),
+                      Colors.black.withValues(alpha: 0.25),
+                    ],
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                  ),
+                ),
+              ),
+            ),
           // Decorative orbs
           Positioned(
             top: -60,

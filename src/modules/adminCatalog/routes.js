@@ -14,6 +14,7 @@ import { Lead } from "../../models/Lead.js";
 import { PlanCatalog } from "../../models/PlanCatalog.js";
 import { SalesAgent } from "../../models/SalesAgent.js";
 import { ServiceabilityZone } from "../../models/ServiceabilityZone.js";
+import { SystemConfig } from "../../models/SystemConfig.js";
 import { getPlanProvisioningIssues, isPlanProvisioningReady } from "../../common/networkProvisioning.js";
 import { jazeClient } from "../../integrations/jazeClient.js";
 import { env } from "../../config/env.js";
@@ -836,5 +837,100 @@ adminCatalogRouter.post(
       updated: results.updated.length,
       details: results
     });
+  })
+);
+
+// ── Wi-Fi Hero Image upload ───────────────────────────────────────────────────
+
+const WIFI_HERO_UPLOAD_DIR = join(process.cwd(), "public", "uploads", "wifi-hero");
+try {
+  if (!existsSync(WIFI_HERO_UPLOAD_DIR)) {
+    mkdirSync(WIFI_HERO_UPLOAD_DIR, { recursive: true });
+  }
+} catch (e) {
+  console.warn("[WifiHero] Could not create upload dir:", e.message);
+}
+
+adminCatalogRouter.post(
+  "/catalog/wifi-hero/upload",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const contentType = req.headers["content-type"] || "";
+    if (!contentType.includes("multipart/form-data")) {
+      throw new ApiError(400, "Expected multipart/form-data");
+    }
+    const chunks = [];
+    for await (const chunk of req) { chunks.push(chunk); }
+    const body = Buffer.concat(chunks);
+    const boundaryMatch = contentType.match(/boundary=(.+)/);
+    if (!boundaryMatch) throw new ApiError(400, "Missing boundary");
+    const boundary = boundaryMatch[1].replace(/;.*$/, "").trim();
+    const boundaryBuffer = Buffer.from(`--${boundary}`);
+    const parts = [];
+    let start = 0;
+    while (true) {
+      const idx = body.indexOf(boundaryBuffer, start);
+      if (idx === -1) break;
+      if (start > 0) parts.push(body.slice(start, idx - 2));
+      start = idx + boundaryBuffer.length + 2;
+    }
+    let fileBuffer = null;
+    let fileName = "wifi-hero";
+    for (const part of parts) {
+      const headerEnd = part.indexOf("\r\n\r\n");
+      if (headerEnd === -1) continue;
+      const headers = part.slice(0, headerEnd).toString();
+      if (headers.includes('name="image"')) {
+        fileBuffer = part.slice(headerEnd + 4);
+        const fnMatch = headers.match(/filename="([^"]+)"/);
+        if (fnMatch) fileName = fnMatch[1];
+        break;
+      }
+    }
+    if (!fileBuffer || fileBuffer.length === 0) throw new ApiError(400, "No image file provided");
+    const ext = extname(fileName) || ".jpg";
+    const savedName = `wifi-hero-${Date.now()}${ext}`;
+    const { writeFileSync } = await import("fs");
+    writeFileSync(join(WIFI_HERO_UPLOAD_DIR, savedName), fileBuffer);
+    const imageUrl = `/uploads/wifi-hero/${savedName}`;
+
+    // Persist to SystemConfig under settings.customer_app
+    const configKey = "settings.customer_app";
+    const existing = await SystemConfig.findOne({ key: configKey }).lean();
+    const currentValue = existing?.value || {};
+    await SystemConfig.findOneAndUpdate(
+      { key: configKey },
+      {
+        $set: {
+          key: configKey,
+          category: "settings",
+          value: { ...currentValue, wifiHeroImageUrl: imageUrl },
+          updatedBy: req.admin._id
+        }
+      },
+      { upsert: true, new: true }
+    );
+
+    return ok(res, { wifiHeroImageUrl: imageUrl });
+  })
+);
+
+adminCatalogRouter.delete(
+  "/catalog/wifi-hero",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const configKey = "settings.customer_app";
+    const existing = await SystemConfig.findOne({ key: configKey }).lean();
+    const currentValue = existing?.value || {};
+    await SystemConfig.findOneAndUpdate(
+      { key: configKey },
+      {
+        $set: {
+          value: { ...currentValue, wifiHeroImageUrl: "" }
+        }
+      },
+      { upsert: true, new: true }
+    );
+    return ok(res, { deleted: true });
   })
 );

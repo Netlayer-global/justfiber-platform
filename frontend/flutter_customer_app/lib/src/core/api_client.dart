@@ -615,6 +615,17 @@ class ApiClient {
     }).toList();
   }
 
+  /// Fetches app-level assets (e.g. Wi-Fi hero image URL).
+  Future<String> fetchWifiHeroImageUrl() async {
+    try {
+      final data = _asMap(await _request('/api/v1/customer/app-assets'));
+      final raw = (data['wifiHeroImageUrl'] ?? '').toString();
+      return _resolveImageUrl(baseUrl, raw);
+    } catch (_) {
+      return '';
+    }
+  }
+
   Future<List<AppBannerItem>> fetchAppBanners() async {
     final list = _asList(await _request('/api/v1/customer/banners'));
     return list.map((item) {

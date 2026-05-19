@@ -263,6 +263,9 @@ const settingsSectionDefaults = {
     oltAndCpeVisible: true,
     ipManagementVisible: true,
     analyticsVisible: true
+  },
+  customer_app: {
+    wifiHeroImageUrl: ""
   }
 };
 

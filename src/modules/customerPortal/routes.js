@@ -2579,6 +2579,17 @@ customerPortalRouter.get(
 );
 
 customerPortalRouter.get(
+  "/app-assets",
+  asyncHandler(async (_req, res) => {
+    const config = await SystemConfig.findOne({ key: "settings.customer_app" }).lean();
+    const value = config?.value || {};
+    return ok(res, {
+      wifiHeroImageUrl: value.wifiHeroImageUrl || ""
+    });
+  })
+);
+
+customerPortalRouter.get(
   "/plans",
   asyncHandler(async (_req, res) => {
     const plans = await PlanCatalog.find({

@@ -79,6 +79,31 @@ class ServiceHubScreen extends StatelessWidget {
                   ),
                   child: Stack(
                     children: [
+                      // Background hero image (admin-uploadable)
+                      if (appState.wifiHeroImageUrl.isNotEmpty)
+                        Positioned.fill(
+                          child: Image.network(
+                            appState.wifiHeroImageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                          ),
+                        ),
+                      // Dark overlay for readability when image is present
+                      if (appState.wifiHeroImageUrl.isNotEmpty)
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.black.withValues(alpha: 0.55),
+                                  Colors.black.withValues(alpha: 0.3),
+                                ],
+                                begin: Alignment.bottomCenter,
+                                end: Alignment.topCenter,
+                              ),
+                            ),
+                          ),
+                        ),
                       // Decorative circle
                       Positioned(
                         right: -60,

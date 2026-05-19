@@ -117,6 +117,7 @@ class AppState extends ChangeNotifier {
   List<FaqItem> faqs = const [];
   List<AddonItem> addons = const [];
   List<AppBannerItem> banners = const [];
+  String wifiHeroImageUrl = '';
   List<ConnectedDevice> connectedDevices = const [];
   List<CustomerConnection> connections = const [];
   List<PlanItem> plans = const [];
@@ -355,6 +356,7 @@ class AppState extends ChangeNotifier {
       runTask('faqs', () async => faqs = await api.fetchFaqs()),
       runTask('addons', () async => addons = await api.fetchAddons(current)),
       runTask('banners', () async => banners = await api.fetchAppBanners()),
+      runTask('wifi hero', () async => wifiHeroImageUrl = await api.fetchWifiHeroImageUrl()),
       runTask('plans', () async => plans = await api.fetchPlans()),
       runTask(
           'devices',
