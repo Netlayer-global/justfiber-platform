@@ -258,7 +258,7 @@ class ServiceHubScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 64),
+              const SizedBox(height: 80),
 
               // ── Quick actions — modern cards ──────────────────────
               Padding(
