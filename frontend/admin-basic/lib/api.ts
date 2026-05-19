@@ -3527,10 +3527,16 @@ export const adminAPI = {
         headers,
         body: formData,
       })
+      if (!response.ok) {
+        const text = await response.text()
+        let parsed: any = {}
+        try { parsed = JSON.parse(text) } catch {}
+        return { success: false, error: parsed?.error?.message || parsed?.error || `Upload failed (${response.status})` }
+      }
       const data = await response.json()
-      return { success: response.ok, data: data?.data || data, error: data?.error || data?.message }
-    } catch {
-      return { success: false, error: 'Failed to upload Wi-Fi hero image' }
+      return { success: true, data: data?.data || data }
+    } catch (e: any) {
+      return { success: false, error: e?.message || 'Failed to upload Wi-Fi hero image' }
     }
   },
   deleteWifiHeroImage: async () =>

@@ -115,11 +115,12 @@ export default function CustomerAppPage() {
     try {
       const res = await adminAPI.getCustomerAppSettings()
       if (res.success && res.data) {
-        const value = (res.data as any)?.value || res.data
-        setWifiHeroUrl(value.wifiHeroImageUrl || '')
+        const raw = res.data as any
+        const value = raw?.value || raw || {}
+        setWifiHeroUrl(value?.wifiHeroImageUrl || '')
       }
     } catch {
-      // ignore
+      // ignore — section may not exist yet
     } finally {
       setWifiHeroLoading(false)
     }
