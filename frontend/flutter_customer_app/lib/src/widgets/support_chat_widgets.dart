@@ -61,17 +61,9 @@ class ChatBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isUser = message.isUser;
-    final bubbleColor = isUser ? kPrimary.withValues(alpha: 0.2) : kSurface;
-    final borderColor = isUser ? kPrimary.withValues(alpha: 0.4) : kBorder;
-    final radius = BorderRadius.only(
-      topLeft: const Radius.circular(18),
-      topRight: const Radius.circular(18),
-      bottomLeft: Radius.circular(isUser ? 18 : 4),
-      bottomRight: Radius.circular(isUser ? 4 : 18),
-    );
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 18),
       child: Column(
         crossAxisAlignment:
             isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -83,56 +75,86 @@ class ChatBubble extends StatelessWidget {
             children: [
               if (!isUser) ...[
                 const _BotAvatar(),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
               ],
               Flexible(
                 child: Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
-                    color: bubbleColor,
-                    borderRadius: radius,
-                    border: Border.all(color: borderColor),
+                    gradient: isUser
+                        ? const LinearGradient(
+                            colors: [Color(0xFF7C3AED), Color(0xFF6D28D9)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : null,
+                    color: isUser ? null : const Color(0xFF1A1A2E),
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(20),
+                      topRight: const Radius.circular(20),
+                      bottomLeft: Radius.circular(isUser ? 20 : 4),
+                      bottomRight: Radius.circular(isUser ? 4 : 20),
+                    ),
+                    border: isUser
+                        ? null
+                        : Border.all(
+                            color: Colors.white.withValues(alpha: 0.06)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isUser
+                            ? const Color(0xFF7C3AED).withValues(alpha: 0.2)
+                            : Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
                   child: Text(
                     message.text,
                     style: GoogleFonts.inter(
-                        color: Colors.white, height: 1.45, fontSize: 13),
+                      color: Colors.white.withValues(alpha: 0.95),
+                      height: 1.5,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ),
+              if (isUser) const SizedBox(width: 8),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 5),
           Padding(
             padding:
-                EdgeInsets.only(left: isUser ? 0 : 44, right: isUser ? 4 : 0),
+                EdgeInsets.only(left: isUser ? 0 : 46, right: isUser ? 4 : 0),
             child: Text(
               timeLabel,
-              style: GoogleFonts.inter(color: kMuted, fontSize: 10),
+              style: GoogleFonts.inter(
+                  color: Colors.white.withValues(alpha: 0.3), fontSize: 10),
             ),
           ),
-          if (message.actions.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.only(left: 44),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children:
-                    message.actions.map((a) => _ActionBtn(action: a)).toList(),
-              ),
-            ),
-          ],
           if (message.meta.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Padding(
-              padding: const EdgeInsets.only(left: 44),
+              padding: const EdgeInsets.only(left: 46),
               child: Wrap(
                 spacing: 6,
                 runSpacing: 6,
                 children:
                     message.meta.map((m) => _MetaChip(item: m)).toList(),
+              ),
+            ),
+          ],
+          if (message.actions.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.only(left: 46),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children:
+                    message.actions.map((a) => _ActionBtn(action: a)).toList(),
               ),
             ),
           ],
@@ -150,12 +172,22 @@ class _BotAvatar extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: kPrimary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: kPrimary.withValues(alpha: 0.2)),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF7C3AED), Color(0xFF9333EA)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: const Icon(Icons.support_agent_rounded,
-            color: kPrimaryLight, size: 17),
+            color: Colors.white, size: 18),
       );
 }
 
@@ -167,11 +199,29 @@ class _ActionBtn extends StatelessWidget {
   Widget build(BuildContext context) => GestureDetector(
         onTap: action.onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: action.primary ? kPrimary : kSurface,
+            gradient: action.primary
+                ? const LinearGradient(
+                    colors: [Color(0xFF7C3AED), Color(0xFF9333EA)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  )
+                : null,
+            color: action.primary ? null : const Color(0xFF1A1A2E),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: action.primary ? kPrimary : kBorder),
+            border: action.primary
+                ? null
+                : Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            boxShadow: action.primary
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ]
+                : null,
           ),
           child: Text(action.label,
               style: GoogleFonts.inter(
@@ -186,22 +236,53 @@ class _MetaChip extends StatelessWidget {
   const _MetaChip({required this.item});
   final ChatMetaChip item;
 
+  Color _chipColor() {
+    final v = item.value.toLowerCase();
+    if (v.contains('online') || v.contains('healthy') || v.contains('good') || v.contains('active')) {
+      return const Color(0xFF10B981);
+    }
+    if (v.contains('offline') || v.contains('down') || v.contains('poor') || v.contains('critical')) {
+      return const Color(0xFFEF4444);
+    }
+    if (v.contains('degraded') || v.contains('weak') || v.contains('slow')) {
+      return const Color(0xFFF59E0B);
+    }
+    return const Color(0xFF8B5CF6);
+  }
+
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-        decoration: BoxDecoration(
-          color: kPrimary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: kPrimary.withValues(alpha: 0.2)),
-        ),
-        child: Text(
-          '${item.label}: ${item.value}',
-          style: GoogleFonts.inter(
-              color: kPrimaryLight,
-              fontWeight: FontWeight.w600,
-              fontSize: 11),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final color = _chipColor();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '${item.label}: ${item.value}',
+            style: GoogleFonts.inter(
+                color: color,
+                fontWeight: FontWeight.w700,
+                fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ── Typing indicator ─────────────────────────────────────────────────────────

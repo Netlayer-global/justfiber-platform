@@ -60,86 +60,107 @@ class SupportScreen extends StatelessWidget {
                       builder: (_) => const SupportAssistantScreen()),
                 ),
                 haptic: true,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(kRCard),
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [kAccent, kAccentDeep],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF7C3AED), Color(0xFF9333EA), Color(0xFFA855F7)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(kRCard),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF7C3AED).withValues(alpha: 0.35),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
                       ),
-                    ),
-                    child: Stack(
-                      children: [
-                        Positioned(
-                          right: -50,
-                          top: -50,
-                          child: Container(
-                            width: 160,
-                            height: 160,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withValues(alpha: 0.06),
+                    ],
+                  ),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        right: -40,
+                        top: -40,
+                        child: Container(
+                          width: 140,
+                          height: 140,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withValues(alpha: 0.06),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: -30,
+                        bottom: -30,
+                        child: Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withValues(alpha: 0.04),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(22),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.2)),
+                              ),
+                              child: const Icon(
+                                  Icons.chat_bubble_rounded,
+                                  color: Colors.white,
+                                  size: 26),
                             ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(22),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 52,
-                                height: 52,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.18),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                      color: Colors.white
-                                          .withValues(alpha: 0.25)),
-                                ),
-                                child: const Icon(
-                                    Icons.chat_bubble_rounded,
-                                    color: Colors.white,
-                                    size: 24),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Chat with us',
-                                      style: GoogleFonts.inter(
-                                        color: Colors.white,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: -0.3,
-                                      ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Chat with us',
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.3,
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Get instant help with your connection, billing, or Wi-Fi',
-                                      style: GoogleFonts.inter(
-                                        color: Colors.white
-                                            .withValues(alpha: 0.85),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        height: 1.4,
-                                      ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Get instant help with your connection, billing, or Wi-Fi',
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white.withValues(alpha: 0.8),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      height: 1.4,
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 8),
-                              const Icon(Icons.arrow_forward_rounded,
-                                  color: Colors.white, size: 20),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.arrow_forward_rounded,
+                                  color: Colors.white, size: 18),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
