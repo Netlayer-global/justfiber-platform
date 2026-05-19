@@ -904,6 +904,7 @@ adminCatalogRouter.post(
         $set: {
           key: configKey,
           category: "settings",
+          valueType: "json",
           value: { ...currentValue, wifiHeroImageUrl: imageUrl },
           updatedBy: req.admin._id
         }
@@ -926,7 +927,9 @@ adminCatalogRouter.delete(
       { key: configKey },
       {
         $set: {
-          value: { ...currentValue, wifiHeroImageUrl: "" }
+          value: { ...currentValue, wifiHeroImageUrl: "" },
+          valueType: "json",
+          category: "settings"
         }
       },
       { upsert: true, new: true }
