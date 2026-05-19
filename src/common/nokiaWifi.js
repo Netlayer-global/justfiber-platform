@@ -27,7 +27,8 @@ export function buildNokiaSsidPaths(kind) {
 export function buildNokiaPasswordPaths(kind) {
   return (NOKIA_WIFI_SLOTS[kind] || []).flatMap((index) => [
     `${buildWlanBase(index)}.KeyPassphrase`,
-    `${buildWlanBase(index)}.PreSharedKey.1.KeyPassphrase`
+    `${buildWlanBase(index)}.PreSharedKey.1.KeyPassphrase`,
+    `${buildWlanBase(index)}.PreSharedKey.1.PreSharedKey`
   ]);
 }
 

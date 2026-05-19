@@ -246,11 +246,14 @@ function discoverDynamicConfigPaths(summary, kind) {
       return (
         (
           normalizedPath.endsWith(".keypassphrase") ||
-          normalizedPath.endsWith(".presharedkey.1.keypassphrase")
+          normalizedPath.endsWith(".presharedkey.1.keypassphrase") ||
+          normalizedPath.endsWith(".presharedkey.1.presharedkey")
         ) &&
         (
           normalizedPath.includes(".wlanconfiguration.1.") ||
+          normalizedPath.includes(".wlanconfiguration.3.") ||
           normalizedPath.includes(".wlanconfiguration.5.") ||
+          normalizedPath.includes(".wlanconfiguration.7.") ||
           normalizedPath.includes(".accesspoint.1.") ||
           normalizedPath.includes(".accesspoint.5.")
         )
@@ -260,11 +263,14 @@ function discoverDynamicConfigPaths(summary, kind) {
       return (
         (
           normalizedPath.endsWith(".keypassphrase") ||
-          normalizedPath.endsWith(".presharedkey.1.keypassphrase")
+          normalizedPath.endsWith(".presharedkey.1.keypassphrase") ||
+          normalizedPath.endsWith(".presharedkey.1.presharedkey")
         ) &&
         (
           normalizedPath.includes(".wlanconfiguration.2.") ||
+          normalizedPath.includes(".wlanconfiguration.4.") ||
           normalizedPath.includes(".wlanconfiguration.6.") ||
+          normalizedPath.includes(".wlanconfiguration.8.") ||
           normalizedPath.includes(".accesspoint.2.") ||
           normalizedPath.includes(".accesspoint.5.") ||
           normalizedPath.includes(".accesspoint.6.")
