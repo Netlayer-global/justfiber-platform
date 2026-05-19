@@ -1137,12 +1137,27 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text(
-                            'Rs ${p.monthlyPrice.toStringAsFixed(0)}',
-                            style: GoogleFonts.inter(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 16,
-                                color: selected ? kPrimaryLight : Colors.white),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                'Rs ${p.monthlyPrice.toStringAsFixed(0)}',
+                                style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 16,
+                                    color: selected ? kPrimaryLight : Colors.white),
+                              ),
+                              if (p.pricesExcludeGst)
+                                Text(
+                                  ' +GST',
+                                  style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 10,
+                                      color: kTextMuted),
+                                ),
+                            ],
                           ),
                           if (selected)
                             Container(
@@ -1188,7 +1203,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                 _row('Plan', '$planSpeed Mbps'),
                 _row('Duration', _termLabel(billingTerm)),
                 _row('Amount',
-                    'Rs ${(selectedPlan?.monthlyPrice ?? plan.monthlyPrice).toStringAsFixed(0)}'),
+                    'Rs ${(selectedPlan?.monthlyPrice ?? plan.monthlyPrice).toStringAsFixed(0)}${(selectedPlan ?? plan).pricesExcludeGst ? ' +GST' : ''}'),
                 _row('Billing', _termBillingCaption(billingTerm), last: true),
               ],
             ),

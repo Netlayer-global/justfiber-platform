@@ -21,6 +21,7 @@ interface EditFormState {
   visibleInCustomerApp: boolean
   visibleInSalesApp: boolean
   active: boolean
+  pricesExcludeGst: boolean
   // Merchandising / template fields
   subtitle: string
   badges: string
@@ -62,6 +63,7 @@ export default function PlansPage() {
     visibleInCustomerApp: true,
     visibleInSalesApp: true,
     active: true,
+    pricesExcludeGst: true,
     subtitle: '',
     badges: '',
     highlightFeatures: '',
@@ -130,6 +132,7 @@ export default function PlansPage() {
       visibleInCustomerApp: plan.visibleInCustomerApp !== false,
       visibleInSalesApp: plan.visibleInSalesApp !== false,
       active: plan.status !== 'inactive',
+      pricesExcludeGst: plan.pricesExcludeGst !== false,
       subtitle: plan.merchandising?.subtitle || '',
       badges: (plan.merchandising?.badges || []).join(', '),
       highlightFeatures: (plan.merchandising?.highlightFeatures || []).join(', '),
@@ -160,6 +163,7 @@ export default function PlansPage() {
         name: editForm.name,
         price: Number(editForm.price) || 0,
         billingPeriodMonths: Number(editForm.billingPeriodMonths) || 1,
+        pricesExcludeGst: editForm.pricesExcludeGst,
         provisioning: {
           ...editingPlan.provisioning,
           jazeGroupId: editForm.jazeGroupId,
@@ -444,6 +448,37 @@ export default function PlansPage() {
                   className="input w-full"
                   placeholder="0"
                 />
+              </div>
+
+              {/* GST Toggle */}
+              <div className="flex items-center gap-3 py-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Pricing
+                </label>
+                <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setEditForm((f) => ({ ...f, pricesExcludeGst: false }))}
+                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                      !editForm.pricesExcludeGst
+                        ? 'bg-purple-700 text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    Include GST
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditForm((f) => ({ ...f, pricesExcludeGst: true }))}
+                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                      editForm.pricesExcludeGst
+                        ? 'bg-purple-700 text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    Exclude GST
+                  </button>
+                </div>
               </div>
 
               {/* Duration */}
