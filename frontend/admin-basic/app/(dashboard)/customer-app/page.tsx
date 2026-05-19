@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { adminAPI } from '@/lib/api'
+import { adminAPI, getApiBaseUrl } from '@/lib/api'
 import type { AppBanner } from '@/lib/types'
 import {
   Image as ImageIcon,
@@ -15,6 +15,13 @@ import {
   X,
 } from 'lucide-react'
 import { toast } from 'sonner'
+
+// Helper to resolve relative image URLs to full API URLs
+function resolveImageUrl(url: string): string {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  return `${getApiBaseUrl()}${url}`
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -373,7 +380,7 @@ export default function CustomerAppPage() {
           <div className="relative group">
             <div className="h-44 overflow-hidden rounded-xl bg-gray-900">
               <img
-                src={wifiHeroUrl}
+                src={resolveImageUrl(wifiHeroUrl)}
                 alt="Wi-Fi Hero"
                 className="h-full w-full object-cover opacity-90"
               />
@@ -458,7 +465,7 @@ export default function CustomerAppPage() {
           <div className="relative group">
             <div className="h-44 overflow-hidden rounded-xl bg-gray-900">
               <img
-                src={loginHeroUrl}
+                src={resolveImageUrl(loginHeroUrl)}
                 alt="Login Hero"
                 className="h-full w-full object-cover opacity-90"
               />
@@ -542,7 +549,7 @@ export default function CustomerAppPage() {
           <div className="relative group">
             <div className="h-44 overflow-hidden rounded-xl bg-gray-900">
               <img
-                src={newUserHeroUrl}
+                src={resolveImageUrl(newUserHeroUrl)}
                 alt="New User Hero"
                 className="h-full w-full object-cover opacity-90"
               />
