@@ -536,18 +536,48 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Banner area (clean image, no overlay) ──────
+          // ── Plan name + subtitle above banner ──────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  plan.name,
+                  style: GoogleFonts.inter(
+                    color: kText,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.inter(
+                    color: kTextMuted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Banner area (clean image) ──────
           if (bannerUrl.isNotEmpty)
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(28)),
-              child: CachedNetworkImage(
-                imageUrl: bannerUrl,
-                height: 160,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                placeholder: (_, __) => Container(color: kSurface, height: 160),
-                errorWidget: (_, __, ___) => const SizedBox.shrink(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: CachedNetworkImage(
+                  imageUrl: bannerUrl,
+                  height: 160,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Container(color: kSurface, height: 160),
+                  errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                ),
               ),
             ),
 
@@ -569,14 +599,23 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 10, vertical: 5),
                                 decoration: BoxDecoration(
-                                  color: kAccentSoft,
+                                  color: b == 'Recommended'
+                                      ? const Color(0xFF2563EB).withValues(alpha: 0.12)
+                                      : kAccentSoft,
                                   borderRadius:
                                       BorderRadius.circular(kRPill),
+                                  border: Border.all(
+                                    color: b == 'Recommended'
+                                        ? const Color(0xFF2563EB).withValues(alpha: 0.3)
+                                        : kAccent.withValues(alpha: 0.2),
+                                  ),
                                 ),
                                 child: Text(
                                   b,
                                   style: GoogleFonts.inter(
-                                    color: kAccent,
+                                    color: b == 'Recommended'
+                                        ? const Color(0xFF2563EB)
+                                        : kAccent,
                                     fontSize: 10,
                                     fontWeight: FontWeight.w800,
                                     letterSpacing: 0.3,
@@ -672,59 +711,6 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                     ),
                   ],
                 ),
-
-                // OTT apps row (if any)
-                if (plan.ottApps.isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      ...plan.ottApps.take(4).map((app) => Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: kSurfaceLow,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: kBorderSoft),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  app.length > 2
-                                      ? app.substring(0, 2).toUpperCase()
-                                      : app.toUpperCase(),
-                                  style: GoogleFonts.inter(
-                                    color: kTextDim,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          )),
-                      if (plan.ottApps.length > 4)
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: kSurfaceLow,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: kBorderSoft),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '+${plan.ottApps.length - 4}',
-                              style: GoogleFonts.inter(
-                                color: kTextMuted,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
 
                 const SizedBox(height: 16),
 

@@ -341,18 +341,51 @@ class _SpeedCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Plan name + speed subtitle above banner
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$speedMbps Mbps Plan',
+                    style: GoogleFonts.inter(
+                      color: kText,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${speedMbps} Mbps Fiber Broadband',
+                    style: GoogleFonts.inter(
+                      color: kTextMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             // Banner image (if available)
             if (bannerUrl.isNotEmpty)
               ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(28)),
-                child: CachedNetworkImage(
+                borderRadius: BorderRadius.circular(16),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: CachedNetworkImage(
                   imageUrl: bannerUrl,
                   height: 140,
                   width: double.infinity,
                   fit: BoxFit.cover,
                   placeholder: (_, __) => Container(color: kSurface, height: 140),
                   errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                    ),
+                  ),
                 ),
               ),
 
@@ -373,14 +406,23 @@ class _SpeedCard extends StatelessWidget {
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: kAccentSoft,
+                                    color: b == 'Recommended'
+                                        ? const Color(0xFF2563EB).withValues(alpha: 0.12)
+                                        : kAccentSoft,
                                     borderRadius:
                                         BorderRadius.circular(kRPill),
+                                    border: Border.all(
+                                      color: b == 'Recommended'
+                                          ? const Color(0xFF2563EB).withValues(alpha: 0.3)
+                                          : kAccent.withValues(alpha: 0.2),
+                                    ),
                                   ),
                                   child: Text(
                                     b,
                                     style: GoogleFonts.inter(
-                                      color: kAccent,
+                                      color: b == 'Recommended'
+                                          ? const Color(0xFF2563EB)
+                                          : kAccent,
                                       fontSize: 10,
                                       fontWeight: FontWeight.w800,
                                     ),
