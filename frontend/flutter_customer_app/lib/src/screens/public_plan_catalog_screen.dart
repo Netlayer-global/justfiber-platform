@@ -379,10 +379,10 @@ class _SpeedCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                     child: CachedNetworkImage(
                   imageUrl: bannerUrl,
-                  height: 140,
+                  height: 200,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(color: kSurface, height: 140),
+                  placeholder: (_, __) => Container(color: kSurface, height: 200),
                   errorWidget: (_, __, ___) => const SizedBox.shrink(),
                     ),
                   ),
