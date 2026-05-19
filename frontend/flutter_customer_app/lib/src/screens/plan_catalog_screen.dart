@@ -572,10 +572,10 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                 borderRadius: BorderRadius.circular(16),
                 child: CachedNetworkImage(
                   imageUrl: bannerUrl,
-                  height: 200,
+                  height: 260,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(color: kSurface, height: 200),
+                  placeholder: (_, __) => Container(color: kSurface, height: 260),
                   errorWidget: (_, __, ___) => const SizedBox.shrink(),
                 ),
               ),
