@@ -72,20 +72,20 @@ class ServiceHubScreen extends StatelessWidget {
               errorBuilder: (_, __, ___) => Container(color: kBg),
             ),
           ),
-          // ── Gradient overlay — dark at bottom, subtle at top ──
+          // ── Gradient overlay — smooth fade to dark at bottom ──
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    kBg.withValues(alpha: 0.85),
-                    kBg.withValues(alpha: 0.5),
+                    kBg,
+                    kBg.withValues(alpha: 0.92),
+                    kBg.withValues(alpha: 0.4),
                     Colors.transparent,
                     Colors.transparent,
-                    Colors.transparent,
-                    Colors.black.withValues(alpha: 0.1),
+                    Colors.black.withValues(alpha: 0.08),
                   ],
-                  stops: const [0.0, 0.3, 0.45, 0.65, 0.85, 1.0],
+                  stops: const [0.0, 0.25, 0.42, 0.55, 0.8, 1.0],
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
                 ),
@@ -94,148 +94,163 @@ class ServiceHubScreen extends StatelessWidget {
           ),
           // ── Scrollable content ────────────────────────────────
           ListView(
-            padding: EdgeInsets.only(top: topPadding + 16, bottom: 140),
+            padding: EdgeInsets.only(top: topPadding, bottom: 140),
             children: [
-              // Title
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 22),
-                child: Text(
-                  'Services',
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.6,
-                  ),
-                ),
-              ),
-
-              // Spacer to push content down — image visible in top half
+              // Spacer — let the image breathe
               SizedBox(height: screenHeight * 0.52),
 
-              // ── Wi-Fi info overlay on image ──────────────────────
+              // ── Wi-Fi info overlay ──────────────────────────────
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 22),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Status row
+                    // Status + device count row
                     Row(
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 5),
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.15),
+                            color: Colors.white.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(kRPill),
                             border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.2)),
+                                color: Colors.white.withValues(alpha: 0.15)),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
-                                width: 7,
-                                height: 7,
+                                width: 8,
+                                height: 8,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: isActive ? kSuccess : kDanger,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: (isActive ? kSuccess : kDanger)
+                                          .withValues(alpha: 0.5),
+                                      blurRadius: 6,
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 7),
                               Text(
                                 isActive ? 'Active' : 'Offline',
                                 style: GoogleFonts.inter(
                                   color: Colors.white,
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const Spacer(),
-                        Text(
-                          '$connectedCount devices',
-                          style: GoogleFonts.inter(
-                            color: Colors.white.withValues(alpha: 0.75),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                        const SizedBox(width: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(kRPill),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.devices_rounded,
+                                  color: Colors.white.withValues(alpha: 0.7),
+                                  size: 13),
+                              const SizedBox(width: 5),
+                              Text(
+                                '$connectedCount connected',
+                                style: GoogleFonts.inter(
+                                  color: Colors.white.withValues(alpha: 0.7),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 20),
 
-                    // SSID
-                    Text(
-                      'WI-FI NETWORK',
-                      style: GoogleFonts.inter(
-                        color: Colors.white.withValues(alpha: 0.5),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.6,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
+                    // SSID — large and bold
                     Text(
                       ssid,
                       style: GoogleFonts.inter(
                         color: Colors.white,
-                        fontSize: 30,
+                        fontSize: 34,
                         fontWeight: FontWeight.w900,
-                        letterSpacing: -0.5,
-                        height: 1.1,
+                        letterSpacing: -0.8,
+                        height: 1.05,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
                       planName,
                       style: GoogleFonts.inter(
-                        color: Colors.white.withValues(alpha: 0.7),
-                        fontSize: 13,
+                        color: Colors.white.withValues(alpha: 0.6),
+                        fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 28),
 
-                    // Wi-Fi Settings CTA
+                    // Wi-Fi Settings CTA — modern glass button
                     PressableScale(
                       onTap: () =>
                           _push(context, appState, const WifiSettingsScreen()),
                       haptic: true,
                       child: Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(kRButton),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF7C3AED), Color(0xFF9333EA)],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.15),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
+                              color: const Color(0xFF7C3AED)
+                                  .withValues(alpha: 0.35),
+                              blurRadius: 16,
+                              offset: const Offset(0, 6),
                             ),
                           ],
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
+                            const Icon(Icons.wifi_rounded,
+                                color: Colors.white, size: 18),
+                            const SizedBox(width: 10),
                             Text(
                               'Wi-Fi Settings',
                               style: GoogleFonts.inter(
-                                color: kAccentDeep,
+                                color: Colors.white,
                                 fontSize: 15,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
-                            const SizedBox(width: 6),
-                            const Icon(Icons.arrow_forward_rounded,
-                                color: kAccentDeep, size: 16),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.arrow_forward_rounded,
+                                  color: Colors.white, size: 14),
+                            ),
                           ],
                         ),
                       ),
@@ -243,21 +258,30 @@ class ServiceHubScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 36),
 
-              // ── Quick actions ──────────────────────────────────
+              // ── Quick actions — modern cards ──────────────────────
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 22),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _Eyebrow('MANAGE'),
+                    Text(
+                      'MANAGE',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white.withValues(alpha: 0.4),
+                        letterSpacing: 1.6,
+                      ),
+                    ),
                     const SizedBox(height: 14),
                     Container(
                       decoration: BoxDecoration(
-                        color: kSurface,
+                        color: kSurface.withValues(alpha: 0.85),
                         borderRadius: BorderRadius.circular(kRCard),
-                        border: Border.all(color: kBorderSoft),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.06)),
                       ),
                       child: Column(
                         children: [
