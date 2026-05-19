@@ -97,7 +97,7 @@ class ServiceHubScreen extends StatelessWidget {
             padding: EdgeInsets.only(top: topPadding, bottom: 140),
             children: [
               // Spacer — let the image breathe
-              SizedBox(height: screenHeight * 0.52),
+              SizedBox(height: screenHeight * 0.58),
 
               // ── Wi-Fi info overlay ──────────────────────────────
               Padding(
