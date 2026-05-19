@@ -188,6 +188,137 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
                     ),
                     const SizedBox(height: 20),
 
+                    // ── Quick Access Buttons ─────────────────────────
+                    Row(
+                      children: [
+                        Expanded(
+                          child: PressableScale(
+                            onTap: () {
+                              if (useJaze && jazeInvoices.isNotEmpty) {
+                                final session = appState.session;
+                                if (session == null) return;
+                                final base = appState.api.baseUrl.replaceAll(RegExp(r'/$'), '');
+                                final url = '$base/api/v1/customer/billing/jaze/invoice-pdf?invoiceId=${jazeInvoices.first.invoiceId}';
+                                Navigator.of(context).push(MaterialPageRoute(
+                                  builder: (_) => _InvoiceViewerScreen(
+                                    title: 'Invoice #${jazeInvoices.first.invoiceId}',
+                                    url: url,
+                                    accessToken: session.accessToken,
+                                  ),
+                                ));
+                              } else if (!useJaze && latestInvoice != null) {
+                                final docUrl = latestInvoice.pdfUrl.isNotEmpty
+                                    ? latestInvoice.pdfUrl
+                                    : latestInvoice.viewUrl;
+                                if (docUrl.isNotEmpty) {
+                                  _openDocument(context, appState,
+                                      'Invoice ${latestInvoice.invoiceNumber}', docUrl);
+                                }
+                              }
+                            },
+                            haptic: true,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              decoration: BoxDecoration(
+                                color: kSurface,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: kBorderSoft),
+                              ),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: kAccent.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(Icons.receipt_long_rounded,
+                                        color: kAccent, size: 20),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    'Latest Invoice',
+                                    style: GoogleFonts.inter(
+                                      color: kText,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    useJaze && jazeInvoices.isNotEmpty
+                                        ? '#${jazeInvoices.first.invoiceId}'
+                                        : (latestInvoice != null
+                                            ? '#${latestInvoice.invoiceNumber}'
+                                            : 'None'),
+                                    style: GoogleFonts.inter(
+                                      color: kTextMuted,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: PressableScale(
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) => const PaymentsHistoryScreen()),
+                            ),
+                            haptic: true,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              decoration: BoxDecoration(
+                                color: kSurface,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: kBorderSoft),
+                              ),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: kSuccess.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(Icons.payments_rounded,
+                                        color: kSuccess, size: 20),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    'Latest Payment',
+                                    style: GoogleFonts.inter(
+                                      color: kText,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    latestPayment != null
+                                        ? 'Rs ${latestPayment.amount.toStringAsFixed(0)}'
+                                        : 'None',
+                                    style: GoogleFonts.inter(
+                                      color: kTextMuted,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
                     // ── Latest Invoice Receipt ───────────────────────
                     _sectionLabel('LATEST INVOICE'),
                     const SizedBox(height: 8),
