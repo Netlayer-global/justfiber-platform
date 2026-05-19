@@ -317,137 +317,56 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
 
-                    // ── Latest Invoice Receipt ───────────────────────
-                    _sectionLabel('LATEST INVOICE'),
-                    const SizedBox(height: 8),
-                    if (useJaze && jazeInvoices.isNotEmpty)
-                      _JazeInvoiceCard(
-                        invoice: jazeInvoices.first,
-                        onDownloadPdf: () async {
-                          final session = appState.session;
-                          if (session == null) return;
-                          final base = appState.api.baseUrl.replaceAll(RegExp(r'/$'), '');
-                          final url = '$base/api/v1/customer/billing/jaze/invoice-pdf?invoiceId=${jazeInvoices.first.invoiceId}';
-                          if (!context.mounted) return;
-                          await Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => _InvoiceViewerScreen(
-                              title: 'Invoice #${jazeInvoices.first.invoiceId}',
-                              url: url,
-                              accessToken: session.accessToken,
-                            ),
-                          ));
+                    // ── All Invoices button ──────────────────────────
+                    if ((useJaze && jazeInvoices.length > 1) || billing.invoices.length > 1)
+                      PressableScale(
+                        onTap: () {
+                          if (useJaze && jazeInvoices.length > 1) {
+                            Navigator.of(context).push(MaterialPageRoute(
+                              builder: (_) => _AllJazeInvoicesScreen(
+                                invoices: jazeInvoices,
+                                apiBaseUrl: appState.api.baseUrl,
+                                accessToken: appState.session?.accessToken ?? '',
+                              ),
+                            ));
+                          } else {
+                            Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => const AllInvoicesScreen()));
+                          }
                         },
-                      ),
-                    if (useJaze && jazeInvoices.length > 1) ...[
-                      const SizedBox(height: 12),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 18),
-                        child: GestureDetector(
-                          onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => _AllJazeInvoicesScreen(
-                              invoices: jazeInvoices,
-                              apiBaseUrl: appState.api.baseUrl,
-                              accessToken: appState.session?.accessToken ?? '',
-                            ),
-                          )),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            decoration: BoxDecoration(
-                              color: kSurface,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: kBorder),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.receipt_long_rounded, color: kPrimaryLight, size: 16),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'View All ${jazeInvoices.length} Invoices',
-                                  style: GoogleFonts.inter(color: kPrimaryLight, fontWeight: FontWeight.w700, fontSize: 13),
-                                ),
-                                const SizedBox(width: 4),
-                                const Icon(Icons.chevron_right_rounded, color: kPrimaryLight, size: 18),
-                              ],
-                            ),
+                        haptic: true,
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          decoration: BoxDecoration(
+                            color: kSurface,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: kBorderSoft),
                           ),
-                        ),
-                      ),
-                    ],
-                    if (!useJaze && latestInvoice != null)
-                      _ReceiptCard(
-                        invoice: latestInvoice,
-                        onOpen: (latestInvoice.pdfUrl.isNotEmpty ||
-                                latestInvoice.viewUrl.isNotEmpty)
-                            ? () => _openDocument(
-                                  context,
-                                  appState,
-                                  'Invoice ${latestInvoice.invoiceNumber}',
-                                  latestInvoice.pdfUrl.isNotEmpty
-                                      ? latestInvoice.pdfUrl
-                                      : latestInvoice.viewUrl,
-                                )
-                            : null,
-                      )
-                    else
-                      _card(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Text(
-                            'No invoice generated yet.',
-                            style:
-                                GoogleFonts.inter(color: kMuted, fontSize: 13),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.receipt_long_rounded,
+                                  color: kAccent, size: 16),
+                              const SizedBox(width: 8),
+                              Text(
+                                'View All Invoices',
+                                style: GoogleFonts.inter(
+                                    color: kAccent,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.chevron_right_rounded,
+                                  color: kAccent, size: 18),
+                            ],
                           ),
                         ),
                       ),
 
                     const SizedBox(height: 20),
-
-                    // ── Latest Payment ───────────────────────────────
-                    _sectionLabel('LATEST PAYMENT'),
-                    const SizedBox(height: 8),
-                    if (latestPayment == null)
-                      _card(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Text(
-                            'No payment recorded yet.',
-                            style:
-                                GoogleFonts.inter(color: kMuted, fontSize: 13),
-                          ),
-                        ),
-                      )
-                    else
-                      _PaymentReceiptCard(
-                        payment: latestPayment,
-                        onOpen: (latestPayment.pdfUrl.isNotEmpty ||
-                                latestPayment.viewUrl.isNotEmpty)
-                            ? () => _openDocument(
-                                  context,
-                                  appState,
-                                  'Receipt',
-                                  latestPayment.pdfUrl.isNotEmpty
-                                      ? latestPayment.pdfUrl
-                                      : latestPayment.viewUrl,
-                                )
-                            : null,
-                      ),
-
-                    const SizedBox(height: 20),
-
-                    // ── Show All Invoices (year-filtered archive) ────
-                    if (billing.invoices.length > 1) ...[
-                      _ShowAllInvoicesCard(
-                        count: billing.invoices.length,
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (_) => const AllInvoicesScreen()),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                    ],
 
                     // ── More Options ─────────────────────────────────
                     _sectionLabel('MORE'),
