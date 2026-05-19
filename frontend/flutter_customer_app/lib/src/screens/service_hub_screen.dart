@@ -43,7 +43,46 @@ class ServiceHubScreen extends StatelessWidget {
         color: kAccent,
         backgroundColor: const Color(0xFF0A0A14),
         onRefresh: appState.refresh,
-        child: ListView(
+        child: Stack(
+          children: [
+            // ── Full-screen hero background image ──────────────────
+            if (appState.wifiHeroImageUrl.isNotEmpty)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: MediaQuery.of(context).size.height * 0.48,
+                child: Image.network(
+                  appState.wifiHeroImageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              ),
+            // Gradient fade from image to page background
+            if (appState.wifiHeroImageUrl.isNotEmpty)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: MediaQuery.of(context).size.height * 0.48,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        kBg,
+                        kBg.withValues(alpha: 0.85),
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.4),
+                      ],
+                      stops: const [0.0, 0.05, 0.3, 1.0],
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                    ),
+                  ),
+                ),
+              ),
+            // ── Scrollable content ────────────────────────────────
+            ListView(
           padding: EdgeInsets.only(
             top: MediaQuery.of(context).padding.top + 16,
             bottom: 140,
@@ -55,7 +94,9 @@ class ServiceHubScreen extends StatelessWidget {
               child: Text(
                 'Services',
                 style: GoogleFonts.inter(
-                  color: kText,
+                  color: appState.wifiHeroImageUrl.isNotEmpty
+                      ? Colors.white
+                      : kText,
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.6,
@@ -64,77 +105,33 @@ class ServiceHubScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // ── Hero card — accent gradient with Wi-Fi info ──────
+            // ── Hero card — Wi-Fi info overlay ──────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 22),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(kRCard),
                 child: Container(
-                  // Taller when hero image is present for full-screen feel
-                  height: appState.wifiHeroImageUrl.isNotEmpty ? 260 : null,
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [kAccent, kAccentDeep],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                  padding: const EdgeInsets.all(22),
+                  decoration: BoxDecoration(
+                    // Glass card when image is present, solid gradient otherwise
+                    gradient: appState.wifiHeroImageUrl.isNotEmpty
+                        ? null
+                        : const LinearGradient(
+                            colors: [kAccent, kAccentDeep],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                    color: appState.wifiHeroImageUrl.isNotEmpty
+                        ? Colors.black.withValues(alpha: 0.35)
+                        : null,
+                    borderRadius: BorderRadius.circular(kRCard),
+                    border: appState.wifiHeroImageUrl.isNotEmpty
+                        ? Border.all(
+                            color: Colors.white.withValues(alpha: 0.12))
+                        : null,
                   ),
-                  child: Stack(
-                    children: [
-                      // Background hero image (admin-uploadable)
-                      if (appState.wifiHeroImageUrl.isNotEmpty)
-                        Positioned.fill(
-                          child: Image.network(
-                            appState.wifiHeroImageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                          ),
-                        ),
-                      // Dark gradient overlay — stronger at bottom for text readability
-                      if (appState.wifiHeroImageUrl.isNotEmpty)
-                        Positioned.fill(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  Colors.black.withValues(alpha: 0.75),
-                                  Colors.black.withValues(alpha: 0.1),
-                                  Colors.black.withValues(alpha: 0.3),
-                                ],
-                                stops: const [0.0, 0.4, 1.0],
-                                begin: Alignment.bottomCenter,
-                                end: Alignment.topCenter,
-                              ),
-                            ),
-                          ),
-                        ),
-                      // Decorative circle (only when no image)
-                      if (appState.wifiHeroImageUrl.isEmpty)
-                      Positioned(
-                        right: -60,
-                        top: -60,
-                        child: Container(
-                          width: 180,
-                          height: 180,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white.withValues(alpha: 0.06),
-                          ),
-                        ),
-                      ),
-                      // Content positioned at bottom when image is present
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        top: appState.wifiHeroImageUrl.isNotEmpty ? null : 0,
-                        child: Padding(
-                        padding: const EdgeInsets.all(22),
-                        child: Column(
+                  child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: appState.wifiHeroImageUrl.isNotEmpty
-                              ? MainAxisSize.min
-                              : MainAxisSize.max,
                           children: [
                             // Status row
                             Row(
@@ -256,10 +253,6 @@ class ServiceHubScreen extends StatelessWidget {
                               ),
                             ),
                           ],
-                        ),
-                      ),
-                      ),
-                    ],
                   ),
                 ),
               ),
@@ -302,6 +295,8 @@ class ServiceHubScreen extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+          ],
             ),
           ],
         ),
