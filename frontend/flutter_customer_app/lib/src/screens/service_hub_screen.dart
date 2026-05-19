@@ -258,7 +258,7 @@ class ServiceHubScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 36),
+              const SizedBox(height: 48),
 
               // ── Quick actions — modern cards ──────────────────────
               Padding(
@@ -278,10 +278,10 @@ class ServiceHubScreen extends StatelessWidget {
                     const SizedBox(height: 14),
                     Container(
                       decoration: BoxDecoration(
-                        color: kSurface.withValues(alpha: 0.85),
+                        color: const Color(0xFF1A1A2E),
                         borderRadius: BorderRadius.circular(kRCard),
                         border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.06)),
+                            color: Colors.white.withValues(alpha: 0.08)),
                       ),
                       child: Column(
                         children: [
