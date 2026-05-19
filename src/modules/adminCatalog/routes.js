@@ -851,6 +851,24 @@ try {
   console.warn("[WifiHero] Could not create upload dir:", e.message);
 }
 
+const LOGIN_HERO_UPLOAD_DIR = join(process.cwd(), "public", "uploads", "login-hero");
+try {
+  if (!existsSync(LOGIN_HERO_UPLOAD_DIR)) {
+    mkdirSync(LOGIN_HERO_UPLOAD_DIR, { recursive: true });
+  }
+} catch (e) {
+  console.warn("[LoginHero] Could not create upload dir:", e.message);
+}
+
+const NEW_USER_HERO_UPLOAD_DIR = join(process.cwd(), "public", "uploads", "new-user-hero");
+try {
+  if (!existsSync(NEW_USER_HERO_UPLOAD_DIR)) {
+    mkdirSync(NEW_USER_HERO_UPLOAD_DIR, { recursive: true });
+  }
+} catch (e) {
+  console.warn("[NewUserHero] Could not create upload dir:", e.message);
+}
+
 adminCatalogRouter.post(
   "/catalog/wifi-hero/upload",
   requirePermission(permissions.configUpdate),
@@ -928,6 +946,182 @@ adminCatalogRouter.delete(
       {
         $set: {
           value: { ...currentValue, wifiHeroImageUrl: "" },
+          valueType: "json",
+          category: "settings"
+        }
+      },
+      { upsert: true, new: true }
+    );
+    return ok(res, { deleted: true });
+  })
+);
+
+// ─── Login Hero Image ─────────────────────────────────────────────────────────
+
+adminCatalogRouter.post(
+  "/catalog/login-hero/upload",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const contentType = req.headers["content-type"] || "";
+    if (!contentType.includes("multipart/form-data")) {
+      throw new ApiError(400, "Expected multipart/form-data");
+    }
+    const chunks = [];
+    for await (const chunk of req) { chunks.push(chunk); }
+    const body = Buffer.concat(chunks);
+    const boundaryMatch = contentType.match(/boundary=(.+)/);
+    if (!boundaryMatch) throw new ApiError(400, "Missing boundary");
+    const boundary = boundaryMatch[1].replace(/;.*$/, "").trim();
+    const boundaryBuffer = Buffer.from(`--${boundary}`);
+    const parts = [];
+    let start = 0;
+    while (true) {
+      const idx = body.indexOf(boundaryBuffer, start);
+      if (idx === -1) break;
+      if (start > 0) parts.push(body.slice(start, idx - 2));
+      start = idx + boundaryBuffer.length + 2;
+    }
+    let fileBuffer = null;
+    let fileName = "login-hero";
+    for (const part of parts) {
+      const headerEnd = part.indexOf("\r\n\r\n");
+      if (headerEnd === -1) continue;
+      const headers = part.slice(0, headerEnd).toString();
+      if (headers.includes('name="image"')) {
+        fileBuffer = part.slice(headerEnd + 4);
+        const fnMatch = headers.match(/filename="([^"]+)"/);
+        if (fnMatch) fileName = fnMatch[1];
+        break;
+      }
+    }
+    if (!fileBuffer || fileBuffer.length === 0) throw new ApiError(400, "No image file provided");
+    const ext = extname(fileName) || ".jpg";
+    const savedName = `login-hero-${Date.now()}${ext}`;
+    const { writeFileSync } = await import("fs");
+    writeFileSync(join(LOGIN_HERO_UPLOAD_DIR, savedName), fileBuffer);
+    const imageUrl = `/uploads/login-hero/${savedName}`;
+
+    const configKey = "settings.customer_app";
+    const existing = await SystemConfig.findOne({ key: configKey }).lean();
+    const currentValue = existing?.value || {};
+    await SystemConfig.findOneAndUpdate(
+      { key: configKey },
+      {
+        $set: {
+          key: configKey,
+          category: "settings",
+          valueType: "json",
+          value: { ...currentValue, loginHeroImageUrl: imageUrl },
+          updatedBy: req.admin._id
+        }
+      },
+      { upsert: true, new: true }
+    );
+
+    return ok(res, { loginHeroImageUrl: imageUrl });
+  })
+);
+
+adminCatalogRouter.delete(
+  "/catalog/login-hero",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const configKey = "settings.customer_app";
+    const existing = await SystemConfig.findOne({ key: configKey }).lean();
+    const currentValue = existing?.value || {};
+    await SystemConfig.findOneAndUpdate(
+      { key: configKey },
+      {
+        $set: {
+          value: { ...currentValue, loginHeroImageUrl: "" },
+          valueType: "json",
+          category: "settings"
+        }
+      },
+      { upsert: true, new: true }
+    );
+    return ok(res, { deleted: true });
+  })
+);
+
+// ─── New User Hero Image ──────────────────────────────────────────────────────
+
+adminCatalogRouter.post(
+  "/catalog/new-user-hero/upload",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const contentType = req.headers["content-type"] || "";
+    if (!contentType.includes("multipart/form-data")) {
+      throw new ApiError(400, "Expected multipart/form-data");
+    }
+    const chunks = [];
+    for await (const chunk of req) { chunks.push(chunk); }
+    const body = Buffer.concat(chunks);
+    const boundaryMatch = contentType.match(/boundary=(.+)/);
+    if (!boundaryMatch) throw new ApiError(400, "Missing boundary");
+    const boundary = boundaryMatch[1].replace(/;.*$/, "").trim();
+    const boundaryBuffer = Buffer.from(`--${boundary}`);
+    const parts = [];
+    let start = 0;
+    while (true) {
+      const idx = body.indexOf(boundaryBuffer, start);
+      if (idx === -1) break;
+      if (start > 0) parts.push(body.slice(start, idx - 2));
+      start = idx + boundaryBuffer.length + 2;
+    }
+    let fileBuffer = null;
+    let fileName = "new-user-hero";
+    for (const part of parts) {
+      const headerEnd = part.indexOf("\r\n\r\n");
+      if (headerEnd === -1) continue;
+      const headers = part.slice(0, headerEnd).toString();
+      if (headers.includes('name="image"')) {
+        fileBuffer = part.slice(headerEnd + 4);
+        const fnMatch = headers.match(/filename="([^"]+)"/);
+        if (fnMatch) fileName = fnMatch[1];
+        break;
+      }
+    }
+    if (!fileBuffer || fileBuffer.length === 0) throw new ApiError(400, "No image file provided");
+    const ext = extname(fileName) || ".jpg";
+    const savedName = `new-user-hero-${Date.now()}${ext}`;
+    const { writeFileSync } = await import("fs");
+    writeFileSync(join(NEW_USER_HERO_UPLOAD_DIR, savedName), fileBuffer);
+    const imageUrl = `/uploads/new-user-hero/${savedName}`;
+
+    const configKey = "settings.customer_app";
+    const existing = await SystemConfig.findOne({ key: configKey }).lean();
+    const currentValue = existing?.value || {};
+    await SystemConfig.findOneAndUpdate(
+      { key: configKey },
+      {
+        $set: {
+          key: configKey,
+          category: "settings",
+          valueType: "json",
+          value: { ...currentValue, newUserHeroImageUrl: imageUrl },
+          updatedBy: req.admin._id
+        }
+      },
+      { upsert: true, new: true }
+    );
+
+    return ok(res, { newUserHeroImageUrl: imageUrl });
+  })
+);
+
+adminCatalogRouter.delete(
+  "/catalog/new-user-hero",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const configKey = "settings.customer_app";
+    const existing = await SystemConfig.findOne({ key: configKey }).lean();
+    const currentValue = existing?.value || {};
+    await SystemConfig.findOneAndUpdate(
+      { key: configKey },
+      {
+        $set: {
+          value: { ...currentValue, newUserHeroImageUrl: "" },
           valueType: "json",
           category: "settings"
         }

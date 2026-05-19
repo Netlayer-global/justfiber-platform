@@ -3541,6 +3541,58 @@ export const adminAPI = {
   },
   deleteWifiHeroImage: async () =>
     request('/api/v1/admin/catalog/wifi-hero', { method: 'DELETE' }),
+  uploadLoginHeroImage: async (file: File): Promise<ApiResponse<{ loginHeroImageUrl: string }>> => {
+    const formData = new FormData()
+    formData.append('image', file)
+    const token = getAuthToken()
+    const headers: Record<string, string> = {}
+    if (token) headers['Authorization'] = `Bearer ${token}`
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/api/v1/admin/catalog/login-hero/upload`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      })
+      if (!response.ok) {
+        const text = await response.text()
+        let parsed: any = {}
+        try { parsed = JSON.parse(text) } catch {}
+        return { success: false, error: parsed?.error?.message || parsed?.error || `Upload failed (${response.status})` }
+      }
+      const data = await response.json()
+      return { success: true, data: data?.data || data }
+    } catch (e: any) {
+      return { success: false, error: e?.message || 'Failed to upload login hero image' }
+    }
+  },
+  deleteLoginHeroImage: async () =>
+    request('/api/v1/admin/catalog/login-hero', { method: 'DELETE' }),
+  uploadNewUserHeroImage: async (file: File): Promise<ApiResponse<{ newUserHeroImageUrl: string }>> => {
+    const formData = new FormData()
+    formData.append('image', file)
+    const token = getAuthToken()
+    const headers: Record<string, string> = {}
+    if (token) headers['Authorization'] = `Bearer ${token}`
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/api/v1/admin/catalog/new-user-hero/upload`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      })
+      if (!response.ok) {
+        const text = await response.text()
+        let parsed: any = {}
+        try { parsed = JSON.parse(text) } catch {}
+        return { success: false, error: parsed?.error?.message || parsed?.error || `Upload failed (${response.status})` }
+      }
+      const data = await response.json()
+      return { success: true, data: data?.data || data }
+    } catch (e: any) {
+      return { success: false, error: e?.message || 'Failed to upload new user hero image' }
+    }
+  },
+  deleteNewUserHeroImage: async () =>
+    request('/api/v1/admin/catalog/new-user-hero', { method: 'DELETE' }),
   getCustomerAppSettings: async () =>
     request<{ wifiHeroImageUrl: string }>('/api/v1/admin/configs/settings/customer_app'),
 }

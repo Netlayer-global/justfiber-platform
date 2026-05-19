@@ -615,14 +615,24 @@ class ApiClient {
     }).toList();
   }
 
-  /// Fetches app-level assets (e.g. Wi-Fi hero image URL).
-  Future<String> fetchWifiHeroImageUrl() async {
+  /// Fetches app-level assets (e.g. hero image URLs).
+  Future<Map<String, String>> fetchAppAssets() async {
     try {
       final data = _asMap(await _request('/api/v1/customer/app-assets'));
-      final raw = (data['wifiHeroImageUrl'] ?? '').toString();
-      return _resolveImageUrl(baseUrl, raw);
+      final wifiHero = (data['wifiHeroImageUrl'] ?? '').toString();
+      final loginHero = (data['loginHeroImageUrl'] ?? '').toString();
+      final newUserHero = (data['newUserHeroImageUrl'] ?? '').toString();
+      return {
+        'wifiHeroImageUrl': _resolveImageUrl(baseUrl, wifiHero),
+        'loginHeroImageUrl': _resolveImageUrl(baseUrl, loginHero),
+        'newUserHeroImageUrl': _resolveImageUrl(baseUrl, newUserHero),
+      };
     } catch (_) {
-      return '';
+      return {
+        'wifiHeroImageUrl': '',
+        'loginHeroImageUrl': '',
+        'newUserHeroImageUrl': '',
+      };
     }
   }
 

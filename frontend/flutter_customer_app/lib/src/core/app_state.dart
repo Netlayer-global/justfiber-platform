@@ -118,6 +118,8 @@ class AppState extends ChangeNotifier {
   List<AddonItem> addons = const [];
   List<AppBannerItem> banners = const [];
   String wifiHeroImageUrl = '';
+  String loginHeroImageUrl = '';
+  String newUserHeroImageUrl = '';
   List<ConnectedDevice> connectedDevices = const [];
   List<CustomerConnection> connections = const [];
   List<PlanItem> plans = const [];
@@ -356,7 +358,12 @@ class AppState extends ChangeNotifier {
       runTask('faqs', () async => faqs = await api.fetchFaqs()),
       runTask('addons', () async => addons = await api.fetchAddons(current)),
       runTask('banners', () async => banners = await api.fetchAppBanners()),
-      runTask('wifi hero', () async => wifiHeroImageUrl = await api.fetchWifiHeroImageUrl()),
+      runTask('app assets', () async {
+        final assets = await api.fetchAppAssets();
+        wifiHeroImageUrl = assets['wifiHeroImageUrl'] ?? '';
+        loginHeroImageUrl = assets['loginHeroImageUrl'] ?? '';
+        newUserHeroImageUrl = assets['newUserHeroImageUrl'] ?? '';
+      }),
       runTask('plans', () async => plans = await api.fetchPlans()),
       runTask(
           'devices',
@@ -1637,6 +1644,8 @@ class AppState extends ChangeNotifier {
     if (mobile == null || accessToken == null || refreshToken == null) {
       restoringSession = false;
       notifyListeners();
+      // Fetch public app assets (hero images) even without a session
+      unawaited(_fetchPublicAppAssets());
       return;
     }
     session = CustomerSession(
@@ -1648,6 +1657,16 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     unawaited(refresh(silent: true));
     unawaited(_registerFcmToken());
+  }
+
+  Future<void> _fetchPublicAppAssets() async {
+    try {
+      final assets = await api.fetchAppAssets();
+      wifiHeroImageUrl = assets['wifiHeroImageUrl'] ?? '';
+      loginHeroImageUrl = assets['loginHeroImageUrl'] ?? '';
+      newUserHeroImageUrl = assets['newUserHeroImageUrl'] ?? '';
+      notifyListeners();
+    } catch (_) {}
   }
 
   Future<void> _registerFcmToken() async {

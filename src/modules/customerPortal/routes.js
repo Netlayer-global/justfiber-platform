@@ -2584,7 +2584,9 @@ customerPortalRouter.get(
     const config = await SystemConfig.findOne({ key: "settings.customer_app" }).lean();
     const value = config?.value || {};
     return ok(res, {
-      wifiHeroImageUrl: value.wifiHeroImageUrl || ""
+      wifiHeroImageUrl: value.wifiHeroImageUrl || "",
+      loginHeroImageUrl: value.loginHeroImageUrl || "",
+      newUserHeroImageUrl: value.newUserHeroImageUrl || ""
     });
   })
 );

@@ -7,8 +7,10 @@ import {
   Image as ImageIcon,
   Loader,
   Plus,
+  Smartphone,
   Trash2,
   Upload,
+  UserPlus,
   Wifi,
   X,
 } from 'lucide-react'
@@ -85,6 +87,14 @@ export default function CustomerAppPage() {
   const [wifiHeroLoading, setWifiHeroLoading] = useState(true)
   const [wifiHeroUploading, setWifiHeroUploading] = useState(false)
 
+  // ─── Login Hero Image state ─────────────────────────────────────────────
+  const [loginHeroUrl, setLoginHeroUrl] = useState('')
+  const [loginHeroUploading, setLoginHeroUploading] = useState(false)
+
+  // ─── New User Hero Image state ──────────────────────────────────────────
+  const [newUserHeroUrl, setNewUserHeroUrl] = useState('')
+  const [newUserHeroUploading, setNewUserHeroUploading] = useState(false)
+
   // ─── Fetch banners ──────────────────────────────────────────────────────
 
   async function fetchBanners() {
@@ -118,6 +128,8 @@ export default function CustomerAppPage() {
         const raw = res.data as any
         const value = raw?.value || raw || {}
         setWifiHeroUrl(value?.wifiHeroImageUrl || '')
+        setLoginHeroUrl(value?.loginHeroImageUrl || '')
+        setNewUserHeroUrl(value?.newUserHeroImageUrl || '')
       }
     } catch {
       // ignore — section may not exist yet
@@ -149,6 +161,68 @@ export default function CustomerAppPage() {
       if (res.success) {
         setWifiHeroUrl('')
         toast.success('Wi-Fi hero image removed')
+      } else {
+        toast.error(res.error || 'Failed to remove image')
+      }
+    } catch {
+      toast.error('Failed to remove image')
+    }
+  }
+
+  async function handleLoginHeroUpload(file: File) {
+    setLoginHeroUploading(true)
+    try {
+      const res = await adminAPI.uploadLoginHeroImage(file)
+      if (res.success && res.data?.loginHeroImageUrl) {
+        setLoginHeroUrl(res.data.loginHeroImageUrl)
+        toast.success('Login hero image uploaded')
+      } else {
+        toast.error(res.error || 'Failed to upload image')
+      }
+    } catch {
+      toast.error('Upload failed')
+    } finally {
+      setLoginHeroUploading(false)
+    }
+  }
+
+  async function handleLoginHeroDelete() {
+    try {
+      const res = await adminAPI.deleteLoginHeroImage()
+      if (res.success) {
+        setLoginHeroUrl('')
+        toast.success('Login hero image removed')
+      } else {
+        toast.error(res.error || 'Failed to remove image')
+      }
+    } catch {
+      toast.error('Failed to remove image')
+    }
+  }
+
+  async function handleNewUserHeroUpload(file: File) {
+    setNewUserHeroUploading(true)
+    try {
+      const res = await adminAPI.uploadNewUserHeroImage(file)
+      if (res.success && res.data?.newUserHeroImageUrl) {
+        setNewUserHeroUrl(res.data.newUserHeroImageUrl)
+        toast.success('New user hero image uploaded')
+      } else {
+        toast.error(res.error || 'Failed to upload image')
+      }
+    } catch {
+      toast.error('Upload failed')
+    } finally {
+      setNewUserHeroUploading(false)
+    }
+  }
+
+  async function handleNewUserHeroDelete() {
+    try {
+      const res = await adminAPI.deleteNewUserHeroImage()
+      if (res.success) {
+        setNewUserHeroUrl('')
+        toast.success('New user hero image removed')
       } else {
         toast.error(res.error || 'Failed to remove image')
       }
@@ -356,6 +430,174 @@ export default function CustomerAppPage() {
               onChange={(e) => {
                 const file = e.target.files?.[0]
                 if (file) handleWifiHeroUpload(file)
+              }}
+            />
+          </label>
+        )}
+      </div>
+
+      {/* ─── Login Hero Image Section ──────────────────────────────────── */}
+      <div className="rounded-xl border border-gray-200 bg-white p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100">
+            <Smartphone className="h-5 w-5 text-blue-700" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">Login Hero Image</h2>
+            <p className="text-xs text-gray-500">
+              Full-screen background image for the login screen in the customer app
+            </p>
+          </div>
+        </div>
+
+        {wifiHeroLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader className="h-5 w-5 animate-spin text-blue-600" />
+          </div>
+        ) : loginHeroUrl ? (
+          <div className="relative group">
+            <div className="h-44 overflow-hidden rounded-xl bg-gray-900">
+              <img
+                src={loginHeroUrl}
+                alt="Login Hero"
+                className="h-full w-full object-cover opacity-90"
+              />
+              <div className="absolute inset-0 flex flex-col justify-end p-5 bg-gradient-to-t from-black/60 to-transparent rounded-xl">
+                <span className="text-white/70 text-[10px] font-bold tracking-widest uppercase">Login Screen</span>
+                <span className="text-white text-lg font-bold">Welcome back.</span>
+                <span className="text-white/60 text-xs mt-0.5">Sign in to manage your plan</span>
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-3">
+              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
+                <Upload className="h-4 w-4" />
+                Replace Image
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleLoginHeroUpload(file)
+                  }}
+                />
+              </label>
+              <button
+                onClick={handleLoginHeroDelete}
+                className="flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                Remove
+              </button>
+            </div>
+          </div>
+        ) : (
+          <label className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 py-10 transition-colors hover:border-blue-400 hover:bg-blue-50">
+            {loginHeroUploading ? (
+              <Loader className="h-8 w-8 animate-spin text-blue-600" />
+            ) : (
+              <Upload className="h-8 w-8 text-gray-400" />
+            )}
+            <div className="text-center">
+              <span className="text-sm font-medium text-gray-700">
+                {loginHeroUploading ? 'Uploading...' : 'Upload Login Hero Image'}
+              </span>
+              <p className="mt-1 text-xs text-gray-400">
+                Recommended: Dark atmospheric photo, 1080×1920px (portrait)
+              </p>
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={loginHeroUploading}
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) handleLoginHeroUpload(file)
+              }}
+            />
+          </label>
+        )}
+      </div>
+
+      {/* ─── New User Hero Image Section ───────────────────────────────── */}
+      <div className="rounded-xl border border-gray-200 bg-white p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-100">
+            <UserPlus className="h-5 w-5 text-green-700" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">New User Hero Image</h2>
+            <p className="text-xs text-gray-500">
+              Full-screen background image for the new user home screen in the customer app
+            </p>
+          </div>
+        </div>
+
+        {wifiHeroLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader className="h-5 w-5 animate-spin text-green-600" />
+          </div>
+        ) : newUserHeroUrl ? (
+          <div className="relative group">
+            <div className="h-44 overflow-hidden rounded-xl bg-gray-900">
+              <img
+                src={newUserHeroUrl}
+                alt="New User Hero"
+                className="h-full w-full object-cover opacity-90"
+              />
+              <div className="absolute inset-0 flex flex-col justify-end p-5 bg-gradient-to-t from-black/60 to-transparent rounded-xl">
+                <span className="text-white/70 text-[10px] font-bold tracking-widest uppercase">New User</span>
+                <span className="text-white text-lg font-bold">Welcome to JustFiber</span>
+                <span className="text-white/60 text-xs mt-0.5">Get started with high-speed fiber</span>
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-3">
+              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
+                <Upload className="h-4 w-4" />
+                Replace Image
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleNewUserHeroUpload(file)
+                  }}
+                />
+              </label>
+              <button
+                onClick={handleNewUserHeroDelete}
+                className="flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                Remove
+              </button>
+            </div>
+          </div>
+        ) : (
+          <label className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 py-10 transition-colors hover:border-green-400 hover:bg-green-50">
+            {newUserHeroUploading ? (
+              <Loader className="h-8 w-8 animate-spin text-green-600" />
+            ) : (
+              <Upload className="h-8 w-8 text-gray-400" />
+            )}
+            <div className="text-center">
+              <span className="text-sm font-medium text-gray-700">
+                {newUserHeroUploading ? 'Uploading...' : 'Upload New User Hero Image'}
+              </span>
+              <p className="mt-1 text-xs text-gray-400">
+                Recommended: Welcoming fiber/tech photo, 1080×1920px (portrait)
+              </p>
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={newUserHeroUploading}
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) handleNewUserHeroUpload(file)
               }}
             />
           </label>

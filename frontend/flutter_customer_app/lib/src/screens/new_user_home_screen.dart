@@ -20,13 +20,41 @@ class NewUserHomeScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: kBg,
-      body: RefreshIndicator(
-        color: kPrimary,
-        backgroundColor: kSurface,
-        onRefresh: appState.refresh,
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
+      body: Stack(
+        children: [
+          // Full-screen hero background image (when set by admin)
+          if (appState.newUserHeroImageUrl.isNotEmpty)
+            Positioned.fill(
+              child: Image.network(
+                appState.newUserHeroImageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
+          // Gradient overlay for text readability
+          if (appState.newUserHeroImageUrl.isNotEmpty)
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.3),
+                      Colors.black.withValues(alpha: 0.85),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          // Main content
+          RefreshIndicator(
+            color: kPrimary,
+            backgroundColor: kSurface,
+            onRefresh: appState.refresh,
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
             SliverToBoxAdapter(
               child: SafeArea(
                 child: Column(
@@ -241,6 +269,8 @@ class NewUserHomeScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+        ],
       ),
     );
   }

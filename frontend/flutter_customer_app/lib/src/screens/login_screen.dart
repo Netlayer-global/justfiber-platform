@@ -98,6 +98,31 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
+          // Full-screen hero background image (when set by admin)
+          if (appState.loginHeroImageUrl.isNotEmpty)
+            Positioned.fill(
+              child: Image.network(
+                appState.loginHeroImageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
+          // Gradient overlay for text readability
+          if (appState.loginHeroImageUrl.isNotEmpty)
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.3),
+                      Colors.black.withValues(alpha: 0.85),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           // Animated gradient orbs for premium depth
           Positioned(
             top: -80,

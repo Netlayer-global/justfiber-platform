@@ -265,7 +265,9 @@ const settingsSectionDefaults = {
     analyticsVisible: true
   },
   customer_app: {
-    wifiHeroImageUrl: ""
+    wifiHeroImageUrl: "",
+    loginHeroImageUrl: "",
+    newUserHeroImageUrl: ""
   }
 };
 
