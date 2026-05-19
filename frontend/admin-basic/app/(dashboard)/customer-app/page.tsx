@@ -385,13 +385,13 @@ export default function CustomerAppPage() {
                 className="h-full w-full object-cover opacity-90"
               />
               {/* Overlay preview */}
-              <div className="absolute inset-0 flex flex-col justify-end p-5 bg-gradient-to-t from-black/60 to-transparent rounded-xl">
+              <div className="absolute inset-0 pointer-events-none flex flex-col justify-end p-5 bg-gradient-to-t from-black/60 to-transparent rounded-xl">
                 <span className="text-white/70 text-[10px] font-bold tracking-widest uppercase">Wi-Fi Network</span>
                 <span className="text-white text-lg font-bold">MyNetwork_5G</span>
                 <span className="text-white/60 text-xs mt-0.5">Online · 4 devices</span>
               </div>
             </div>
-            <div className="mt-3 flex items-center gap-3">
+            <div className="mt-3 flex items-center gap-3 relative z-10">
               <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
                 <Upload className="h-4 w-4" />
                 Replace Image
@@ -469,13 +469,13 @@ export default function CustomerAppPage() {
                 alt="Login Hero"
                 className="h-full w-full object-cover opacity-90"
               />
-              <div className="absolute inset-0 flex flex-col justify-end p-5 bg-gradient-to-t from-black/60 to-transparent rounded-xl">
+              <div className="absolute inset-0 pointer-events-none flex flex-col justify-end p-5 bg-gradient-to-t from-black/60 to-transparent rounded-xl">
                 <span className="text-white/70 text-[10px] font-bold tracking-widest uppercase">Login Screen</span>
                 <span className="text-white text-lg font-bold">Welcome back.</span>
                 <span className="text-white/60 text-xs mt-0.5">Sign in to manage your plan</span>
               </div>
             </div>
-            <div className="mt-3 flex items-center gap-3">
+            <div className="mt-3 flex items-center gap-3 relative z-10">
               <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
                 <Upload className="h-4 w-4" />
                 Replace Image
@@ -553,13 +553,13 @@ export default function CustomerAppPage() {
                 alt="New User Hero"
                 className="h-full w-full object-cover opacity-90"
               />
-              <div className="absolute inset-0 flex flex-col justify-end p-5 bg-gradient-to-t from-black/60 to-transparent rounded-xl">
+              <div className="absolute inset-0 pointer-events-none flex flex-col justify-end p-5 bg-gradient-to-t from-black/60 to-transparent rounded-xl">
                 <span className="text-white/70 text-[10px] font-bold tracking-widest uppercase">New User</span>
                 <span className="text-white text-lg font-bold">Welcome to JustFiber</span>
                 <span className="text-white/60 text-xs mt-0.5">Get started with high-speed fiber</span>
               </div>
             </div>
-            <div className="mt-3 flex items-center gap-3">
+            <div className="mt-3 flex items-center gap-3 relative z-10">
               <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
                 <Upload className="h-4 w-4" />
                 Replace Image
