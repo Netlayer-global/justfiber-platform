@@ -136,34 +136,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                             ),
                             borderRadius: BorderRadius.circular(kRCard),
                           ),
-                          child: Stack(
-                            children: [
-                              // Background hero image (admin-uploadable)
-                              if (appState.wifiHeroImageUrl.isNotEmpty)
-                                Positioned.fill(
-                                  child: Image.network(
-                                    appState.wifiHeroImageUrl,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) =>
-                                        const SizedBox.shrink(),
-                                  ),
-                                ),
-                              if (appState.wifiHeroImageUrl.isNotEmpty)
-                                Positioned.fill(
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          Colors.black.withValues(alpha: 0.55),
-                                          Colors.black.withValues(alpha: 0.25),
-                                        ],
-                                        begin: Alignment.bottomCenter,
-                                        end: Alignment.topCenter,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              Padding(
+                          child: Padding(
                                 padding: const EdgeInsets.all(20),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -276,7 +249,6 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                                   ],
                                 ),
                               ),
-                            ],
                           ),
                         ),
                       ),

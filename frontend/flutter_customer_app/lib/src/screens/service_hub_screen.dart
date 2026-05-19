@@ -78,14 +78,14 @@ class ServiceHubScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    kBg,
-                    kBg.withValues(alpha: 0.95),
-                    kBg.withValues(alpha: 0.6),
-                    Colors.black.withValues(alpha: 0.2),
+                    kBg.withValues(alpha: 0.85),
+                    kBg.withValues(alpha: 0.5),
                     Colors.transparent,
-                    Colors.black.withValues(alpha: 0.15),
+                    Colors.transparent,
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.1),
                   ],
-                  stops: const [0.0, 0.35, 0.5, 0.6, 0.75, 1.0],
+                  stops: const [0.0, 0.3, 0.45, 0.65, 0.85, 1.0],
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
                 ),
