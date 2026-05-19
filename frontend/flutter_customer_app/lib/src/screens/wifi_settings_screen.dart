@@ -249,7 +249,6 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                                   ],
                                 ),
                               ),
-                          ),
                         ),
                       ),
                     ],
