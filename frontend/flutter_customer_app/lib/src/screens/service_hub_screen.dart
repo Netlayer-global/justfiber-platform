@@ -51,7 +51,7 @@ class ServiceHubScreen extends StatelessWidget {
                 top: 0,
                 left: 0,
                 right: 0,
-                height: MediaQuery.of(context).size.height * 0.48,
+                height: MediaQuery.of(context).size.height * 0.55,
                 child: Image.network(
                   appState.wifiHeroImageUrl,
                   fit: BoxFit.cover,
@@ -64,17 +64,17 @@ class ServiceHubScreen extends StatelessWidget {
                 top: 0,
                 left: 0,
                 right: 0,
-                height: MediaQuery.of(context).size.height * 0.48,
+                height: MediaQuery.of(context).size.height * 0.55,
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
                         kBg,
-                        kBg.withValues(alpha: 0.85),
+                        kBg.withValues(alpha: 0.7),
                         Colors.transparent,
-                        Colors.black.withValues(alpha: 0.4),
+                        Colors.transparent,
                       ],
-                      stops: const [0.0, 0.05, 0.3, 1.0],
+                      stops: const [0.0, 0.08, 0.35, 1.0],
                       begin: Alignment.bottomCenter,
                       end: Alignment.topCenter,
                     ),
@@ -122,12 +122,12 @@ class ServiceHubScreen extends StatelessWidget {
                             end: Alignment.bottomRight,
                           ),
                     color: appState.wifiHeroImageUrl.isNotEmpty
-                        ? Colors.black.withValues(alpha: 0.35)
+                        ? Colors.black.withValues(alpha: 0.2)
                         : null,
                     borderRadius: BorderRadius.circular(kRCard),
                     border: appState.wifiHeroImageUrl.isNotEmpty
                         ? Border.all(
-                            color: Colors.white.withValues(alpha: 0.12))
+                            color: Colors.white.withValues(alpha: 0.08))
                         : null,
                   ),
                   child: Column(
