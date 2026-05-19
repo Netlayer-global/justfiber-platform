@@ -70,6 +70,8 @@ class ServiceHubScreen extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(kRCard),
                 child: Container(
+                  // Taller when hero image is present for full-screen feel
+                  height: appState.wifiHeroImageUrl.isNotEmpty ? 260 : null,
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
                       colors: [kAccent, kAccentDeep],
@@ -88,23 +90,26 @@ class ServiceHubScreen extends StatelessWidget {
                             errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                           ),
                         ),
-                      // Dark overlay for readability when image is present
+                      // Dark gradient overlay — stronger at bottom for text readability
                       if (appState.wifiHeroImageUrl.isNotEmpty)
                         Positioned.fill(
                           child: Container(
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [
-                                  Colors.black.withValues(alpha: 0.55),
+                                  Colors.black.withValues(alpha: 0.75),
+                                  Colors.black.withValues(alpha: 0.1),
                                   Colors.black.withValues(alpha: 0.3),
                                 ],
+                                stops: const [0.0, 0.4, 1.0],
                                 begin: Alignment.bottomCenter,
                                 end: Alignment.topCenter,
                               ),
                             ),
                           ),
                         ),
-                      // Decorative circle
+                      // Decorative circle (only when no image)
+                      if (appState.wifiHeroImageUrl.isEmpty)
                       Positioned(
                         right: -60,
                         top: -60,
@@ -117,10 +122,19 @@ class ServiceHubScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Padding(
+                      // Content positioned at bottom when image is present
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        top: appState.wifiHeroImageUrl.isNotEmpty ? null : 0,
+                        child: Padding(
                         padding: const EdgeInsets.all(22),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: appState.wifiHeroImageUrl.isNotEmpty
+                              ? MainAxisSize.min
+                              : MainAxisSize.max,
                           children: [
                             // Status row
                             Row(
@@ -171,7 +185,7 @@ class ServiceHubScreen extends StatelessWidget {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 22),
+                            const SizedBox(height: 16),
 
                             // SSID
                             Text(
@@ -243,6 +257,7 @@ class ServiceHubScreen extends StatelessWidget {
                             ),
                           ],
                         ),
+                      ),
                       ),
                     ],
                   ),
