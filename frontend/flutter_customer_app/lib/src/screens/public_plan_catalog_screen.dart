@@ -777,15 +777,24 @@ class _DurationPickerSheet extends StatelessWidget {
                                 letterSpacing: -0.3,
                               ),
                             ),
-                            if (opt.plan.pricesExcludeGst)
+                            if (opt.plan.pricesExcludeGst) ...[
                               Text(
-                                '+GST',
+                                '+18% GST: ₹${(opt.price * 0.18).toStringAsFixed(0)}',
                                 style: GoogleFonts.inter(
-                                  color: kTextFaint,
+                                  color: kTextMuted,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
+                              Text(
+                                'Total: ₹${(opt.price * 1.18).toStringAsFixed(0)}',
+                                style: GoogleFonts.inter(
+                                  color: kAccent,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                         const SizedBox(width: 10),

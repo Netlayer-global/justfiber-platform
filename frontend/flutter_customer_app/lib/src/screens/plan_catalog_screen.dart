@@ -1143,7 +1143,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                             textBaseline: TextBaseline.alphabetic,
                             children: [
                               Text(
-                                'Rs ${p.monthlyPrice.toStringAsFixed(0)}',
+                                '₹${p.monthlyPrice.toStringAsFixed(0)}',
                                 style: GoogleFonts.inter(
                                     fontWeight: FontWeight.w800,
                                     fontSize: 16,
@@ -1159,6 +1159,14 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                                 ),
                             ],
                           ),
+                          if (p.pricesExcludeGst)
+                            Text(
+                              'Total: ₹${(p.monthlyPrice * 1.18).toStringAsFixed(0)}',
+                              style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 11,
+                                  color: kAccent),
+                            ),
                           if (selected)
                             Container(
                               margin: const EdgeInsets.only(top: 4),
@@ -1183,31 +1191,48 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
             );
           }),
           const SizedBox(height: 4),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: kBg,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: kBorder),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Summary',
-                    style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        color: Colors.white)),
-                const SizedBox(height: 10),
-                _row('Plan', '$planSpeed Mbps'),
-                _row('Duration', _termLabel(billingTerm)),
-                _row('Amount',
-                    'Rs ${(selectedPlan?.monthlyPrice ?? plan.monthlyPrice).toStringAsFixed(0)}${(selectedPlan ?? plan).pricesExcludeGst ? ' +GST' : ''}'),
-                _row('Billing', _termBillingCaption(billingTerm), last: true),
-              ],
-            ),
-          ),
+          Builder(builder: (_) {
+            final activePlan = selectedPlan ?? plan;
+            final basePrice = activePlan.monthlyPrice;
+            final gstRate = activePlan.gstRate > 0 ? activePlan.gstRate : 18.0;
+            final gstAmount = activePlan.pricesExcludeGst
+                ? (basePrice * gstRate / 100)
+                : 0.0;
+            final totalPrice = basePrice + gstAmount;
+
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: kBg,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: kBorder),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Summary',
+                      style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: Colors.white)),
+                  const SizedBox(height: 10),
+                  _row('Plan', '$planSpeed Mbps'),
+                  _row('Duration', _termLabel(billingTerm)),
+                  _row('Base Amount', '₹${basePrice.toStringAsFixed(0)}'),
+                  if (activePlan.pricesExcludeGst)
+                    _row('GST (${gstRate.toStringAsFixed(0)}%)',
+                        '₹${gstAmount.toStringAsFixed(0)}'),
+                  const SizedBox(height: 6),
+                  Container(height: 1, color: kBorderSoft),
+                  const SizedBox(height: 6),
+                  _row('Total',
+                      '₹${totalPrice.toStringAsFixed(0)}',
+                      last: true),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );
