@@ -59,13 +59,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="modernize-shell flex min-h-screen items-center justify-center px-4 py-10">
+    <div className="modernize-shell admin-dark flex min-h-screen items-center justify-center px-4 py-10">
       <div className="relative w-full max-w-[500px]">
-        <div className="absolute inset-0 rounded-[24px] bg-[radial-gradient(circle_at_top,rgba(210,241,223,0.8),rgba(211,215,250,0.65),rgba(186,216,244,0.6))] opacity-70 blur-3xl" />
+        <div className="absolute inset-0 rounded-[24px] bg-[radial-gradient(circle_at_top,rgba(130,36,227,0.35),rgba(130,36,227,0.12),transparent)] opacity-80 blur-3xl" />
 
-        <div className="relative rounded-[18px] border border-slate-200 bg-white p-8 shadow-[0_12px_40px_rgba(15,23,42,0.08)] md:p-10">
+        <div className="relative rounded-[18px] border bg-[#131316] p-8 shadow-[0_12px_40px_rgba(0,0,0,0.5)] md:p-10" style={{ borderColor: '#27272a' }}>
           <div className="flex items-center justify-center">
-            <span className="text-2xl font-black tracking-tight text-slate-900">Just<span className="text-purple-600">Fiber</span></span>
+            <span className="text-2xl font-black tracking-tight text-white">Just<span style={{ color: '#b98bf0' }}>Fiber</span></span>
           </div>
 
           <div className="mt-8 text-center">

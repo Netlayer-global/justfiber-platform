@@ -119,15 +119,15 @@ function SidebarContent({
   }, [search])
 
   return (
-    <div className="flex h-full flex-col bg-white">
-      <div className={cn('border-b border-slate-100', collapsed ? 'px-3 py-5' : 'px-5 py-5')}>
+    <div className="flex h-full flex-col" style={{ background: '#0c0c0f' }}>
+      <div className={cn('border-b', collapsed ? 'px-3 py-5' : 'px-5 py-5')} style={{ borderColor: '#27272a' }}>
         <Link href="/dashboard" className="flex items-center">
           {collapsed ? (
             <div className="flex h-10 w-10 shrink-0 items-center justify-center">
-              <span className="text-lg font-black tracking-tight text-slate-900">J<span className="text-purple-600">F</span></span>
+              <span className="text-lg font-black tracking-tight text-white">J<span style={{ color: '#b98bf0' }}>F</span></span>
             </div>
           ) : (
-            <span className="text-xl font-black tracking-tight text-slate-900">Just<span className="text-purple-600">Fiber</span></span>
+            <span className="text-xl font-black tracking-tight text-white">Just<span style={{ color: '#b98bf0' }}>Fiber</span></span>
           )}
         </Link>
         {!collapsed ? (
@@ -394,10 +394,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const sidebarWidth = collapsed ? 'w-[72px]' : 'w-[260px]'
 
   return (
-    <div className="modernize-shell admin-light min-h-screen">
+    <div className="modernize-shell admin-dark min-h-screen">
       <div className="flex min-h-screen w-full">
-        <aside className={cn('hidden shrink-0 border-r border-slate-100 transition-all duration-200 lg:block', sidebarWidth)}>
-          <div className={cn('fixed inset-y-0 z-30 border-r border-slate-100 bg-white transition-all duration-200', sidebarWidth)}>
+        <aside className={cn('hidden shrink-0 border-r transition-all duration-200 lg:block', sidebarWidth)} style={{ borderColor: '#27272a' }}>
+          <div className={cn('fixed inset-y-0 z-30 border-r transition-all duration-200', sidebarWidth)} style={{ borderColor: '#27272a', background: '#0c0c0f' }}>
             <SidebarContent pathname={pathname} collapsed={collapsed} onOpenCommandPalette={() => setCommandPaletteOpen(true)} />
             <button
               type="button"
@@ -425,7 +425,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         ) : null}
 
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 border-b border-slate-100 bg-white/85 backdrop-blur-md">
+          <header className="sticky top-0 z-20 border-b backdrop-blur-md" style={{ borderColor: '#27272a', background: 'rgba(12,12,15,0.85)' }}>
             <div className="flex min-h-[64px] items-center gap-3 px-4 md:px-6">
               <button onClick={() => setMobileSidebarOpen(true)} className="btn-icon lg:hidden" aria-label="Open menu">
                 <Menu className="h-5 w-5" />
