@@ -180,7 +180,7 @@ function DetailTile({ label, value }: { label: string; value: string }) {
   return (
     <div className="metric-tile p-4">
       <p className="text-[11px] uppercase tracking-[0.18em] text-black/40">{label}</p>
-      <p className="mt-3 text-lg font-semibold">{value}</p>
+      <p className="mt-3 font-mono text-lg font-semibold">{value}</p>
     </div>
   )
 }
@@ -189,7 +189,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
       <span className="text-xs uppercase tracking-[0.18em] text-slate-500">{label}</span>
-      <span className="text-right text-sm font-semibold text-slate-900">{value}</span>
+      <span className="text-right font-mono text-sm font-semibold text-slate-900">{value}</span>
     </div>
   )
 }
