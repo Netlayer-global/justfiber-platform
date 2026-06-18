@@ -341,14 +341,14 @@ function CustomersContent() {
                   <div>
                     <div className="font-semibold text-slate-900">{customer.name}</div>
                     <div className="mt-1 text-xs text-slate-500">
-                      {customer.customerId || customer.id}
+                      <span className="font-mono">{customer.customerId || customer.id}</span>
                       {' | '}
                       {customer.plan?.name || 'Unassigned'}
                       {customer.zoneName ? ` | ${customer.zoneName}` : ''}
                     </div>
                   </div>
-                  <div className="text-slate-600">{customer.phone || '-'}</div>
-                  <div className="text-slate-600">{customer.pppoeUsername || '-'}</div>
+                  <div className="font-mono text-slate-600">{customer.phone || '-'}</div>
+                  <div className="font-mono text-slate-600">{customer.pppoeUsername || '-'}</div>
                   <div>
                     <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                       customer.status === 'active'
