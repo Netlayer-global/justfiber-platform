@@ -373,7 +373,7 @@ export default function DashboardPage() {
                         <Avatar name={item.name} size="sm" />
                         <div className="min-w-0">
                           <div className="truncate font-semibold text-slate-900">{item.name}</div>
-                          <div className="truncate text-xs text-slate-500">{item.phone} · {item.ref}</div>
+                          <div className="truncate font-mono text-xs text-slate-500">{item.phone} · {item.ref}</div>
                         </div>
                       </div>
                     </td>
@@ -447,7 +447,7 @@ export default function DashboardPage() {
         {otpValue && (
           <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
             <span className="text-sm text-emerald-700">OTP: </span>
-            <span className="text-lg font-bold text-emerald-900 tracking-widest">{otpValue}</span>
+            <span className="font-mono text-lg font-bold text-emerald-900 tracking-widest">{otpValue}</span>
           </div>
         )}
         {otpError && (
