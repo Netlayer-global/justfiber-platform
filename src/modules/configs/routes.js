@@ -1,10 +1,13 @@
 import { Router } from "express";
 import { asyncHandler } from "../../common/asyncHandler.js";
 import { ok } from "../../common/response.js";
+import { ApiError } from "../../common/ApiError.js";
 import { requireAuth, requirePermission } from "../../common/auth.js";
 import { permissions } from "../../config/permissions.js";
 import { SystemConfig } from "../../models/SystemConfig.js";
 import { NotificationEventPreference } from "../../models/NotificationEventPreference.js";
+import { CompanyGstRegistration } from "../../models/CompanyGstRegistration.js";
+import { validateGstin } from "../../common/gstin.js";
 import {
   updateConfigSchema,
   updateNotificationEventSchema,
@@ -629,5 +632,115 @@ configsRouter.put(
       after: config.toObject()
     });
     return ok(res, config);
+  })
+);
+
+// ── Multi-state GST registrations (CompanyGstRegistration) ────────────────────
+
+configsRouter.get(
+  "/gst-registrations",
+  requirePermission(permissions.configRead),
+  asyncHandler(async (_req, res) => {
+    const items = await CompanyGstRegistration.find().sort({ isPrimary: -1, stateName: 1 }).lean();
+    return ok(res, items);
+  })
+);
+
+configsRouter.post(
+  "/gst-registrations",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const body = req.body || {};
+    const gstinCheck = validateGstin(body.gstin);
+    if (!gstinCheck.valid) {
+      throw new ApiError(400, gstinCheck.error || "Invalid GSTIN");
+    }
+    const stateCode = gstinCheck.stateCode || String(body.stateCode || "").trim().toUpperCase();
+    if (!stateCode) {
+      throw new ApiError(400, "Could not resolve state from GSTIN; provide stateCode");
+    }
+    if (!String(body.legalTradeName || "").trim()) {
+      throw new ApiError(400, "legalTradeName is required");
+    }
+    if (!String(body.registeredAddress || "").trim()) {
+      throw new ApiError(400, "registeredAddress is required");
+    }
+    const isPrimary = Boolean(body.isPrimary);
+    if (isPrimary) {
+      await CompanyGstRegistration.updateMany({}, { $set: { isPrimary: false } });
+    }
+    const created = await CompanyGstRegistration.create({
+      stateCode,
+      stateName: String(body.stateName || "").trim() || stateCode,
+      gstin: String(body.gstin).trim().toUpperCase(),
+      legalTradeName: String(body.legalTradeName).trim(),
+      registeredAddress: String(body.registeredAddress).trim(),
+      isPrimary,
+      active: body.active !== false
+    });
+    await auditFromRequest(req, {
+      action: "gst.registration.created",
+      entityType: "company_gst_registration",
+      entityId: created.gstin,
+      after: created.toObject()
+    });
+    return ok(res, created, { created: true });
+  })
+);
+
+configsRouter.patch(
+  "/gst-registrations/:id",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const existing = await CompanyGstRegistration.findById(req.params.id);
+    if (!existing) {
+      throw new ApiError(404, "GST registration not found");
+    }
+    const body = req.body || {};
+    const before = existing.toObject();
+    if (body.gstin !== undefined) {
+      const gstinCheck = validateGstin(body.gstin);
+      if (!gstinCheck.valid) {
+        throw new ApiError(400, gstinCheck.error || "Invalid GSTIN");
+      }
+      existing.gstin = String(body.gstin).trim().toUpperCase();
+      existing.stateCode = gstinCheck.stateCode || existing.stateCode;
+    }
+    if (body.stateName !== undefined) existing.stateName = String(body.stateName).trim();
+    if (body.legalTradeName !== undefined) existing.legalTradeName = String(body.legalTradeName).trim();
+    if (body.registeredAddress !== undefined) existing.registeredAddress = String(body.registeredAddress).trim();
+    if (body.active !== undefined) existing.active = Boolean(body.active);
+    if (body.isPrimary !== undefined) {
+      if (body.isPrimary) {
+        await CompanyGstRegistration.updateMany({ _id: { $ne: existing._id } }, { $set: { isPrimary: false } });
+      }
+      existing.isPrimary = Boolean(body.isPrimary);
+    }
+    await existing.save();
+    await auditFromRequest(req, {
+      action: "gst.registration.updated",
+      entityType: "company_gst_registration",
+      entityId: existing.gstin,
+      before,
+      after: existing.toObject()
+    });
+    return ok(res, existing);
+  })
+);
+
+configsRouter.delete(
+  "/gst-registrations/:id",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const removed = await CompanyGstRegistration.findByIdAndDelete(req.params.id).lean();
+    if (!removed) {
+      throw new ApiError(404, "GST registration not found");
+    }
+    await auditFromRequest(req, {
+      action: "gst.registration.deleted",
+      entityType: "company_gst_registration",
+      entityId: removed.gstin
+    });
+    return ok(res, { deleted: true });
   })
 );

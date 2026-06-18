@@ -1,6 +1,7 @@
 import { BillingInvoice } from "../models/BillingInvoice.js";
 import { BillingLedgerEntry } from "../models/BillingLedgerEntry.js";
 import { BillingProfile } from "../models/BillingProfile.js";
+import { CompanyGstRegistration } from "../models/CompanyGstRegistration.js";
 import { Customer } from "../models/Customer.js";
 import { PlanCatalog } from "../models/PlanCatalog.js";
 import { SubscriberService } from "../models/SubscriberService.js";
@@ -416,6 +417,45 @@ function resolveComparableStateCode(code, name = "") {
   const normalizedName = normalizeStateName(name);
   const match = Object.entries(STATE_CODE_MAP).find(([, stateName]) => stateName === normalizedName);
   return match?.[0] || "";
+}
+
+/**
+ * Resolves the *service-providing state* — the state where the physical service
+ * (zone) operates. This is the state whose GSTIN the invoice should bill under
+ * for true multi-GSTIN setups. Falls back to the company state on the profile.
+ */
+function resolveServiceProvidingState(customer = {}, zoneMapping = null, billingProfile = null) {
+  let stateCode = resolveComparableStateCode(
+    customer?.zoneStateCode ||
+      customer?.billingSnapshot?.zoneStateCode ||
+      zoneMapping?.stateCode,
+    customer?.zoneStateName ||
+      customer?.billingSnapshot?.zoneStateName ||
+      zoneMapping?.stateName
+  );
+  if (!stateCode) {
+    stateCode = resolveComparableStateCode(
+      billingProfile?.companyStateCode,
+      billingProfile?.companyStateName
+    );
+  }
+  return stateCode;
+}
+
+/**
+ * Looks up the active CompanyGstRegistration for the given service state.
+ * Returns null when no multi-GSTIN registration is configured (single-GSTIN
+ * fallback then applies). Used by invoice generation/regeneration only.
+ */
+async function resolveCompanyGstRegistration(serviceStateCode) {
+  if (!serviceStateCode) return null;
+  const match = await CompanyGstRegistration.findOne({
+    stateCode: serviceStateCode,
+    active: true
+  })
+    .sort({ isPrimary: -1, updatedAt: -1 })
+    .lean();
+  return match || null;
 }
 
 function normalizeZoneCode(value) {
@@ -878,9 +918,12 @@ export async function regenerateExistingInvoice(invoice, {
 
   const zoneCode = safeCustomer?.billingZoneCode || safeCustomer?.billingSnapshot?.billingZoneCode || zoneMapping?.zoneCode || "";
   const zoneName = safeCustomer?.billingZoneName || safeCustomer?.billingSnapshot?.billingZoneName || zoneMapping?.zoneName || "";
-  const legalName = selectedTemplate.companyName || zoneMapping?.companyLegalName || billingProfile?.companyLegalName || "";
-  const companyAddress = selectedTemplate.companyAddress || zoneMapping?.companyAddress || billingProfile?.companyAddress || "";
-  const gstNumber = selectedTemplate.gstNumber || zoneMapping?.gstNumber || amounts.gstNumber || billingProfile?.gstNumber || "";
+  // Multi-GSTIN resolution: prefer the registration for the service-providing state.
+  const serviceStateCode = resolveServiceProvidingState(safeCustomer, zoneMapping, billingProfile);
+  const gstRegistration = await resolveCompanyGstRegistration(serviceStateCode);
+  const legalName = gstRegistration?.legalTradeName || selectedTemplate.companyName || zoneMapping?.companyLegalName || billingProfile?.companyLegalName || "";
+  const companyAddress = gstRegistration?.registeredAddress || selectedTemplate.companyAddress || zoneMapping?.companyAddress || billingProfile?.companyAddress || "";
+  const gstNumber = gstRegistration?.gstin || selectedTemplate.gstNumber || zoneMapping?.gstNumber || amounts.gstNumber || billingProfile?.gstNumber || "";
 
   invoice.invoiceNumber = numbering.invoiceNumber;
   invoice.invoicePrefix = numbering.invoicePrefix;
@@ -1068,9 +1111,12 @@ export class InternalBillingEngine {
     const numbering = await buildInvoiceNumber({ billingProfile, zoneMapping, customer, billCycle, selectedTemplate });
     const zoneCode = customer?.billingZoneCode || customer?.billingSnapshot?.billingZoneCode || zoneMapping?.zoneCode || "";
     const zoneName = customer?.billingZoneName || customer?.billingSnapshot?.billingZoneName || zoneMapping?.zoneName || "";
-    const legalName = selectedTemplate.companyName || zoneMapping?.companyLegalName || billingProfile?.companyLegalName || "";
-    const companyAddress = selectedTemplate.companyAddress || zoneMapping?.companyAddress || billingProfile?.companyAddress || "";
-    const gstNumber = selectedTemplate.gstNumber || zoneMapping?.gstNumber || amounts.gstNumber || billingProfile?.gstNumber || "";
+    // Multi-GSTIN resolution: prefer the registration for the service-providing state.
+    const serviceStateCode = resolveServiceProvidingState(customer, zoneMapping, billingProfile);
+    const gstRegistration = await resolveCompanyGstRegistration(serviceStateCode);
+    const legalName = gstRegistration?.legalTradeName || selectedTemplate.companyName || zoneMapping?.companyLegalName || billingProfile?.companyLegalName || "";
+    const companyAddress = gstRegistration?.registeredAddress || selectedTemplate.companyAddress || zoneMapping?.companyAddress || billingProfile?.companyAddress || "";
+    const gstNumber = gstRegistration?.gstin || selectedTemplate.gstNumber || zoneMapping?.gstNumber || amounts.gstNumber || billingProfile?.gstNumber || "";
     const invoice = await BillingInvoice.create({
       invoiceId: `INV-${service.customerId}-${billCycle}`,
       customerId: service.customerId,

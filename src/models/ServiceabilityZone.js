@@ -9,6 +9,9 @@ const serviceabilityZoneSchema = new mongoose.Schema(
     city: String,
     area: String,
     pinCodes: { type: [String], default: [] },
+    // State the zone bills under (for multi-GSTIN resolution). 2-letter internal code.
+    stateCode: { type: String, uppercase: true, trim: true },
+    stateName: { type: String, trim: true },
     status: { type: String, enum: ["active", "planned", "coming_soon"], default: "planned", index: true },
     polygonGeoJson: mongoose.Schema.Types.Mixed,
     serviceType: { type: String, default: "fiber" },

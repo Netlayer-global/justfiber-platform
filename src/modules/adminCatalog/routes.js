@@ -35,6 +35,8 @@ const zoneSchema = z.object({
   parentZoneName: z.string().optional(),
   city: z.string().optional(),
   area: z.string().optional(),
+  stateCode: z.string().optional(),
+  stateName: z.string().optional(),
   pinCodes: z.array(z.string().min(4)).optional(),
   status: z.enum(["active", "planned", "coming_soon"]).default("planned"),
   polygonGeoJson: z.any().optional(),

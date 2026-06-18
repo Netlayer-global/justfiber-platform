@@ -6,21 +6,21 @@ import { toast } from 'sonner'
 import { adminAPI } from '@/lib/api'
 import { Installer, SupportDiagnosticItem, SupportQueueRequest, Ticket } from '@/lib/types'
 import { AlertCircle, ClipboardList, Loader, RefreshCw, ShieldCheck, Ticket as TicketIcon, UsersRound } from 'lucide-react'
+import {
+  Badge,
+  StatusBadge,
+  Button,
+  Card,
+  EmptyState,
+  Input,
+  Select,
+  Textarea,
+  PageHeader,
+  StatCard,
+} from '@/components/ui'
 
 function statusText(status: string) {
   return String(status || 'open').replace(/_/g, ' ')
-}
-
-function badgeClass(kind: 'status' | 'priority', value: string) {
-  if (kind === 'priority') {
-    if (value === 'critical' || value === 'high') return 'bg-red-100 text-red-700'
-    if (value === 'medium') return 'bg-amber-100 text-amber-700'
-    return 'bg-blue-100 text-blue-700'
-  }
-  if (value === 'resolved' || value === 'closed') return 'bg-green-100 text-green-700'
-  if (value === 'open') return 'bg-red-100 text-red-700'
-  if (value === 'in_progress') return 'bg-blue-100 text-blue-700'
-  return 'bg-purple-100 text-purple-700'
 }
 
 export default function TicketsPage() {
@@ -146,170 +146,193 @@ export default function TicketsPage() {
   }, [search, statusFilter, tickets])
 
   const metrics = [
-    { label: 'Open tickets', value: tickets.filter((item) => ['open', 'assigned', 'in_progress'].includes(item.status)).length, Icon: AlertCircle },
-    { label: 'Field pending', value: tickets.filter((item) => !item.installerJobId && !['resolved', 'closed'].includes(item.status)).length, Icon: UsersRound },
-    { label: 'Resolved', value: tickets.filter((item) => item.status === 'resolved').length, Icon: ShieldCheck },
-    { label: 'Diagnostics', value: diagnostics.length, Icon: ClipboardList },
-    { label: 'Requests', value: requests.length, Icon: TicketIcon },
+    { label: 'Open tickets', value: tickets.filter((item) => ['open', 'assigned', 'in_progress'].includes(item.status)).length, Icon: AlertCircle, color: 'rose' as const },
+    { label: 'Field pending', value: tickets.filter((item) => !item.installerJobId && !['resolved', 'closed'].includes(item.status)).length, Icon: UsersRound, color: 'amber' as const },
+    { label: 'Resolved', value: tickets.filter((item) => item.status === 'resolved').length, Icon: ShieldCheck, color: 'emerald' as const },
+    { label: 'Diagnostics', value: diagnostics.length, Icon: ClipboardList, color: 'sky' as const },
+    { label: 'Requests', value: requests.length, Icon: TicketIcon, color: 'purple' as const },
   ]
 
   return (
     <div className="space-y-6">
-      <section className="card p-5">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div>
-            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Support workspace</div>
-            <h1 className="mt-2 text-3xl font-semibold text-slate-900">Tickets</h1>
-            <div className="mt-2 text-sm text-slate-500">Simple complaint queue with installer assignment and ticket closure.</div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            {metrics.map(({ label, value, Icon }) => (
-              <div key={label} className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
-                <div className="flex items-center justify-between">
-                  <div className="text-xs uppercase tracking-[0.16em] text-slate-400">{label}</div>
-                  <Icon className="h-4 w-4 text-purple-700" />
-                </div>
-                <div className="mt-3 text-2xl font-semibold text-slate-900">{value}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <PageHeader
+        eyebrow="Support Workspace"
+        title="Tickets"
+        description="Simple complaint queue with installer assignment and ticket closure."
+        breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Tickets' }]}
+        actions={
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void loadData()}
+            disabled={isLoading}
+            icon={!isLoading ? <RefreshCw className="h-4 w-4" /> : undefined}
+            loading={isLoading}
+          >
+            Refresh
+          </Button>
+        }
+      />
 
-      <section className="card p-4">
-        <div className="grid gap-3 md:grid-cols-[1fr_260px_auto]">
-          <input
-            className="input"
-            placeholder="Search ticket, customer, zone, issue"
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        {metrics.map(({ label, value, Icon, color }) => (
+          <StatCard
+            key={label}
+            label={label}
+            value={value}
+            icon={Icon}
+            iconColor={color}
+            format="raw"
+          />
+        ))}
+      </div>
+
+      <Card padding="sm">
+        <div className="grid gap-3 md:grid-cols-[1fr_260px]">
+          <Input
+            placeholder="Search ticket, customer, zone, issue..."
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
-          <select className="input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+          <Select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+          >
             <option value="">All statuses</option>
             <option value="open">Open</option>
             <option value="assigned">Assigned</option>
             <option value="in_progress">In progress</option>
             <option value="resolved">Resolved</option>
             <option value="closed">Closed</option>
-          </select>
-          <button className="btn-secondary inline-flex items-center gap-2" onClick={() => void loadData()} disabled={isLoading}>
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
+          </Select>
         </div>
-      </section>
+      </Card>
 
       {isLoading ? (
-        <div className="card p-6 text-center">
-          <Loader className="mx-auto h-6 w-6 animate-spin text-purple-700" />
+        <div className="flex justify-center items-center py-20">
+          <Loader className="h-6 w-6 animate-spin text-purple-700" />
+          <span className="ml-2 text-slate-500 font-medium">Loading ticket queue...</span>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {filteredTickets.map((ticket) => {
             const zoneInstallers = installersForTicket(ticket)
             const isClosed = ['resolved', 'closed'].includes(ticket.status)
             const isBusy = busyTicketId === ticket.id
             return (
-              <div key={ticket.id} className="card p-4">
+              <Card key={ticket.id} padding="md" className="space-y-4 hover:border-purple-200 transition">
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-lg font-semibold text-slate-900">{ticket.subject}</h2>
-                      <span className={`rounded-full px-2 py-1 text-xs font-medium ${badgeClass('status', ticket.status)}`}>
-                        {statusText(ticket.status)}
-                      </span>
-                      <span className={`rounded-full px-2 py-1 text-xs font-medium ${badgeClass('priority', ticket.priority)}`}>
+                      <h2 className="text-lg font-bold text-slate-900 leading-tight">{ticket.subject}</h2>
+                      <StatusBadge status={ticket.status} />
+                      <Badge variant={ticket.priority === 'critical' || ticket.priority === 'high' ? 'danger' : ticket.priority === 'medium' ? 'warning' : 'info'}>
                         {ticket.priority}
-                      </span>
+                      </Badge>
                       {ticket.installerJobId ? (
-                        <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700">Field job created</span>
+                        <Badge variant="success">Field Job Active</Badge>
                       ) : null}
                     </div>
-                    <div className="mt-1 text-sm text-slate-500">
-                      {ticket.ticketNumber || ticket.id} | Customer: {ticket.customerId || '-'} | Service: {ticket.serviceId || '-'}
+
+                    <div className="text-xs text-slate-500 font-medium space-y-1">
+                      <div>
+                        Ticket: <span className="font-semibold text-slate-700">{ticket.ticketNumber || ticket.id}</span>
+                        {' · '}
+                        Customer: <span className="font-semibold text-slate-700">{ticket.customerId || '-'}</span>
+                        {' · '}
+                        Service ID: <span className="font-semibold text-slate-700">{ticket.serviceId || '-'}</span>
+                      </div>
+                      <div>
+                        Category: <span className="font-semibold text-slate-700">{ticket.category || '-'}</span>
+                        {' · '}
+                        Zone: <span className="font-semibold text-slate-700">{ticket.zoneName || ticket.zoneCode || 'Not mapped'}</span>
+                        {' · '}
+                        Created: <span className="font-semibold text-slate-700">{new Date(ticket.createdAt).toLocaleString()}</span>
+                      </div>
                     </div>
-                    <div className="mt-1 text-sm text-slate-500">
-                      Category: {ticket.category || '-'} | Zone: {ticket.zoneName || ticket.zoneCode || 'Not mapped'} | Created:{' '}
-                      {new Date(ticket.createdAt).toLocaleString()}
-                    </div>
+
                     {ticket.description ? (
-                      <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm leading-6 text-slate-600">
+                      <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-sm leading-relaxed text-slate-600">
                         {ticket.description}
                       </div>
                     ) : null}
                   </div>
 
-                  <div className="w-full space-y-3 xl:w-[430px]">
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <Link className="btn-secondary" href={`/customers/${encodeURIComponent(ticket.customerId)}?tab=billing`}>
-                        Customer
+                  <div className="w-full space-y-3 xl:w-[420px]">
+                    <div className="grid gap-2 grid-cols-2">
+                      <Link className="btn-secondary text-center text-xs font-semibold py-2" href={`/customers/${encodeURIComponent(ticket.customerId)}?tab=billing`}>
+                        Customer Details
                       </Link>
-                      <Link className="btn-secondary" href={`/customers/${encodeURIComponent(ticket.customerId)}?tab=devices`}>
-                        Network
+                      <Link className="btn-secondary text-center text-xs font-semibold py-2" href={`/customers/${encodeURIComponent(ticket.customerId)}?tab=devices`}>
+                        Network Diagnostics
                       </Link>
                     </div>
 
-                    <textarea
-                      className="input min-h-[76px] w-full"
-                      placeholder="Internal note / installer instruction"
+                    <Textarea
+                      placeholder="Add an internal note or specific instructions for the assigned field technician..."
                       value={noteByTicket[ticket.id] || ''}
                       onChange={(event) => setNoteByTicket((current) => ({ ...current, [ticket.id]: event.target.value }))}
+                      className="text-sm"
                     />
 
                     {!isClosed ? (
-                      <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                          {ticket.installerJobId ? 'Reassign installer' : 'Assign installer'}
+                      <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4">
+                        <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                          {ticket.installerJobId ? 'Reassign Dispatch' : 'Dispatch Installer'}
                         </div>
-                        <select
-                          className="input w-full"
+                        <Select
                           value={selectedInstallerByTicket[ticket.id] || ''}
                           onChange={(event) =>
                             setSelectedInstallerByTicket((current) => ({ ...current, [ticket.id]: event.target.value }))
                           }
+                          className="bg-white text-sm"
                         >
-                          <option value="">Select installer</option>
+                          <option value="">Select an installer...</option>
                           {zoneInstallers.map((installer) => (
                             <option key={installer.id} value={installer.id}>
                               {installer.name} [{installer.availabilityStatus || 'available'}]
                             </option>
                           ))}
-                        </select>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          <button className="btn-primary" disabled={isBusy} onClick={() => void assignTicket(ticket, 'manual')}>
-                            {ticket.installerJobId ? 'Manual reassign' : 'Manual assign'}
-                          </button>
-                          <button className="btn-secondary" disabled={isBusy || !ticket.zoneCode} onClick={() => void assignTicket(ticket, 'zone_pool')}>
-                            Auto to zone
-                          </button>
+                        </Select>
+                        <div className="grid gap-2 grid-cols-2">
+                          <Button disabled={isBusy} size="sm" onClick={() => void assignTicket(ticket, 'manual')}>
+                            {ticket.installerJobId ? 'Reassign' : 'Assign Manual'}
+                          </Button>
+                          <Button variant="secondary" size="sm" disabled={isBusy || !ticket.zoneCode} onClick={() => void assignTicket(ticket, 'zone_pool')}>
+                            Broadcast Pool
+                          </Button>
                         </div>
-                        <div className="text-xs text-slate-500">
+                        <div className="text-[11px] text-slate-500 font-medium leading-relaxed">
                           {ticket.zoneCode && zoneInstallers.some((installer) => (installer.assignedZones || []).map((item) => String(item || '').trim().toUpperCase()).includes(String(ticket.zoneCode || '').trim().toUpperCase()))
-                            ? `${zoneInstallers.length} active installer(s) available for this zone.`
-                            : `${zoneInstallers.length} active installer(s) available. No strict zone match found, so all active installers are shown for manual assignment.`}
+                            ? `${zoneInstallers.length} active technician(s) assigned to this zone.`
+                            : `${zoneInstallers.length} active technician(s) available overall. (No matching zone technicians)`}
                         </div>
                       </div>
                     ) : null}
 
-                    <div className="grid gap-2 sm:grid-cols-3">
-                      <button className="btn-secondary" disabled={isBusy || isClosed} onClick={() => void updateTicketStatus(ticket, 'in_progress')}>
-                        Start
-                      </button>
-                      <button className="btn-secondary" disabled={isBusy || ticket.status === 'resolved'} onClick={() => void updateTicketStatus(ticket, 'resolved')}>
+                    <div className="grid gap-2 grid-cols-3">
+                      <Button variant="secondary" size="sm" className="font-semibold" disabled={isBusy || isClosed} onClick={() => void updateTicketStatus(ticket, 'in_progress')}>
+                        Start Work
+                      </Button>
+                      <Button variant="secondary" size="sm" className="font-semibold text-emerald-700 border-emerald-100 hover:bg-emerald-50" disabled={isBusy || ticket.status === 'resolved'} onClick={() => void updateTicketStatus(ticket, 'resolved')}>
                         Resolve
-                      </button>
-                      <button className="btn-secondary" disabled={isBusy || ticket.status === 'closed'} onClick={() => void updateTicketStatus(ticket, 'closed')}>
-                        Close
-                      </button>
+                      </Button>
+                      <Button variant="secondary" size="sm" className="font-semibold text-slate-700 border-slate-200 hover:bg-slate-50" disabled={isBusy || ticket.status === 'closed'} onClick={() => void updateTicketStatus(ticket, 'closed')}>
+                        Close Desk
+                      </Button>
                     </div>
                   </div>
                 </div>
-              </div>
+              </Card>
             )
           })}
 
           {!filteredTickets.length ? (
-            <div className="card p-6 text-center text-slate-500">No tickets found.</div>
+            <EmptyState
+              icon={TicketIcon}
+              title="No tickets found"
+              description="Check back later or change your filter queries."
+            />
           ) : null}
         </div>
       )}

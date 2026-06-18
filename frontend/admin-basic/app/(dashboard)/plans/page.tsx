@@ -3,8 +3,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import type { Plan } from '@/lib/types'
-import { Loader, RefreshCw, Trash2, X, Upload, Image as ImageIcon } from 'lucide-react'
+import { Loader, RefreshCw, Trash2, Upload, Image as ImageIcon } from 'lucide-react'
 import { toast } from 'sonner'
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Input,
+  Select,
+  Modal,
+  PageHeader,
+} from '@/components/ui'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -39,14 +49,6 @@ function durationLabel(months: number): string {
   if (months === 6) return '6 Months'
   if (months === 12) return '1 Year'
   return `${months} Months`
-}
-
-function durationShort(months: number): string {
-  if (months <= 1) return '1M'
-  if (months === 3) return '3M'
-  if (months === 6) return '6M'
-  if (months === 12) return '12M'
-  return `${months}M`
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -275,65 +277,68 @@ export default function PlansPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Plans</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Manage speed plans and duration pricing
-          </p>
-        </div>
-        <button
-          onClick={fetchPlans}
-          disabled={loading}
-          className="btn-secondary inline-flex items-center gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
-      </div>
+      <PageHeader
+        title="Plans"
+        description="Manage speed plans and duration pricing"
+        breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Plans' }]}
+        actions={
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={fetchPlans}
+            disabled={loading}
+            icon={!loading ? <RefreshCw className="h-4 w-4" /> : undefined}
+            loading={loading}
+          >
+            Refresh
+          </Button>
+        }
+      />
 
       {/* Loading state */}
       {loading && plans.length === 0 && (
         <div className="flex items-center justify-center py-20">
-          <Loader className="h-6 w-6 animate-spin text-gray-400" />
-          <span className="ml-2 text-gray-500">Loading plans...</span>
+          <Loader className="h-6 w-6 animate-spin text-purple-600" />
+          <span className="ml-2 text-slate-500">Loading plans...</span>
         </div>
       )}
 
       {/* Speed groups */}
       {!loading && speedGroups.length === 0 && (
-        <div className="text-center py-20 text-gray-500">
-          No plans found
-        </div>
+        <EmptyState
+          icon={ImageIcon}
+          title="No plans found"
+          description="Create plans to manage speed plans and pricing."
+        />
       )}
 
       {speedGroups.map((group) => (
-        <div key={group.speedMbps} className="card p-5">
+        <Card key={group.speedMbps} padding="md">
           {/* Speed group header */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
             <div className="flex items-center gap-3">
-              <h2 className="text-lg font-semibold text-gray-800">
+              <h2 className="text-lg font-bold text-slate-900">
                 {group.speedMbps} Mbps
               </h2>
               {group.plans[0]?.merchandising?.bannerImageUrl && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
-                  <ImageIcon className="h-3 w-3" /> Banner set
-                </span>
+                <Badge variant="success" withDot>
+                  Banner set
+                </Badge>
               )}
             </div>
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={() => {
                 const representative = group.plans[0]
                 if (!representative) return
-                // Apply template to all plans in this speed group
                 openEdit(representative)
               }}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-xs font-medium text-purple-700 transition-colors hover:bg-purple-100"
+              icon={<Upload className="h-3 w-3" />}
             >
-              <Upload className="h-3 w-3" />
               Group Template
-            </button>
+            </Button>
           </div>
 
           {/* Duration cards grid */}
@@ -341,489 +346,428 @@ export default function PlansPage() {
             {group.plans.map((plan) => (
               <button
                 key={plan.id}
+                type="button"
                 onClick={() => openEdit(plan)}
-                className={`relative rounded-lg border p-4 text-left transition-all hover:shadow-md hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`relative rounded-xl border p-4 text-left transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${
                   plan.status === 'inactive'
-                    ? 'border-gray-200 bg-gray-50 opacity-60'
-                    : 'border-gray-200 bg-white'
+                    ? 'border-slate-200 bg-slate-50/50 opacity-60'
+                    : 'border-slate-200 bg-white hover:border-purple-300'
                 }`}
               >
                 {/* Plan name */}
-                <div className="text-xs font-semibold text-gray-700 truncate" title={plan.name}>
+                <div className="text-xs font-bold text-slate-700 truncate" title={plan.name}>
                   {plan.name}
                 </div>
 
-                {/* Duration badge */}
-                <div className="mt-0.5 text-[11px] font-medium text-purple-600">
+                {/* Duration label */}
+                <div className="mt-0.5 text-[11px] font-semibold text-purple-600">
                   {durationLabel(plan.billingPeriodMonths || 1)}
                 </div>
 
                 {/* Price */}
-                <div className="mt-1.5 text-lg font-bold text-gray-900">
+                <div className="mt-1.5 text-lg font-black text-slate-900">
                   ₹{(plan.price || 0).toLocaleString('en-IN')}
                 </div>
 
                 {/* Jaze Group ID */}
                 {plan.provisioning?.jazeGroupId && (
-                  <div className="mt-1 text-xs text-gray-400 truncate" title={plan.provisioning.jazeGroupId}>
+                  <div className="mt-1 text-xs text-slate-400 truncate" title={plan.provisioning.jazeGroupId}>
                     Jaze: {plan.provisioning.jazeGroupId}
                   </div>
                 )}
 
                 {/* Status indicators */}
-                <div className="mt-2 flex items-center gap-1.5">
+                <div className="mt-2.5 flex items-center gap-1.5">
                   <span
                     title="Customer App"
                     className={`inline-block w-2 h-2 rounded-full ${
-                      plan.visibleInCustomerApp !== false ? 'bg-green-500' : 'bg-gray-300'
+                      plan.visibleInCustomerApp !== false ? 'bg-emerald-500' : 'bg-slate-300'
                     }`}
                   />
                   <span
                     title="Sales App"
                     className={`inline-block w-2 h-2 rounded-full ${
-                      plan.visibleInSalesApp !== false ? 'bg-blue-500' : 'bg-gray-300'
+                      plan.visibleInSalesApp !== false ? 'bg-sky-500' : 'bg-slate-300'
                     }`}
                   />
                   {plan.status === 'inactive' && (
-                    <span className="ml-1 text-xs text-red-500 font-medium">Inactive</span>
+                    <Badge variant="danger" className="ml-1 !py-0 !px-1.5 text-[10px]">
+                      Inactive
+                    </Badge>
                   )}
                 </div>
               </button>
             ))}
           </div>
-        </div>
+        </Card>
       ))}
 
       {/* Edit Modal */}
-      {editingPlan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6 max-h-[90vh] overflow-y-auto">
-            {/* Modal header */}
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Edit Plan
-                </h3>
-                <p className="text-sm text-gray-500 mt-0.5">
-                  {editingPlan.speed} Mbps · {editingPlan.planCode}
-                </p>
-              </div>
-              <button
+      <Modal
+        open={!!editingPlan}
+        onClose={closeEdit}
+        title="Edit Plan"
+        description={editingPlan ? `${editingPlan.speed} Mbps · ${editingPlan.planCode}` : undefined}
+        size="md"
+        footer={
+          <div className="flex w-full items-center justify-between">
+            <Button
+              variant="danger"
+              onClick={() => setConfirmDelete(editingPlan)}
+              disabled={saving}
+              icon={<Trash2 className="h-4 w-4" />}
+            >
+              Delete
+            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
                 onClick={closeEdit}
-                className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Form fields */}
-            <div className="space-y-4">
-              {/* Plan Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Plan Name
-                </label>
-                <input
-                  type="text"
-                  value={editForm.name}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, name: e.target.value }))
-                  }
-                  className="input w-full"
-                  placeholder="e.g. 100M 3 Month"
-                />
-              </div>
-
-              {/* Price */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Price (₹)
-                </label>
-                <input
-                  type="number"
-                  value={editForm.price}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, price: e.target.value }))
-                  }
-                  className="input w-full"
-                  placeholder="0"
-                />
-              </div>
-
-              {/* GST Toggle */}
-              <div className="flex items-center gap-3 py-1">
-                <label className="text-sm font-medium text-gray-700">
-                  Pricing
-                </label>
-                <div className="flex rounded-lg border border-gray-300 overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => setEditForm((f) => ({ ...f, pricesExcludeGst: false }))}
-                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                      !editForm.pricesExcludeGst
-                        ? 'bg-purple-700 text-white'
-                        : 'bg-white text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    Include GST
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditForm((f) => ({ ...f, pricesExcludeGst: true }))}
-                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                      editForm.pricesExcludeGst
-                        ? 'bg-purple-700 text-white'
-                        : 'bg-white text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    Exclude GST
-                  </button>
-                </div>
-              </div>
-
-              {/* Duration */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Duration (Months)
-                </label>
-                <select
-                  value={editForm.billingPeriodMonths}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, billingPeriodMonths: e.target.value }))
-                  }
-                  className="input w-full"
-                >
-                  <option value="1">1 Month</option>
-                  <option value="3">3 Months</option>
-                  <option value="6">6 Months</option>
-                  <option value="12">12 Months (1 Year)</option>
-                </select>
-              </div>
-
-              {/* Jaze Group ID */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Jaze Group ID
-                </label>
-                <input
-                  type="text"
-                  value={editForm.jazeGroupId}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, jazeGroupId: e.target.value }))
-                  }
-                  className="input w-full"
-                  placeholder="e.g. 42"
-                />
-              </div>
-
-              {/* Toggles */}
-              <div className="space-y-3 pt-2">
-                {/* Visible in Customer App */}
-                <label className="flex items-center justify-between cursor-pointer">
-                  <span className="text-sm text-gray-700">
-                    Visible in Customer App
-                  </span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={editForm.visibleInCustomerApp}
-                    onClick={() =>
-                      setEditForm((f) => ({
-                        ...f,
-                        visibleInCustomerApp: !f.visibleInCustomerApp,
-                      }))
-                    }
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      editForm.visibleInCustomerApp
-                        ? 'bg-blue-600'
-                        : 'bg-gray-300'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        editForm.visibleInCustomerApp
-                          ? 'translate-x-6'
-                          : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                </label>
-
-                {/* Visible in Sales App */}
-                <label className="flex items-center justify-between cursor-pointer">
-                  <span className="text-sm text-gray-700">
-                    Visible in Sales App
-                  </span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={editForm.visibleInSalesApp}
-                    onClick={() =>
-                      setEditForm((f) => ({
-                        ...f,
-                        visibleInSalesApp: !f.visibleInSalesApp,
-                      }))
-                    }
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      editForm.visibleInSalesApp
-                        ? 'bg-blue-600'
-                        : 'bg-gray-300'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        editForm.visibleInSalesApp
-                          ? 'translate-x-6'
-                          : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                </label>
-
-                {/* Active */}
-                <label className="flex items-center justify-between cursor-pointer">
-                  <span className="text-sm text-gray-700">Active</span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={editForm.active}
-                    onClick={() =>
-                      setEditForm((f) => ({ ...f, active: !f.active }))
-                    }
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      editForm.active ? 'bg-green-600' : 'bg-gray-300'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        editForm.active ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                </label>
-              </div>
-
-              {/* ── Merchandising / Template Section ─────────────────── */}
-              <div className="border-t pt-4 mt-4">
-                <h4 className="text-sm font-semibold text-gray-800 mb-3">
-                  Plan Template (Customer App)
-                </h4>
-
-                {/* Banner Image Upload */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Banner Image
-                  </label>
-                  {editingPlan.merchandising?.bannerImageUrl && (
-                    <div className="mb-2 rounded-lg overflow-hidden border border-gray-200">
-                      <img
-                        src={editingPlan.merchandising.bannerImageUrl}
-                        alt="Plan banner"
-                        className="w-full h-24 object-cover"
-                      />
-                    </div>
-                  )}
-                  <label className="flex items-center gap-2 cursor-pointer rounded-lg border border-dashed border-gray-300 px-4 py-3 hover:border-blue-400 hover:bg-blue-50 transition-colors">
-                    {uploadingBanner ? (
-                      <Loader className="h-4 w-4 animate-spin text-gray-400" />
-                    ) : (
-                      <Upload className="h-4 w-4 text-gray-400" />
-                    )}
-                    <span className="text-sm text-gray-600">
-                      {uploadingBanner ? 'Uploading...' : 'Upload banner image'}
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleBannerUpload}
-                      disabled={uploadingBanner}
-                    />
-                  </label>
-                </div>
-
-                {/* Subtitle */}
-                <div className="mb-3">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Subtitle
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.subtitle}
-                    onChange={(e) =>
-                      setEditForm((f) => ({ ...f, subtitle: e.target.value }))
-                    }
-                    className="input w-full"
-                    placeholder="e.g. High-speed fiber for your home"
-                  />
-                </div>
-
-                {/* Badges */}
-                <div className="mb-3">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Badges (comma-separated)
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.badges}
-                    onChange={(e) =>
-                      setEditForm((f) => ({ ...f, badges: e.target.value }))
-                    }
-                    className="input w-full"
-                    placeholder="e.g. Recommended, Unlimited Data"
-                  />
-                </div>
-
-                {/* Highlight Features */}
-                <div className="mb-3">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Highlight Features (comma-separated)
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.highlightFeatures}
-                    onChange={(e) =>
-                      setEditForm((f) => ({ ...f, highlightFeatures: e.target.value }))
-                    }
-                    className="input w-full"
-                    placeholder="e.g. 300 Mbps Speed, Router Included"
-                  />
-                </div>
-
-                {/* Spotlight Label */}
-                <div className="mb-3">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Spotlight Label
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.spotlightLabel}
-                    onChange={(e) =>
-                      setEditForm((f) => ({ ...f, spotlightLabel: e.target.value }))
-                    }
-                    className="input w-full"
-                    placeholder="e.g. Top Seller, Best Value"
-                  />
-                </div>
-
-                {/* Featured & Recommended toggles */}
-                <div className="space-y-3">
-                  <label className="flex items-center justify-between cursor-pointer">
-                    <span className="text-sm text-gray-700">Featured</span>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={editForm.featured}
-                      onClick={() =>
-                        setEditForm((f) => ({ ...f, featured: !f.featured }))
-                      }
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        editForm.featured ? 'bg-purple-600' : 'bg-gray-300'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          editForm.featured ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                      />
-                    </button>
-                  </label>
-
-                  <label className="flex items-center justify-between cursor-pointer">
-                    <span className="text-sm text-gray-700">Recommended</span>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={editForm.recommended}
-                      onClick={() =>
-                        setEditForm((f) => ({ ...f, recommended: !f.recommended }))
-                      }
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        editForm.recommended ? 'bg-purple-600' : 'bg-gray-300'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          editForm.recommended
-                            ? 'translate-x-6'
-                            : 'translate-x-1'
-                        }`}
-                      />
-                    </button>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="mt-6 flex items-center justify-between">
-              <button
-                onClick={() => setConfirmDelete(editingPlan)}
-                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
                 disabled={saving}
               >
-                <Trash2 className="h-4 w-4" />
-                Delete
-              </button>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={closeEdit}
-                  className="btn-secondary"
-                  disabled={saving}
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleSave}
+                loading={saving}
+              >
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        }
+      >
+        {editingPlan && (
+          <div className="space-y-4">
+            {/* Plan Name */}
+            <Input
+              label="Plan Name"
+              type="text"
+              value={editForm.name}
+              onChange={(e) =>
+                setEditForm((f) => ({ ...f, name: e.target.value }))
+              }
+              placeholder="e.g. 100M 3 Month"
+            />
+
+            {/* Price */}
+            <Input
+              label="Price (₹)"
+              type="number"
+              value={editForm.price}
+              onChange={(e) =>
+                setEditForm((f) => ({ ...f, price: e.target.value }))
+              }
+              placeholder="0"
+            />
+
+            {/* GST Toggle */}
+            <div className="flex items-center gap-3 py-1">
+              <label className="text-sm font-semibold text-slate-700">
+                Pricing Method
+              </label>
+              <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+                <Button
+                  type="button"
+                  variant={!editForm.pricesExcludeGst ? 'primary' : 'ghost'}
+                  size="sm"
+                  className="rounded-none border-none py-1.5 !px-3 font-semibold"
+                  onClick={() => setEditForm((f) => ({ ...f, pricesExcludeGst: false }))}
                 >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="btn-primary inline-flex items-center gap-2"
+                  Include GST
+                </Button>
+                <Button
+                  type="button"
+                  variant={editForm.pricesExcludeGst ? 'primary' : 'ghost'}
+                  size="sm"
+                  className="rounded-none border-none py-1.5 !px-3 font-semibold"
+                  onClick={() => setEditForm((f) => ({ ...f, pricesExcludeGst: true }))}
                 >
-                  {saving && <Loader className="h-4 w-4 animate-spin" />}
-                  Save
+                  Exclude GST
+                </Button>
+              </div>
+            </div>
+
+            {/* Duration */}
+            <Select
+              label="Duration"
+              value={editForm.billingPeriodMonths}
+              onChange={(e) =>
+                setEditForm((f) => ({ ...f, billingPeriodMonths: e.target.value }))
+              }
+            >
+              <option value="1">1 Month</option>
+              <option value="3">3 Months</option>
+              <option value="6">6 Months</option>
+              <option value="12">12 Months (1 Year)</option>
+            </Select>
+
+            {/* Jaze Group ID */}
+            <Input
+              label="Jaze Group ID"
+              type="text"
+              value={editForm.jazeGroupId}
+              onChange={(e) =>
+                setEditForm((f) => ({ ...f, jazeGroupId: e.target.value }))
+              }
+              placeholder="e.g. 42"
+            />
+
+            {/* Toggles */}
+            <div className="space-y-3 pt-2">
+              {/* Visible in Customer App */}
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="text-sm font-medium text-slate-700">
+                  Visible in Customer App
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={editForm.visibleInCustomerApp}
+                  onClick={() =>
+                    setEditForm((f) => ({
+                      ...f,
+                      visibleInCustomerApp: !f.visibleInCustomerApp,
+                    }))
+                  }
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    editForm.visibleInCustomerApp
+                      ? 'bg-purple-600'
+                      : 'bg-slate-200'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      editForm.visibleInCustomerApp
+                        ? 'translate-x-6'
+                        : 'translate-x-1'
+                    }`}
+                  />
                 </button>
+              </label>
+
+              {/* Visible in Sales App */}
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="text-sm font-medium text-slate-700">
+                  Visible in Sales App
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={editForm.visibleInSalesApp}
+                  onClick={() =>
+                    setEditForm((f) => ({
+                      ...f,
+                      visibleInSalesApp: !f.visibleInSalesApp,
+                    }))
+                  }
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    editForm.visibleInSalesApp
+                      ? 'bg-purple-600'
+                      : 'bg-slate-200'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      editForm.visibleInSalesApp
+                        ? 'translate-x-6'
+                        : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </label>
+
+              {/* Active */}
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="text-sm font-medium text-slate-700">Active</span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={editForm.active}
+                  onClick={() =>
+                    setEditForm((f) => ({ ...f, active: !f.active }))
+                  }
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    editForm.active ? 'bg-emerald-600' : 'bg-slate-200'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      editForm.active ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </label>
+            </div>
+
+            {/* ── Merchandising / Template Section ─────────────────── */}
+            <div className="border-t border-slate-100 pt-4 mt-4 space-y-4">
+              <h4 className="text-sm font-bold text-slate-800">
+                Plan Template (Customer App)
+              </h4>
+
+              {/* Banner Image Upload */}
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Banner Image
+                </label>
+                {editingPlan.merchandising?.bannerImageUrl && (
+                  <div className="rounded-xl overflow-hidden border border-slate-100">
+                    <img
+                      src={editingPlan.merchandising.bannerImageUrl}
+                      alt="Plan banner"
+                      className="w-full h-24 object-cover"
+                    />
+                  </div>
+                )}
+                <label className="flex items-center gap-2 cursor-pointer rounded-xl border border-dashed border-slate-200 px-4 py-3 hover:border-purple-400 hover:bg-purple-50 transition-colors">
+                  {uploadingBanner ? (
+                    <Loader className="h-4 w-4 animate-spin text-purple-600" />
+                  ) : (
+                    <Upload className="h-4 w-4 text-slate-400" />
+                  )}
+                  <span className="text-sm font-medium text-slate-600">
+                    {uploadingBanner ? 'Uploading...' : 'Upload banner image'}
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleBannerUpload}
+                    disabled={uploadingBanner}
+                  />
+                </label>
+              </div>
+
+              {/* Subtitle */}
+              <Input
+                label="Subtitle"
+                type="text"
+                value={editForm.subtitle}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, subtitle: e.target.value }))
+                }
+                placeholder="e.g. High-speed fiber for your home"
+              />
+
+              {/* Badges */}
+              <Input
+                label="Badges (comma-separated)"
+                type="text"
+                value={editForm.badges}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, badges: e.target.value }))
+                }
+                placeholder="e.g. Recommended, Unlimited Data"
+              />
+
+              {/* Highlight Features */}
+              <Input
+                label="Highlight Features (comma-separated)"
+                type="text"
+                value={editForm.highlightFeatures}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, highlightFeatures: e.target.value }))
+                }
+                placeholder="e.g. 300 Mbps Speed, Router Included"
+              />
+
+              {/* Spotlight Label */}
+              <Input
+                label="Spotlight Label"
+                type="text"
+                value={editForm.spotlightLabel}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, spotlightLabel: e.target.value }))
+                }
+                placeholder="e.g. Top Seller, Best Value"
+              />
+
+              {/* Featured & Recommended toggles */}
+              <div className="space-y-3 pt-2">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span className="text-sm font-medium text-slate-700">Featured</span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={editForm.featured}
+                    onClick={() =>
+                      setEditForm((f) => ({ ...f, featured: !f.featured }))
+                    }
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      editForm.featured ? 'bg-purple-600' : 'bg-slate-200'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        editForm.featured ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </label>
+
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span className="text-sm font-medium text-slate-700">Recommended</span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={editForm.recommended}
+                    onClick={() =>
+                      setEditForm((f) => ({ ...f, recommended: !f.recommended }))
+                    }
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      editForm.recommended ? 'bg-purple-600' : 'bg-slate-200'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        editForm.recommended
+                          ? 'translate-x-6'
+                          : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </label>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {/* Delete Confirmation Modal */}
-      {confirmDelete && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
-                <Trash2 className="h-5 w-5 text-red-600" />
-              </div>
-              <div>
-                <h3 className="text-base font-semibold text-gray-900">Delete Plan</h3>
-                <p className="text-sm text-gray-500">This cannot be undone</p>
-              </div>
-            </div>
-            <p className="text-sm text-gray-600 mb-5">
-              Are you sure you want to delete <strong>{confirmDelete.name}</strong>?
-              This plan will be archived and no longer visible in any app.
-            </p>
-            <div className="flex items-center justify-end gap-3">
-              <button
-                onClick={() => setConfirmDelete(null)}
-                className="btn-secondary"
-                disabled={deleting}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors disabled:opacity-50"
-              >
-                {deleting && <Loader className="h-4 w-4 animate-spin" />}
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        title="Delete Plan"
+        description="This cannot be undone"
+        size="sm"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => setConfirmDelete(null)}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleDelete}
+              loading={deleting}
+            >
+              Delete
+            </Button>
+          </>
+        }
+      >
+        {confirmDelete && (
+          <p className="text-sm text-slate-600 leading-relaxed">
+            Are you sure you want to delete <strong>{confirmDelete.name}</strong>?
+            This plan will be archived and no longer visible in any app.
+          </p>
+        )}
+      </Modal>
     </div>
   )
 }
