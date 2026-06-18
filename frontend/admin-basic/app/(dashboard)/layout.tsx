@@ -64,6 +64,7 @@ const NAV_SECTIONS: NavSection[] = [
     subheader: 'COMMERCIAL',
     items: [
       { href: '/plans', label: 'Plans', icon: Cable },
+      { href: '/billing', label: 'Billing', icon: CreditCard, badge: 'New' },
       { href: '/customer-app', label: 'Customer App', icon: Bell },
       { href: '/sales', label: 'Sales & Leads', icon: Briefcase },
       { href: '/sales-agents', label: 'Sales Agents', icon: UserSquare2 },
