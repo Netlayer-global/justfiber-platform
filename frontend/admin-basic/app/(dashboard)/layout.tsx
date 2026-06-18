@@ -31,6 +31,7 @@ import {
   Sparkles,
   ChevronsLeft,
   ChevronsRight,
+  Building2,
 } from 'lucide-react'
 import { adminAPI, clearAuthToken, getAuthToken } from '@/lib/api'
 import type { FranchiseProfile } from '@/lib/types'
@@ -89,6 +90,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     subheader: 'SYSTEM',
     items: [
+      { href: '/gst-registrations', label: 'GST Registrations', icon: Building2, badge: 'New' },
       { href: '/my-zone-details', label: 'My Zone Details', icon: MapPinned },
     ],
   },

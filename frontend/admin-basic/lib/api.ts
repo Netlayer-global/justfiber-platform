@@ -3395,6 +3395,28 @@ export const adminAPI = {
       method: 'PUT',
       body: JSON.stringify({ value }),
     }),
+  // ── Multi-state GST registrations ──
+  getGstRegistrations: async () =>
+    request<any[]>('/api/v1/admin/configs/gst-registrations'),
+  createGstRegistration: async (data: {
+    gstin: string
+    stateName?: string
+    legalTradeName: string
+    registeredAddress: string
+    isPrimary?: boolean
+    active?: boolean
+  }) =>
+    request('/api/v1/admin/configs/gst-registrations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateGstRegistration: async (id: string, data: Record<string, any>) =>
+    request(`/api/v1/admin/configs/gst-registrations/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deleteGstRegistration: async (id: string) =>
+    request(`/api/v1/admin/configs/gst-registrations/${id}`, { method: 'DELETE' }),
   createBillingNote: async (data: {
     customerId: string
     type: 'credit' | 'debit'
