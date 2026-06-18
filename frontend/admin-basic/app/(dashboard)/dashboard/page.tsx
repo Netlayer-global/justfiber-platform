@@ -5,60 +5,54 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Activity,
   ArrowUpRight,
-  Briefcase,
   CreditCard,
-  Eye,
+  HardDrive,
   RefreshCw,
   Router,
-  ShieldCheck,
   Ticket,
   UserPlus,
   Users,
   Wallet,
   Wifi,
-  WifiOff,
 } from 'lucide-react'
 import { adminAPI } from '@/lib/api'
 import type { BngNode, Customer, DashboardStats, SalesBookingItem, SalesLeadItem } from '@/lib/types'
-import { formatCurrency, formatDate, formatNumber, relativeTime } from '@/lib/utils'
-import { Avatar } from '@/components/ui/avatar'
-import { Badge, StatusBadge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
-import { CategoryBarChart, DonutChart } from '@/components/ui/charts'
-import { EmptyState } from '@/components/ui/empty-state'
-import { PageHeader } from '@/components/ui/page-header'
-import { SkeletonCard, SkeletonTable } from '@/components/ui/skeleton'
-import { StatCard } from '@/components/ui/stat-card'
+import { formatCurrency, formatNumber, relativeTime } from '@/lib/utils'
+import {
+  LatLabel,
+  LatPanel,
+  LatPanelHeader,
+  LatMetric,
+  LatPill,
+  LatTable,
+  LatTh,
+  LatTd,
+  LatIconChip,
+  statusToTone,
+} from '@/components/lat'
 
-type ZoneSwitchDetail = { key?: string; label?: string }
-
-function getStoredZoneCode() {
-  if (typeof window === 'undefined') return 'default'
-  return window.localStorage.getItem('justfiber-active-zone') || 'default'
-}
 function getStoredZoneLabel() {
   const value = typeof window === 'undefined' ? 'Admin' : window.localStorage.getItem('justfiber-active-zone-label') || 'Admin'
-  const normalized = String(value || '').trim().toLowerCase()
-  if (!normalized || normalized === 'justfiber' || normalized === 'justfiber hq' || normalized === 'default') return 'Admin'
+  const n = String(value || '').trim().toLowerCase()
+  if (!n || n === 'justfiber' || n === 'justfiber hq' || n === 'default') return 'Admin'
   return String(value)
 }
 
 function formatLeadSource(value?: string) {
-  const source = String(value || '').trim()
-  if (!source) return 'Manual'
-  if (source === 'customer_app_booking') return 'Customer App'
-  if (source === 'customer_app_feasibility') return 'App Enquiry'
-  if (source === 'app_new_user') return 'New User'
-  return source.replace(/_/g, ' ')
+  const s = String(value || '').trim()
+  if (!s) return 'Manual'
+  if (s === 'customer_app_booking') return 'Customer App'
+  if (s === 'customer_app_feasibility') return 'App Enquiry'
+  if (s === 'app_new_user') return 'New User'
+  return s.replace(/_/g, ' ')
 }
 
 function hasLivePppoeSession(customer: Customer) {
   return Boolean(
-    customer.devices?.some((device) => {
-      const online = String(device.onlineStatus || '').toLowerCase() === 'online'
-      const sessionUp = String(device.wanInfo?.sessionStatus || '').toLowerCase() === 'up'
-      const hasIpv4 = Boolean(String(device.wanInfo?.ipv4Address || device.wanInfo?.ipAddress || '').trim())
+    customer.devices?.some((d) => {
+      const online = String(d.onlineStatus || '').toLowerCase() === 'online'
+      const sessionUp = String(d.wanInfo?.sessionStatus || '').toLowerCase() === 'up'
+      const hasIpv4 = Boolean(String(d.wanInfo?.ipv4Address || d.wanInfo?.ipAddress || '').trim())
       return online || sessionUp || hasIpv4
     })
   )
@@ -73,84 +67,49 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState('')
-  const [otpLookup, setOtpLookup] = useState('')
-  const [otpValue, setOtpValue] = useState('')
-  const [otpLoading, setOtpLoading] = useState(false)
-  const [otpError, setOtpError] = useState('')
-  const [currentZoneLabel, setCurrentZoneLabel] = useState('Admin')
-  const [currentZoneCode, setCurrentZoneCode] = useState('default')
+  const [zoneLabel, setZoneLabel] = useState('Admin')
 
   useEffect(() => {
-    syncZoneFromStorage()
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === 'justfiber-active-zone' || event.key === 'justfiber-active-zone-label') syncZoneFromStorage()
-    }
-    const handleZoneChange = (event: Event) => {
-      const detail = (event as CustomEvent<ZoneSwitchDetail>).detail
-      setCurrentZoneCode(detail?.key || getStoredZoneCode())
-      setCurrentZoneLabel(detail?.label || getStoredZoneLabel())
-    }
-    window.addEventListener('storage', handleStorage)
-    window.addEventListener('justfiber-zone-change', handleZoneChange as EventListener)
-    return () => {
-      window.removeEventListener('storage', handleStorage)
-      window.removeEventListener('justfiber-zone-change', handleZoneChange as EventListener)
-    }
+    setZoneLabel(getStoredZoneLabel())
+    const onZone = () => setZoneLabel(getStoredZoneLabel())
+    window.addEventListener('justfiber-zone-change', onZone as EventListener)
+    return () => window.removeEventListener('justfiber-zone-change', onZone as EventListener)
   }, [])
 
-  useEffect(() => { void loadDashboard() }, [currentZoneCode])
+  useEffect(() => { void load() }, [])
 
-  function syncZoneFromStorage() {
-    setCurrentZoneCode(getStoredZoneCode())
-    setCurrentZoneLabel(getStoredZoneLabel())
-  }
-
-  async function loadDashboard(refresh = false) {
-    if (refresh) setIsRefreshing(true)
-    else setIsLoading(true)
+  async function load(refresh = false) {
+    refresh ? setIsRefreshing(true) : setIsLoading(true)
     setError('')
     try {
-      const [statsRes, customersRes, routersRes, salesLeadsRes, salesBookingsRes] = await Promise.allSettled([
+      const [s, c, r, l, b] = await Promise.allSettled([
         adminAPI.getDashboardStats(),
         adminAPI.getCustomers(1, 100),
         adminAPI.getBngNodes(),
         adminAPI.getSalesLeads(),
         adminAPI.getSalesBookings(),
       ])
-      if (statsRes.status === 'fulfilled' && statsRes.value.success && statsRes.value.data) setStats(statsRes.value.data)
-      if (customersRes.status === 'fulfilled' && customersRes.value.success && customersRes.value.data?.items) setCustomers(customersRes.value.data.items)
-      if (routersRes.status === 'fulfilled' && routersRes.value.success && routersRes.value.data) setRouters(routersRes.value.data)
-      if (salesLeadsRes.status === 'fulfilled' && salesLeadsRes.value.success && salesLeadsRes.value.data) setSalesLeads(salesLeadsRes.value.data)
-      if (salesBookingsRes.status === 'fulfilled' && salesBookingsRes.value.success && salesBookingsRes.value.data) setSalesBookings(salesBookingsRes.value.data)
-      const failed = [statsRes, customersRes, routersRes, salesLeadsRes, salesBookingsRes].filter((item) => item.status === 'rejected').length
-      if (failed) setError('Some dashboard data could not be loaded.')
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Dashboard failed to load')
+      if (s.status === 'fulfilled' && s.value.success && s.value.data) setStats(s.value.data)
+      if (c.status === 'fulfilled' && c.value.success && c.value.data?.items) setCustomers(c.value.data.items)
+      if (r.status === 'fulfilled' && r.value.success && r.value.data) setRouters(r.value.data)
+      if (l.status === 'fulfilled' && l.value.success && l.value.data) setSalesLeads(l.value.data)
+      if (b.status === 'fulfilled' && b.value.success && b.value.data) setSalesBookings(b.value.data)
+      if ([s, c, r, l, b].some((x) => x.status === 'rejected')) setError('Some dashboard data could not be loaded.')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Dashboard failed to load')
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
     }
   }
 
-  async function fetchDemoOtp() {
-    if (!otpLookup.trim()) { setOtpError('Enter mobile number first'); setOtpValue(''); return }
-    setOtpLoading(true); setOtpError(''); setOtpValue('')
-    try {
-      const res = await adminAPI.getCustomerDemoOtp(otpLookup.trim())
-      if (res.success && res.data?.otp) setOtpValue(res.data.otp)
-      else setOtpError(typeof res.error === 'string' ? res.error : (res.error as any)?.message || 'OTP not found')
-    } catch (err) {
-      setOtpError(err instanceof Error ? err.message : 'OTP lookup failed')
-    } finally { setOtpLoading(false) }
-  }
-
-  const userCountSummary = useMemo(() => {
-    const onlineUsers = typeof stats?.onlineUsers === 'number' ? stats.onlineUsers : customers.filter((c) => hasLivePppoeSession(c)).length
-    const activeUsers = typeof stats?.activeUsers === 'number' ? stats.activeUsers : customers.filter((c) => c.status === 'active').length
-    const suspendedUsers = typeof stats?.suspendedCustomers === 'number' ? stats.suspendedCustomers : customers.filter((c) => c.status === 'suspended').length
-    const blockedUsers = typeof stats?.inactiveCustomers === 'number' ? stats.inactiveCustomers : customers.filter((c) => c.status === 'inactive').length
-    const totalUsers = typeof stats?.totalCustomers === 'number' && stats.totalCustomers > 0 ? stats.totalCustomers : customers.length
-    return { totalUsers, onlineUsers, activeUsers, suspendedUsers, blockedUsers }
+  const summary = useMemo(() => {
+    const online = typeof stats?.onlineUsers === 'number' ? stats.onlineUsers : customers.filter(hasLivePppoeSession).length
+    const active = typeof stats?.activeUsers === 'number' ? stats.activeUsers : customers.filter((c) => c.status === 'active').length
+    const suspended = typeof stats?.suspendedCustomers === 'number' ? stats.suspendedCustomers : customers.filter((c) => c.status === 'suspended').length
+    const inactive = typeof stats?.inactiveCustomers === 'number' ? stats.inactiveCustomers : customers.filter((c) => c.status === 'inactive').length
+    const total = typeof stats?.totalCustomers === 'number' && stats.totalCustomers > 0 ? stats.totalCustomers : customers.length
+    return { total, online, active, suspended, inactive }
   }, [customers, stats])
 
   const routerSummary = useMemo(() => {
@@ -158,20 +117,22 @@ export default function DashboardPage() {
     return { total: routers.length, ready }
   }, [routers])
 
-  const bookingEnquiries = useMemo(() => {
+  const onlinePct = ((summary.online / Math.max(1, summary.total)) * 100).toFixed(1)
+
+  const intake = useMemo(() => {
     const leadMap = new Map<string, SalesLeadItem>()
-    salesLeads.forEach((lead) => { if (lead.id) leadMap.set(lead.id, lead) })
-    const recentBookings = salesBookings
+    salesLeads.forEach((l) => { if (l.id) leadMap.set(l.id, l) })
+    const bookings = salesBookings
       .filter((b) => {
-        const source = String(b.source || '').toLowerCase()
-        const linkedLead = b.leadId ? leadMap.get(b.leadId) : null
-        const leadSource = String(linkedLead?.source || '').toLowerCase()
-        return source === 'customer_app' || leadSource.includes('customer_app') || leadSource === 'app_new_user'
+        const src = String(b.source || '').toLowerCase()
+        const lead = b.leadId ? leadMap.get(b.leadId) : null
+        const ls = String(lead?.source || '').toLowerCase()
+        return src === 'customer_app' || ls.includes('customer_app') || ls === 'app_new_user'
       })
       .map((b) => {
         const lead = b.leadId ? leadMap.get(b.leadId) : null
         return {
-          key: `booking-${b.id}`, type: 'Booking', ref: b.bookingNumber,
+          key: `b-${b.id}`, type: 'Booking', ref: b.bookingNumber,
           name: b.personalDetails?.fullName || lead?.fullName || 'New enquiry',
           phone: b.personalDetails?.mobile || lead?.mobile || '-',
           plan: b.selectedPlan?.planName || lead?.selectedPlan?.planName || '-',
@@ -180,339 +141,221 @@ export default function DashboardPage() {
           createdAt: b.createdAt || lead?.createdAt,
         }
       })
-    const standaloneLeads = salesLeads
+    const leads = salesLeads
       .filter((l) => { const s = String(l.source || '').toLowerCase(); return s.includes('customer_app') || s === 'app_new_user' })
       .filter((l) => !salesBookings.some((b) => String(b.leadId || '') === l.id))
       .map((l) => ({
-        key: `lead-${l.id}`, type: 'Lead', ref: l.leadNumber,
+        key: `l-${l.id}`, type: 'Lead', ref: l.leadNumber,
         name: l.fullName || 'New enquiry', phone: l.mobile || '-',
         plan: l.selectedPlan?.planName || '-', status: l.status || '-',
         source: formatLeadSource(l.source), createdAt: l.createdAt,
       }))
-    return [...recentBookings, ...standaloneLeads]
+    return [...bookings, ...leads]
       .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
       .slice(0, 8)
   }, [salesBookings, salesLeads])
 
-  const customerStatusData = useMemo(() => [
-    { name: 'Active', value: userCountSummary.activeUsers },
-    { name: 'Suspended', value: userCountSummary.suspendedUsers },
-    { name: 'Inactive', value: userCountSummary.blockedUsers },
-  ].filter(d => d.value > 0), [userCountSummary])
-
-  const planDistribution = useMemo(() => {
+  const planDist = useMemo(() => {
     const map = new Map<string, number>()
-    customers.forEach((c) => {
-      const name = c.plan?.name || 'Unassigned'
-      map.set(name, (map.get(name) || 0) + 1)
-    })
+    customers.forEach((c) => { const n = c.plan?.name || 'Unassigned'; map.set(n, (map.get(n) || 0) + 1) })
     return Array.from(map.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 6)
   }, [customers])
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
-        </div>
-        <SkeletonTable rows={6} cols={6} />
-      </div>
-    )
-  }
+  const planMax = Math.max(1, ...planDist.map((p) => p.value))
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Welcome back"
-        title={`${currentZoneLabel} Dashboard`}
-        description="Real-time business snapshot — customers, sessions, revenue, and field operations."
-        actions={
-          <>
-            <Button
-              variant="secondary"
-              size="sm"
-              loading={isRefreshing}
-              onClick={() => void loadDashboard(true)}
-              icon={!isRefreshing ? <RefreshCw className="h-4 w-4" /> : undefined}
-            >
-              Refresh
-            </Button>
-            <Link href="/customers"><Button size="sm" icon={<UserPlus className="h-4 w-4" />}>Add Customer</Button></Link>
-          </>
-        }
-      />
-
-      {error ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {error}
-        </div>
-      ) : null}
-
-      {/* Top KPI cards */}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Total Customers"
-          value={userCountSummary.totalUsers}
-          detail="Across all zones"
-          icon={Users}
-          iconColor="purple"
-        />
-        <StatCard
-          label="Online Now"
-          value={userCountSummary.onlineUsers}
-          detail={`${((userCountSummary.onlineUsers / Math.max(1, userCountSummary.totalUsers)) * 100).toFixed(1)}% live sessions`}
-          icon={Wifi}
-          iconColor="emerald"
-        />
-        <StatCard
-          label="Monthly Revenue"
-          value={formatCurrency(stats?.monthlyRevenue || 0)}
-          detail="Current cycle"
-          icon={Wallet}
-          iconColor="amber"
-          format="raw"
-        />
-        <StatCard
-          label="System Health"
-          value={`${stats?.systemHealth ?? 0}%`}
-          detail={`${routerSummary.ready}/${routerSummary.total} routers ready`}
-          icon={ShieldCheck}
-          iconColor="sky"
-          format="raw"
-        />
-      </div>
-
-      {/* Mini stats row */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <MiniMetric label="Active" value={userCountSummary.activeUsers} icon={Activity} color="emerald" />
-        <MiniMetric label="Suspended" value={userCountSummary.suspendedUsers} icon={WifiOff} color="amber" />
-        <MiniMetric label="Inactive" value={userCountSummary.blockedUsers} icon={Users} color="rose" />
-        <MiniMetric label="Connections" value={stats?.activeConnections || 0} icon={Activity} color="purple" />
-        <MiniMetric label="Routers" value={`${routerSummary.ready}/${routerSummary.total}`} icon={Router} color="sky" />
-      </div>
-
-      {/* Charts row */}
-      <div className="grid gap-5 lg:grid-cols-3">
-        <Card padding="none">
-          <CardHeader>
-            <CardTitle>Customer Status</CardTitle>
-          </CardHeader>
-          <CardBody>
-            {customerStatusData.length > 0 ? (
-              <DonutChart
-                data={customerStatusData}
-                centerLabel={{ value: formatNumber(userCountSummary.totalUsers), sub: 'Customers' }}
-              />
-            ) : (
-              <EmptyState title="No data yet" />
-            )}
-          </CardBody>
-        </Card>
-      </div>
-
-      {/* Plan distribution + Quick actions */}
-      <div className="grid gap-5 lg:grid-cols-3">
-        <Card padding="none" className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Top Plans</CardTitle>
-            <Link href="/plans" className="text-xs font-semibold text-purple-700 hover:underline">View all →</Link>
-          </CardHeader>
-          <CardBody>
-            {planDistribution.length > 0 ? (
-              <CategoryBarChart data={planDistribution} height={240} />
-            ) : (
-              <EmptyState title="No plan data" />
-            )}
-          </CardBody>
-        </Card>
-
-        <Card padding="none">
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-          </CardHeader>
-          <CardBody className="space-y-2">
-            <QuickAction href="/customers" icon={UserPlus} label="Add Customer" hint="Onboard a new subscriber" color="purple" />
-            <QuickAction href="/billing" icon={CreditCard} label="Billing Run" hint="Generate invoices" color="emerald" />
-            <QuickAction href="/jobs" icon={Briefcase} label="Schedule Job" hint="Assign installer" color="amber" />
-            <QuickAction href="/tickets" icon={Ticket} label="Open Tickets" hint="Customer support queue" color="rose" />
-          </CardBody>
-        </Card>
-      </div>
-
-      {/* Sales Intake */}
-      <Card padding="none">
-        <CardHeader>
-          <div>
-            <CardTitle>Recent Sales Intake</CardTitle>
-            <p className="mt-1 text-sm text-slate-500">New booking enquiries from customer app & public bookings.</p>
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 text-xs text-zinc-500">
+            <span>Overview</span><span className="text-zinc-700">/</span>
+            <span className="text-zinc-300">{zoneLabel}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="brand">{bookingEnquiries.length} pending</Badge>
-            <Link href="/sales"><Button size="sm" variant="secondary" iconRight={<ArrowUpRight className="h-3.5 w-3.5" />}>View all</Button></Link>
-          </div>
-        </CardHeader>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr>
-                <th className="table-header">Customer</th>
-                <th className="table-header">Type</th>
-                <th className="table-header">Plan</th>
-                <th className="table-header">Status</th>
-                <th className="table-header">Source</th>
-                <th className="table-header">Created</th>
-                <th className="table-header w-12"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {bookingEnquiries.length > 0 ? (
-                bookingEnquiries.map((item) => (
-                  <tr key={item.key} className="table-row">
-                    <td className="table-cell">
-                      <div className="flex items-center gap-3">
-                        <Avatar name={item.name} size="sm" />
-                        <div className="min-w-0">
-                          <div className="truncate font-semibold text-slate-900">{item.name}</div>
-                          <div className="truncate font-mono text-xs text-slate-500">{item.phone} · {item.ref}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="table-cell">
-                      <Badge variant={item.type === 'Booking' ? 'success' : 'info'}>{item.type}</Badge>
-                    </td>
-                    <td className="table-cell text-sm">{item.plan}</td>
-                    <td className="table-cell"><StatusBadge status={item.status} /></td>
-                    <td className="table-cell text-xs text-slate-500">{item.source}</td>
-                    <td className="table-cell text-xs text-slate-500" title={formatDate(item.createdAt, true)}>
-                      {relativeTime(item.createdAt)}
-                    </td>
-                    <td className="table-cell">
-                      <Link href="/sales" className="btn-icon"><Eye className="h-4 w-4" /></Link>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={7}>
-                    <EmptyState
-                      icon={Briefcase}
-                      title="No sales enquiries yet"
-                      description="New customer enquiries from the app or public bookings will appear here."
-                    />
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-50">Dashboard</h1>
         </div>
-      </Card>
-
-      {/* Network Status */}
-      <Card>
-        <h3 className="text-base font-bold text-slate-900">Network Status</h3>
-        <p className="mt-1 text-sm text-slate-500">Live PPPoE & router health.</p>
-        <div className="mt-4 space-y-3">
-          <StatusRow label="PPPoE Sessions" value={`${userCountSummary.onlineUsers} online`} status="success" />
-          <StatusRow label="Routers Operational" value={`${routerSummary.ready}/${routerSummary.total}`} status={routerSummary.ready === routerSummary.total ? 'success' : 'warning'} />
-          <StatusRow label="System Health" value={`${stats?.systemHealth ?? 0}%`} status={(stats?.systemHealth || 0) > 80 ? 'success' : 'warning'} />
-          <Link href="/network-map" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-purple-700 hover:underline">
-            View network map <ArrowUpRight className="h-3 w-3" />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => void load(true)}
+            disabled={isRefreshing}
+            className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 bg-[#18181b] px-3 py-2 text-xs font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} /> Refresh
+          </button>
+          <Link href="/customers" className="inline-flex items-center gap-2 rounded-lg bg-[#8224e3] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#6f1cc4]">
+            <UserPlus className="h-3.5 w-3.5" /> Add Customer
           </Link>
         </div>
-      </Card>
+      </div>
 
-      {/* OTP Lookup */}
-      <Card>
-        <h3 className="text-base font-bold text-slate-900">OTP Lookup</h3>
-        <p className="mt-1 text-sm text-slate-500">Fetch customer login or job completion OTP for testing.</p>
-        <div className="mt-4 flex items-end gap-3">
-          <div className="flex-1">
-            <label className="text-xs font-semibold text-slate-600">Mobile number</label>
-            <input
-              className="input mt-1"
-              placeholder="Enter mobile number"
-              value={otpLookup}
-              onChange={(e) => setOtpLookup(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') void fetchDemoOtp() }}
-            />
+      {error ? (
+        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-300">{error}</div>
+      ) : null}
+
+      {/* KPI metric row */}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <LatMetric label="Total Customers" value={isLoading ? '—' : formatNumber(summary.total)} sub="All zones" href="/customers" accent />
+        <LatMetric label="Online Now" value={isLoading ? '—' : formatNumber(summary.online)} sub={`${onlinePct}% live sessions`} delta={`${onlinePct}%`} deltaTone="up" />
+        <LatMetric label="Monthly Revenue" value={isLoading ? '—' : formatCurrency(stats?.monthlyRevenue || 0)} sub="Current cycle" />
+        <LatMetric label="System Health" value={isLoading ? '—' : `${stats?.systemHealth ?? 0}%`} sub={`${routerSummary.ready}/${routerSummary.total} routers ready`} deltaTone={(stats?.systemHealth || 0) > 80 ? 'up' : 'down'} delta={(stats?.systemHealth || 0) > 80 ? 'OK' : 'CHECK'} />
+      </div>
+
+      {/* Status strip */}
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
+        <StatTile label="Active" value={summary.active} tone="success" />
+        <StatTile label="Suspended" value={summary.suspended} tone="warning" />
+        <StatTile label="Inactive" value={summary.inactive} tone="danger" />
+        <StatTile label="Connections" value={stats?.activeConnections || 0} tone="brand" />
+        <StatTile label="Routers" value={`${routerSummary.ready}/${routerSummary.total}`} tone="info" />
+      </div>
+
+      {/* Two-column: plan distribution + quick actions */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <LatPanel padded={false} className="lg:col-span-2">
+          <LatPanelHeader title="Top Plans" subtitle="Customer distribution by plan" action={<Link href="/plans" className="text-xs font-medium text-[#b98bf0] hover:underline">View all →</Link>} />
+          <div className="space-y-3 p-5">
+            {planDist.length === 0 ? (
+              <div className="py-8 text-center text-sm text-zinc-600">No plan data</div>
+            ) : planDist.map((p) => (
+              <div key={p.name}>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-zinc-300">{p.name}</span>
+                  <span className="font-mono tabular-nums text-zinc-500">{p.value}</span>
+                </div>
+                <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-zinc-900">
+                  <div className="h-full rounded-full bg-gradient-to-r from-[#8224e3] to-[#a06ef0]" style={{ width: `${(p.value / planMax) * 100}%` }} />
+                </div>
+              </div>
+            ))}
           </div>
-          <button
-            className="btn-primary h-[42px] px-5"
-            onClick={() => void fetchDemoOtp()}
-            disabled={otpLoading}
-          >
-            {otpLoading ? 'Fetching...' : 'Get OTP'}
-          </button>
-        </div>
-        {otpValue && (
-          <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-            <span className="text-sm text-emerald-700">OTP: </span>
-            <span className="font-mono text-lg font-bold text-emerald-900 tracking-widest">{otpValue}</span>
+        </LatPanel>
+
+        <LatPanel padded={false}>
+          <LatPanelHeader title="Quick Actions" />
+          <div className="space-y-1.5 p-3">
+            <QuickAction href="/customers" icon={UserPlus} label="Add Customer" hint="Onboard a subscriber" />
+            <QuickAction href="/customers" icon={CreditCard} label="Billing" hint="Invoices & payments" />
+            <QuickAction href="/devices" icon={HardDrive} label="Devices" hint="CPE / ONU fleet" />
+            <QuickAction href="/tickets" icon={Ticket} label="Tickets" hint="Support queue" />
           </div>
-        )}
-        {otpError && (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-            {otpError}
+        </LatPanel>
+      </div>
+
+      {/* Sales intake table */}
+      <LatPanel padded={false}>
+        <LatPanelHeader
+          title="Recent Sales Intake"
+          subtitle="New booking enquiries from the customer app & public bookings"
+          action={
+            <div className="flex items-center gap-2">
+              <LatPill tone="brand">{intake.length} pending</LatPill>
+              <Link href="/sales" className="inline-flex items-center gap-1 text-xs font-medium text-zinc-400 hover:text-white">View all <ArrowUpRight className="h-3 w-3" /></Link>
+            </div>
+          }
+        />
+        <LatTable>
+          <thead>
+            <tr>
+              <LatTh>Customer</LatTh>
+              <LatTh>Type</LatTh>
+              <LatTh>Plan</LatTh>
+              <LatTh>Status</LatTh>
+              <LatTh>Source</LatTh>
+              <LatTh className="text-right">Created</LatTh>
+            </tr>
+          </thead>
+          <tbody>
+            {intake.length === 0 ? (
+              <tr><LatTd className="py-10 text-center text-zinc-600" >No sales enquiries yet</LatTd></tr>
+            ) : intake.map((it) => (
+              <tr key={it.key} className="transition-colors hover:bg-[#18181b]">
+                <LatTd>
+                  <div className="font-medium text-zinc-100">{it.name}</div>
+                  <div className="mt-0.5 font-mono text-[11px] text-zinc-500">{it.phone} · {it.ref}</div>
+                </LatTd>
+                <LatTd><LatPill tone={it.type === 'Booking' ? 'success' : 'info'}>{it.type}</LatPill></LatTd>
+                <LatTd>{it.plan}</LatTd>
+                <LatTd><LatPill tone={statusToTone(it.status)}>{it.status}</LatPill></LatTd>
+                <LatTd className="text-zinc-500">{it.source}</LatTd>
+                <LatTd mono className="text-right text-[11px] text-zinc-500">{relativeTime(it.createdAt)}</LatTd>
+              </tr>
+            ))}
+          </tbody>
+        </LatTable>
+      </LatPanel>
+
+      {/* Network status */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <LatPanel padded={false}>
+          <LatPanelHeader title="Network Status" subtitle="Live PPPoE & router health" action={<Link href="/network-map" className="text-xs font-medium text-[#b98bf0] hover:underline">Map →</Link>} />
+          <div className="divide-y divide-zinc-900">
+            <NetRow icon={Wifi} label="PPPoE Sessions" value={`${summary.online} online`} tone="success" />
+            <NetRow icon={Router} label="Routers Operational" value={`${routerSummary.ready}/${routerSummary.total}`} tone={routerSummary.ready === routerSummary.total ? 'success' : 'warning'} />
+            <NetRow icon={Activity} label="System Health" value={`${stats?.systemHealth ?? 0}%`} tone={(stats?.systemHealth || 0) > 80 ? 'success' : 'warning'} />
           </div>
-        )}
-      </Card>
+        </LatPanel>
+
+        <LatPanel padded={false}>
+          <LatPanelHeader title="Revenue Snapshot" subtitle="Current billing cycle" />
+          <div className="grid grid-cols-2 gap-px bg-zinc-800">
+            <RevCell label="This Cycle" value={formatCurrency(stats?.monthlyRevenue || 0)} icon={Wallet} />
+            <RevCell label="Active Subscribers" value={formatNumber(summary.active)} icon={Users} />
+            <RevCell label="Online Ratio" value={`${onlinePct}%`} icon={Wifi} />
+            <RevCell label="Open Connections" value={formatNumber(stats?.activeConnections || 0)} icon={Activity} />
+          </div>
+        </LatPanel>
+      </div>
     </div>
   )
 }
 
-function MiniMetric({ label, value, icon: Icon, color }: { label: string; value: string | number; icon: any; color: 'emerald' | 'amber' | 'rose' | 'purple' | 'sky' }) {
-  const colors = {
-    emerald: 'bg-emerald-50 text-emerald-600',
-    amber: 'bg-amber-50 text-amber-600',
-    rose: 'bg-rose-50 text-rose-600',
-    purple: 'bg-purple-50 text-purple-600',
-    sky: 'bg-sky-50 text-sky-600',
-  }
+function StatTile({ label, value, tone }: { label: string; value: string | number; tone: 'success' | 'warning' | 'danger' | 'brand' | 'info' }) {
+  const dot = { success: 'bg-emerald-400', warning: 'bg-amber-400', danger: 'bg-rose-400', brand: 'bg-[#a06ef0]', info: 'bg-blue-400' }[tone]
   return (
-    <div className="card flex items-center gap-3 p-4">
-      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${colors[color]}`}>
-        <Icon className="h-5 w-5" />
+    <div className="rounded-xl border border-zinc-800 bg-[#101013] px-4 py-3">
+      <div className="flex items-center gap-2">
+        <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+        <LatLabel>{label}</LatLabel>
       </div>
-      <div className="min-w-0">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{label}</div>
-        <div className="truncate text-lg font-bold text-slate-900">
-          {typeof value === 'number' ? formatNumber(value) : value}
-        </div>
+      <div className="mt-1.5 font-mono text-lg font-semibold tabular-nums text-zinc-50">
+        {typeof value === 'number' ? formatNumber(value) : value}
       </div>
     </div>
   )
 }
 
-function QuickAction({ href, icon: Icon, label, hint, color }: { href: string; icon: any; label: string; hint: string; color: 'purple' | 'emerald' | 'amber' | 'rose' }) {
-  const colors = {
-    purple: 'bg-purple-50 text-purple-600 group-hover:bg-purple-100',
-    emerald: 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100',
-    amber: 'bg-amber-50 text-amber-600 group-hover:bg-amber-100',
-    rose: 'bg-rose-50 text-rose-600 group-hover:bg-rose-100',
-  }
+function QuickAction({ href, icon: Icon, label, hint }: { href: string; icon: any; label: string; hint: string }) {
   return (
-    <Link href={href} className="group flex items-center gap-3 rounded-xl border border-slate-100 p-3 transition hover:border-purple-200 hover:bg-slate-50">
-      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition ${colors[color]}`}>
-        <Icon className="h-5 w-5" />
-      </div>
+    <Link href={href} className="group flex items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 transition hover:border-zinc-800 hover:bg-[#18181b]">
+      <LatIconChip icon={Icon} tone="brand" />
       <div className="min-w-0 flex-1">
-        <div className="font-semibold text-slate-900">{label}</div>
-        <div className="truncate text-xs text-slate-500">{hint}</div>
+        <div className="text-sm font-medium text-zinc-100">{label}</div>
+        <div className="truncate text-[11px] text-zinc-500">{hint}</div>
       </div>
-      <ArrowUpRight className="h-4 w-4 text-slate-400 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-purple-600" />
+      <ArrowUpRight className="h-4 w-4 text-zinc-600 transition group-hover:text-[#b98bf0]" />
     </Link>
   )
 }
 
-function StatusRow({ label, value, status }: { label: string; value: string; status: 'success' | 'warning' | 'danger' }) {
-  const dotColor = { success: 'dot-success', warning: 'dot-warning', danger: 'dot-danger' }[status]
+function NetRow({ icon: Icon, label, value, tone }: { icon: any; label: string; value: string; tone: 'success' | 'warning' | 'danger' }) {
   return (
-    <div className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2.5">
-      <div className="flex items-center gap-2.5">
-        <span className={`${dotColor} dot-pulse`} />
-        <span className="text-sm font-medium text-slate-700">{label}</span>
+    <div className="flex items-center justify-between px-5 py-3.5">
+      <div className="flex items-center gap-3">
+        <Icon className="h-4 w-4 text-zinc-500" />
+        <span className="text-sm text-zinc-300">{label}</span>
       </div>
-      <span className="text-sm font-bold text-slate-900">{value}</span>
+      <LatPill tone={tone} pulse={tone === 'success'}>{value}</LatPill>
+    </div>
+  )
+}
+
+function RevCell({ label, value, icon: Icon }: { label: string; value: string; icon: any }) {
+  return (
+    <div className="bg-[#101013] p-5">
+      <div className="flex items-center gap-2">
+        <Icon className="h-4 w-4 text-zinc-600" />
+        <LatLabel>{label}</LatLabel>
+      </div>
+      <div className="mt-2 font-mono text-xl font-semibold tabular-nums text-zinc-50">{value}</div>
     </div>
   )
 }
