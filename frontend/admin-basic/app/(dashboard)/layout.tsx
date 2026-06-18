@@ -86,6 +86,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: '/network-map', label: 'Network Map', icon: MapPinned },
       { href: '/serviceability', label: 'Serviceability', icon: MapPinned },
       { href: '/provisioning', label: 'Provisioning', icon: ShieldCheck },
+      { href: '/nat-logs', label: 'NAT Logs', icon: Network, badge: 'New' },
     ],
   },
   {
