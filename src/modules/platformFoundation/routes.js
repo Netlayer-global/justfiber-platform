@@ -21,6 +21,7 @@ import { CustomerNotification } from "../../models/CustomerNotification.js";
 import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { DiscountVoucher } from "../../models/DiscountVoucher.js";
 import { FranchiseProfile } from "../../models/FranchiseProfile.js";
+import { FranchiseCommission } from "../../models/FranchiseCommission.js";
 import { IntegrationConnection } from "../../models/IntegrationConnection.js";
 import { IntegrationEventLog } from "../../models/IntegrationEventLog.js";
 import { InstallerNotification } from "../../models/InstallerNotification.js";
@@ -1045,6 +1046,14 @@ async function syncFreeradiusClientForNode(node) {
     return { synced: false, reason: "disabled" };
   }
 
+  let sqlResult = { synced: false, reason: "skipped" };
+  try {
+    sqlResult = await serviceControlAdapter.syncNasClient(node);
+  } catch (err) {
+    console.error(`[SQL NAS SYNC ERROR] Failed to sync ${node.nodeCode} to FreeRADIUS nas table:`, err.message);
+    sqlResult = { synced: false, error: err.message };
+  }
+
   if (env.FREERADIUS_SYNC_HELPER_COMMAND?.length) {
     const payload = Buffer.from(
       JSON.stringify({
@@ -1072,12 +1081,14 @@ async function syncFreeradiusClientForNode(node) {
             reloaded: parsed?.reloaded !== false,
             validation: { command: parsed?.validationCommand || helper.command, reason: parsed?.validationReason || "" },
             reload: { command: parsed?.reloadCommand || helper.command, reason: parsed?.reloadReason || "" }
-          }
+          },
+          sqlSync: sqlResult
         }
       : {
           synced: false,
           filePath: env.FREERADIUS_CLIENTS_FILE,
-          reason: helper.reason || helper.stderr || "sync_helper_failed"
+          reason: helper.reason || helper.stderr || "sync_helper_failed",
+          sqlSync: sqlResult
         };
     await persistFreeradiusSyncStatus(node.nodeCode, result);
     return result;
@@ -1085,7 +1096,7 @@ async function syncFreeradiusClientForNode(node) {
 
   const filePath = String(env.FREERADIUS_CLIENTS_FILE || "").trim();
   if (!filePath) {
-    return { synced: false, reason: "missing_clients_file" };
+    return { synced: false, reason: "missing_clients_file", sqlSync: sqlResult };
   }
 
   try {
@@ -1104,15 +1115,19 @@ async function syncFreeradiusClientForNode(node) {
         String(node.radiusClientIp || "").trim(),
         ...(Array.isArray(node.additionalRadiusClientIps) ? node.additionalRadiusClientIps : [])
       ].map((item) => String(item || "").trim()).filter(Boolean),
-      serviceReload: reloadStatus
+      serviceReload: reloadStatus,
+      sqlSync: sqlResult
     };
     await persistFreeradiusSyncStatus(node.nodeCode, result);
     return result;
   } catch (error) {
+    const isEnoent = error instanceof Error && error.code === "ENOENT";
     const result = {
-      synced: false,
+      synced: isEnoent && (sqlResult.synced || env.MOCK_EXTERNALS),
       filePath,
-      reason: error instanceof Error ? error.message : "sync_failed"
+      reason: error instanceof Error ? error.message : "sync_failed",
+      bypassedFileWrite: isEnoent,
+      sqlSync: sqlResult
     };
     await persistFreeradiusSyncStatus(node.nodeCode, result);
     return result;
@@ -1131,6 +1146,14 @@ async function removeFreeradiusClientForNode(nodeCode) {
     return { synced: false, reason: "disabled" };
   }
 
+  let sqlResult = { deleted: false, reason: "skipped" };
+  try {
+    sqlResult = await serviceControlAdapter.removeNasClient(nodeCode);
+  } catch (err) {
+    console.error(`[SQL NAS REMOVE ERROR] Failed to remove ${nodeCode} from FreeRADIUS nas table:`, err.message);
+    sqlResult = { deleted: false, error: err.message };
+  }
+
   if (env.FREERADIUS_SYNC_HELPER_COMMAND?.length) {
     const payload = Buffer.from(JSON.stringify({ action: "remove", nodeCode }), "utf8").toString("base64url");
     const helper = await runFreeradiusHelper(env.FREERADIUS_SYNC_HELPER_COMMAND, [nodeCode, payload]);
@@ -1144,18 +1167,20 @@ async function removeFreeradiusClientForNode(nodeCode) {
             reloaded: true,
             validation: { command: helper.command },
             reload: { command: helper.command }
-          }
+          },
+          sqlSync: sqlResult
         }
       : {
           synced: false,
           filePath: env.FREERADIUS_CLIENTS_FILE,
-          reason: helper.reason || helper.stderr || "remove_helper_failed"
+          reason: helper.reason || helper.stderr || "remove_helper_failed",
+          sqlSync: sqlResult
         };
   }
 
   const filePath = String(env.FREERADIUS_CLIENTS_FILE || "").trim();
   if (!filePath) {
-    return { synced: false, reason: "missing_clients_file" };
+    return { synced: false, reason: "missing_clients_file", sqlSync: sqlResult };
   }
 
   try {
@@ -1163,12 +1188,15 @@ async function removeFreeradiusClientForNode(nodeCode) {
     const next = `${stripManagedFreeradiusClientBlock(current, nodeCode).trimEnd()}\n`;
     await fs.writeFile(filePath, next, "utf8");
     const reloadStatus = await validateAndReloadFreeradius();
-    return { synced: true, filePath, mode: "removed", serviceReload: reloadStatus };
+    return { synced: true, filePath, mode: "removed", serviceReload: reloadStatus, sqlSync: sqlResult };
   } catch (error) {
+    const isEnoent = error instanceof Error && error.code === "ENOENT";
     return {
-      synced: false,
+      synced: isEnoent && (sqlResult.deleted || env.MOCK_EXTERNALS),
       filePath,
-      reason: error instanceof Error ? error.message : "remove_failed"
+      reason: error instanceof Error ? error.message : "remove_failed",
+      bypassedFileWrite: isEnoent,
+      sqlSync: sqlResult
     };
   }
 }
@@ -2506,6 +2534,72 @@ platformFoundationRouter.delete(
     });
   })
 );
+
+platformFoundationRouter.get(
+  "/foundation/franchises/:franchiseCode/commissions",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const franchiseCode = req.params.franchiseCode;
+    const franchise = await FranchiseProfile.findOne({ franchiseCode }).lean();
+    if (!franchise) throw new ApiError(404, "Franchise not found");
+
+    const entries = await FranchiseCommission.find({ franchiseCode }).sort({ postedAt: -1 }).lean();
+
+    // Calculate balance
+    let balance = 0;
+    for (const entry of entries) {
+      if (entry.type === "commission") {
+        balance += entry.amount;
+      } else if (entry.type === "payout") {
+        balance -= entry.amount;
+      }
+    }
+
+    return ok(res, {
+      franchiseCode,
+      franchiseName: franchise.name,
+      balance,
+      commissionPercent: franchise.commissionPercent,
+      payoutMode: franchise.payoutMode,
+      entries
+    });
+  })
+);
+
+platformFoundationRouter.post(
+  "/foundation/franchises/:franchiseCode/payouts",
+  requirePermission(permissions.billingWrite),
+  asyncHandler(async (req, res) => {
+    const franchiseCode = req.params.franchiseCode;
+    const franchise = await FranchiseProfile.findOne({ franchiseCode });
+    if (!franchise) throw new ApiError(404, "Franchise not found");
+
+    const { amount, notes, payoutReference } = z.object({
+      amount: z.number().positive(),
+      notes: z.string().optional(),
+      payoutReference: z.string().optional()
+    }).parse(req.body);
+
+    const payout = await FranchiseCommission.create({
+      franchiseCode,
+      type: "payout",
+      amount,
+      notes: notes || `Manual payout disbursement`,
+      reference: payoutReference,
+      createdByAdminId: req.admin?._id
+    });
+
+    await auditFromRequest(req, {
+      action: "franchise.payout_disbursement",
+      entityType: "franchise",
+      entityId: franchiseCode,
+      metadata: { payoutId: payout._id, amount }
+    });
+
+    return ok(res, payout);
+  })
+);
+
 
 platformFoundationRouter.get(
   "/foundation/collections",

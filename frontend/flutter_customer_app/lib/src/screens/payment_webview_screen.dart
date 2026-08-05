@@ -10,9 +10,9 @@ import '../core/theme.dart';
 /// Represents the current state of the payment WebView flow.
 enum PaymentFlowState { idle, loading, webviewOpen, success, failure }
 
-/// A screen that displays the Jaze payment page in an in-app WebView.
+/// A screen that displays the payment page in an in-app WebView.
 ///
-/// Accepts a [paymentUrl] (the Jaze payment link) and [jazeDomain] (the
+/// Accepts a [paymentUrl] (the payment link) and [paymentDomain] (the
 /// allowed payment domain for navigation whitelisting).
 ///
 /// Pops with:
@@ -23,15 +23,15 @@ class PaymentWebViewScreen extends StatefulWidget {
   const PaymentWebViewScreen({
     super.key,
     required this.paymentUrl,
-    required this.jazeDomain,
+    required this.paymentDomain,
   });
 
-  /// The Jaze payment URL to load in the WebView.
+  /// The payment URL to load in the WebView.
   final String paymentUrl;
 
-  /// The allowed Jaze payment domain (e.g., "jaze.in").
+  /// The allowed payment domain.
   /// Navigation outside this domain (and justfiber domains) is blocked.
-  final String jazeDomain;
+  final String paymentDomain;
 
   @override
   State<PaymentWebViewScreen> createState() => _PaymentWebViewScreenState();
@@ -145,12 +145,11 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
     }
 
     // Domain whitelist check (Req 6.3)
-    // Allow navigation to Jaze payment domain, justfiber domains, and payment gateways
+    // Allow navigation to JustFiber-owned payment pages and payment gateways.
     final host = uri.host.toLowerCase();
-    if (!host.contains(widget.jazeDomain.toLowerCase()) &&
+    if (!host.contains(widget.paymentDomain.toLowerCase()) &&
         !host.contains('justfiber') &&
         !host.contains('razorpay') &&
-        !host.contains('jaze') &&
         !host.contains('paytm') &&
         !host.contains('phonepe') &&
         !host.contains('upi')) {

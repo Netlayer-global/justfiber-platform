@@ -109,7 +109,7 @@ class AppState extends ChangeNotifier {
     notes: [],
   );
 
-  JazeBillingView? jazeBilling;
+  SubscriberBillingView? subscriberBilling;
 
   List<RequestItem> requests = const [];
   List<SupportTicketItem> tickets = const [];
@@ -271,7 +271,7 @@ class AppState extends ChangeNotifier {
       try {
         await task();
       } catch (e) {
-        debugPrint('[refresh] TASK FAILED: $label — $e');
+        debugPrint('[refresh] TASK FAILED: $label â€” $e');
         failures.add('$label: $e');
       }
     }
@@ -308,12 +308,12 @@ class AppState extends ChangeNotifier {
               () async => billing = await api.fetchBilling(current,
                   customerId: selectedCustomerId)),
         runRefreshTask(
-            'jaze billing',
+            'subscriber billing',
             () async {
-              jazeBilling = await api.fetchJazeBilling(
+              subscriberBilling = await api.fetchSubscriberBilling(
                   current,
                   customerId: selectedCustomerId);
-              debugPrint('[refresh] jazeBilling: summary=${jazeBilling?.summary != null}, invoices=${jazeBilling?.invoices.length ?? 0}, selectedCustomerId=$selectedCustomerId');
+              debugPrint('[refresh] subscriberBilling: summary=${subscriberBilling?.summary != null}, invoices=${subscriberBilling?.invoices.length ?? 0}, selectedCustomerId=$selectedCustomerId');
             }),
         runRefreshTask('notifications',
             () async => notifications = await api.fetchNotifications(current)),
@@ -1045,22 +1045,22 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> loadJazeBilling() async {
+  Future<void> loadSubscriberBilling() async {
     final current = session;
     if (current == null) return;
     busy = true;
     error = null;
     notifyListeners();
     try {
-      jazeBilling = await api.fetchJazeBilling(
+      subscriberBilling = await api.fetchSubscriberBilling(
         current,
         customerId: selectedCustomerId,
       );
-      debugPrint('[AppState] jazeBilling loaded: summary=${jazeBilling?.summary != null}, invoices=${jazeBilling?.invoices.length ?? 0}');
+      debugPrint('[AppState] subscriberBilling loaded: summary=${subscriberBilling?.summary != null}, invoices=${subscriberBilling?.invoices.length ?? 0}');
     } catch (e) {
-      debugPrint('[AppState] jazeBilling FAILED: $e');
+      debugPrint('[AppState] subscriberBilling FAILED: $e');
       error = e.toString();
-      jazeBilling = null;
+      subscriberBilling = null;
     } finally {
       busy = false;
       notifyListeners();

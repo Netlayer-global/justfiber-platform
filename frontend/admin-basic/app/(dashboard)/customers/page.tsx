@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { adminAPI, openProtectedDocument } from '@/lib/api'
 import type { BngNode, Customer, Plan } from '@/lib/types'
-import { Eye, Loader, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
+import { Eye, Loader, Plus, RefreshCw, Search, Trash2, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 
 function formatDate(value?: string) {
@@ -49,11 +49,16 @@ function CustomersContent() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [plans, setPlans] = useState<Plan[]>([])
   const [bngNodes, setBngNodes] = useState<BngNode[]>([])
+  const [ipPools, setIpPools] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [deletingCustomerId, setDeletingCustomerId] = useState<string | null>(null)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+  const [isImportOpen, setIsImportOpen] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importing, setImporting] = useState(false)
+  const [importLogs, setImportLogs] = useState<any[] | null>(null)
   const [lookup, setLookup] = useState('')
   const [activeZone, setActiveZone] = useState({ key: 'default', label: 'JustFiber HQ' })
   const [createForm, setCreateForm] = useState({
@@ -75,6 +80,8 @@ function CustomersContent() {
     radiusUsername: '',
     radiusPassword: '123456',
     bngNodeCode: '',
+    currentIpv4: '',
+    ipv4Pool: '',
     operationalStatus: 'active',
   })
 
@@ -119,6 +126,9 @@ function CustomersContent() {
       serviceId: '',
       radiusUsername: '',
       radiusPassword: '123456',
+      bngNodeCode: '',
+      currentIpv4: '',
+      ipv4Pool: '',
       operationalStatus: 'active',
     }))
   }
@@ -140,20 +150,23 @@ function CustomersContent() {
       } else {
         setIsRefreshing(true)
       }
-      const [customersRes, plansRes, bngRes] = await Promise.all([
+      const [customersRes, plansRes, bngRes, poolsRes] = await Promise.all([
         adminAPI.getCustomers(1, 120),
         adminAPI.getPlans(),
         adminAPI.getBngNodes(),
+        adminAPI.getIpPools(),
       ])
       if (!customersRes.success) throw new Error(customersRes.error || 'Failed to load customers')
       if (!plansRes.success) throw new Error(plansRes.error || 'Failed to load plans')
       if (!bngRes.success) throw new Error(bngRes.error || 'Failed to load BNG nodes')
+      if (!poolsRes.success) throw new Error(poolsRes.error || 'Failed to load IP Subnets')
 
       setCustomers(customersRes.data?.items || [])
       const activePlans = plansRes.data?.items?.filter((plan) => plan.status === 'active') || []
       const activeNodes = (bngRes.data || []).filter((node) => node.status === 'active')
       setPlans(activePlans)
       setBngNodes(activeNodes)
+      setIpPools(poolsRes.data || [])
       const fallbackBillingTerm = getPlanBillingTermOptions(activePlans[0] || null)[0]?.value || 'monthly'
       setCreateForm((current) => ({
         ...current,
@@ -204,6 +217,8 @@ function CustomersContent() {
         radiusUsername: createForm.radiusUsername.trim() || suggestedUsername || undefined,
         radiusPassword: createForm.radiusPassword.trim() || undefined,
         bngNodeCode: createForm.bngNodeCode || undefined,
+        currentIpv4: createForm.currentIpv4.trim() || undefined,
+        ipv4Pool: createForm.ipv4Pool || undefined,
         createRadius: true,
       })
       if (!res.success || !res.data) {
@@ -226,6 +241,87 @@ function CustomersContent() {
       toast.error('Failed to create customer')
     } finally {
       setIsCreating(false)
+    }
+  }
+
+  function handleCsvFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (e.target.files && e.target.files[0]) {
+      setImportFile(e.target.files[0])
+      setImportLogs(null)
+    }
+  }
+
+  async function handleImportSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!importFile) {
+      toast.error('Select a CSV file first')
+      return
+    }
+    setImporting(true)
+    setImportLogs(null)
+    try {
+      const reader = new FileReader()
+      reader.onload = async (event) => {
+        const text = event.target?.result as string
+        if (!text) {
+          toast.error('Could not read file contents')
+          setImporting(false)
+          return
+        }
+
+        const lines = text.split(/\r?\n/)
+        const headers = lines[0].split(',').map(h => h.trim().replace(/^["']|["']$/g, ''))
+
+        const records = []
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim()
+          if (!line) continue
+          const values = line.split(',').map(v => v.trim().replace(/^["']|["']$/g, ''))
+          if (values.length < headers.length) continue
+
+          const rec: Record<string, string> = {}
+          headers.forEach((hdr, idx) => {
+            rec[hdr] = values[idx] || ''
+          })
+          records.push({
+            fullName: rec.fullName || rec.name || '',
+            mobile: rec.mobile || rec.phone || '',
+            email: rec.email || '',
+            planCode: rec.planCode || rec.plan || '',
+            zoneCode: rec.zoneCode || rec.zone || 'default',
+            address: rec.address || '',
+            radiusUsername: rec.radiusUsername || rec.username || '',
+            radiusPassword: rec.radiusPassword || rec.password || '123456'
+          })
+        }
+
+        if (records.length === 0) {
+          toast.error('No valid rows found in CSV')
+          setImporting(false)
+          return
+        }
+
+        const res = await adminAPI.importBulkCustomers(records)
+        if (res.success && Array.isArray(res.data)) {
+          const passed = res.data.filter((r: any) => r.status === 'success')
+          const failed = res.data.filter((r: any) => r.status === 'failed')
+          toast.success(`Processed ${res.data.length} records. ${passed.length} succeeded, ${failed.length} failed.`)
+          setImportLogs(res.data)
+          if (failed.length === 0) {
+            setIsImportOpen(false)
+            setImportFile(null)
+          }
+          await loadWorkspace()
+        } else {
+          toast.error(res.error || 'Failed to process bulk import')
+        }
+        setImporting(false)
+      }
+      reader.readAsText(importFile)
+    } catch (err) {
+      console.error(err)
+      toast.error('Error reading or processing CSV import file')
+      setImporting(false)
     }
   }
 
@@ -284,6 +380,10 @@ function CustomersContent() {
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
+            <button type="button" onClick={() => setIsImportOpen(true)} className="btn-secondary inline-flex items-center gap-2">
+              <Upload className="h-4 w-4 text-purple-600" />
+              Import CSV
+            </button>
             <button type="button" onClick={() => setIsCreateOpen(true)} className="btn-primary inline-flex items-center gap-2">
               <Plus className="h-4 w-4" />
               New Customer
@@ -530,6 +630,21 @@ function CustomersContent() {
                   <input className={`input w-full ${createErrors.radiusPassword ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : ''}`} required value={createForm.radiusPassword} onChange={(e) => setCreateForm((current) => ({ ...current, radiusPassword: e.target.value }))} />
                   {createErrors.radiusPassword ? <p className="mt-2 text-xs text-rose-600">{createErrors.radiusPassword}</p> : null}
                 </div>
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">Static IP Address</label>
+                  <input className="input w-full" placeholder="e.g. 103.x.x.x" value={createForm.currentIpv4} onChange={(e) => setCreateForm((current) => ({ ...current, currentIpv4: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">IP Subnet Pool</label>
+                  <select className="input w-full" value={createForm.ipv4Pool} onChange={(e) => setCreateForm((current) => ({ ...current, ipv4Pool: e.target.value }))} disabled={Boolean(createForm.currentIpv4)}>
+                    <option value="">Select Pool (Dynamic IP)</option>
+                    {ipPools.map((pool) => (
+                      <option key={pool.id || pool.name} value={pool.name}>
+                        {pool.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -570,6 +685,82 @@ function CustomersContent() {
                 <button type="submit" className="btn-primary inline-flex items-center gap-2" disabled={isCreating || !canCreateCustomer}>
                   {isCreating ? <Loader className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                   {isCreating ? 'Creating...' : 'Create Customer'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Bulk CSV Import Modal */}
+      {isImportOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-3xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+              <h3 className="text-lg font-bold text-zinc-100">Bulk Customer Onboarding</h3>
+              <button
+                type="button"
+                className="text-zinc-400 hover:text-zinc-200"
+                onClick={() => {
+                  setIsImportOpen(false)
+                  setImportFile(null)
+                  setImportLogs(null)
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleImportSubmit} className="mt-4 space-y-4">
+              <div className="p-3 rounded-xl bg-zinc-800/30 border border-zinc-800 space-y-1.5 text-xs text-zinc-400">
+                <div className="font-bold text-zinc-300">Required CSV Columns:</div>
+                <p className="font-mono text-xxs leading-relaxed bg-zinc-950 p-2 rounded text-purple-400 overflow-x-auto">
+                  fullName,mobile,email,planCode,zoneCode,address,radiusUsername,radiusPassword
+                </p>
+                <div className="text-zinc-500 pt-1">• Automatically registers subscribers in both CRM and FreeRADIUS.</div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-zinc-400">Select CSV File</label>
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleCsvFileChange}
+                  className="w-full text-sm text-zinc-450 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-zinc-800 file:text-zinc-200 hover:file:bg-zinc-700"
+                  required
+                />
+              </div>
+
+              {importLogs && (
+                <div className="space-y-2">
+                  <div className="text-xs font-bold text-zinc-300">Onboarding Status Report:</div>
+                  <div className="max-h-40 overflow-y-auto border border-zinc-800 rounded-xl p-2 bg-zinc-950/40 text-xxs font-mono space-y-1">
+                    {importLogs.map((log, index) => (
+                      <div key={index} className={log.status === 'success' ? 'text-emerald-500' : 'text-red-500'}>
+                        {log.status === 'success'
+                          ? `✓ ${log.fullName}: Onboarded successfully (${log.customerId})`
+                          : `✗ ${log.fullName}: Failed - ${log.error}`}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-zinc-800">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setIsImportOpen(false)
+                    setImportFile(null)
+                    setImportLogs(null)
+                  }}
+                  disabled={importing}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary inline-flex items-center gap-2" disabled={importing || !importFile}>
+                  {importing ? <Loader className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  {importing ? 'Processing...' : 'Start Onboarding'}
                 </button>
               </div>
             </form>

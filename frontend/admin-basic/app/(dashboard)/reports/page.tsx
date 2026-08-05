@@ -7,10 +7,12 @@ import {
   Wallet,
   Wifi,
 } from 'lucide-react'
-import { adminAPI } from '@/lib/api'
+import { adminAPI, downloadProtectedFile } from '@/lib/api'
+import { toast } from 'sonner'
 import type { BillingOverview, Customer, DashboardStats } from '@/lib/types'
 import { formatCurrency } from '@/lib/utils'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { CategoryBarChart, DonutChart } from '@/components/ui/charts'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
@@ -166,6 +168,82 @@ export default function ReportsPage() {
           <CardBody><CategoryBarChart data={stateGstData} height={300} /></CardBody>
         </Card>
       ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Tax & Audit Registers</CardTitle>
+          <p className="text-xs text-slate-500 mt-0.5">Export standard compliance spreadsheets and invoices lists.</p>
+        </CardHeader>
+        <CardBody className="mt-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/50 flex flex-col justify-between">
+              <div>
+                <h4 className="font-bold text-zinc-150 text-sm">GSTR-1 Tax Return</h4>
+                <p className="text-xxs text-zinc-500 mt-1">Spreadsheet containing B2C and B2B sales data segmented by IGST, CGST, and SGST rates.</p>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="mt-4 w-full"
+                onClick={async () => {
+                  try {
+                    await downloadProtectedFile('/api/v1/admin/billing/exports/gstr1.csv', 'gstr1-export.csv')
+                    toast.success('GSTR-1 report downloaded successfully')
+                  } catch {
+                    toast.error('Failed to download GSTR-1 report')
+                  }
+                }}
+              >
+                Download GSTR-1 CSV
+              </Button>
+            </div>
+
+            <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/50 flex flex-col justify-between">
+              <div>
+                <h4 className="font-bold text-zinc-150 text-sm">Invoices Register</h4>
+                <p className="text-xxs text-zinc-500 mt-1">Audit log of all system invoices, due dates, billing periods, and payment statuses.</p>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="mt-4 w-full"
+                onClick={async () => {
+                  try {
+                    await downloadProtectedFile('/api/v1/admin/billing/exports/invoices.csv', 'invoices-export.csv')
+                    toast.success('Invoices register downloaded successfully')
+                  } catch {
+                    toast.error('Failed to download invoices register')
+                  }
+                }}
+              >
+                Download Invoices CSV
+              </Button>
+            </div>
+
+            <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/50 flex flex-col justify-between">
+              <div>
+                <h4 className="font-bold text-zinc-150 text-sm">Payments Ledger</h4>
+                <p className="text-xxs text-zinc-500 mt-1">List of all collected payments, payment modes, gateway reference numbers, and dates.</p>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="mt-4 w-full"
+                onClick={async () => {
+                  try {
+                    await downloadProtectedFile('/api/v1/admin/billing/exports/payments.csv', 'payments-export.csv')
+                    toast.success('Payments log downloaded successfully')
+                  } catch {
+                    toast.error('Failed to download payments log')
+                  }
+                }}
+              >
+                Download Payments CSV
+              </Button>
+            </div>
+          </div>
+        </CardBody>
+      </Card>
     </div>
   )
 }

@@ -32,6 +32,9 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Building2,
+  Package,
+  Users,
+  Landmark,
 } from 'lucide-react'
 import { adminAPI, clearAuthToken, getAuthToken } from '@/lib/api'
 import type { FranchiseProfile } from '@/lib/types'
@@ -61,39 +64,48 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    subheader: 'SUBSCRIBERS & CRM',
+    items: [
+      { href: '/customers', label: 'Customers', icon: UserRound },
+      { href: '/kyc', label: 'KYC Verification', icon: ShieldCheck, badge: 'New' },
+      { href: '/tickets', label: 'Support Tickets', icon: Ticket },
+      { href: '/sales', label: 'Sales & Leads', icon: Briefcase },
+      { href: '/sales-agents', label: 'Sales Agents', icon: UserSquare2 },
+      { href: '/franchises', label: 'Franchises / LCOs', icon: Landmark, badge: 'New' },
+    ],
+  },
+  {
     subheader: 'COMMERCIAL',
     items: [
       { href: '/plans', label: 'Plans', icon: Cable },
-      { href: '/billing', label: 'Billing', icon: CreditCard, badge: 'New' },
-      { href: '/customer-app', label: 'Customer App', icon: Bell },
-      { href: '/sales', label: 'Sales & Leads', icon: Briefcase },
-      { href: '/sales-agents', label: 'Sales Agents', icon: UserSquare2 },
-      { href: '/customers', label: 'Customers', icon: UserRound },
+      { href: '/billing', label: 'Billing & Invoices', icon: CreditCard, badge: 'New' },
+      { href: '/gst-registrations', label: 'GST Registrations', icon: Building2, badge: 'New' },
+      { href: '/customer-app', label: 'Banners & Ads', icon: Bell },
     ],
   },
   {
     subheader: 'OPERATIONS',
     items: [
-      { href: '/installers', label: 'Installers', icon: Wrench },
       { href: '/jobs', label: 'Jobs & Schedule', icon: Activity },
-      { href: '/tickets', label: 'Support Tickets', icon: Ticket },
+      { href: '/installers', label: 'Installers', icon: Wrench },
+      { href: '/inventory', label: 'Inventory', icon: Package, badge: 'New' },
+      { href: '/notifications', label: 'Notifications', icon: Bell, badge: 'New' },
     ],
   },
   {
     subheader: 'NETWORK',
     items: [
-      { href: '/devices', label: 'Devices', icon: HardDrive },
-      { href: '/network-map', label: 'Network Map', icon: MapPinned },
-      { href: '/serviceability', label: 'Serviceability', icon: MapPinned },
-      { href: '/provisioning', label: 'Provisioning', icon: ShieldCheck },
+      { href: '/radius-manager', label: 'RADIUS Manager', icon: Router, badge: 'New' },
       { href: '/nat-logs', label: 'NAT Logs', icon: Network, badge: 'New' },
+      { href: '/devices', label: 'Devices (ACS)', icon: HardDrive },
+      { href: '/network-map', label: 'Network Map', icon: MapPinned },
     ],
   },
   {
     subheader: 'SYSTEM',
     items: [
-      { href: '/gst-registrations', label: 'GST Registrations', icon: Building2, badge: 'New' },
-      { href: '/my-zone-details', label: 'My Zone Details', icon: MapPinned },
+      { href: '/settings', label: 'Settings', icon: Settings, badge: 'New' },
+      { href: '/staff', label: 'Staff Accounts', icon: Users, badge: 'New' },
     ],
   },
 ]

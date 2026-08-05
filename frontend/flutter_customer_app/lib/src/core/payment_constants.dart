@@ -4,9 +4,9 @@
 /// whitelisting, success/failure URL detection, and timeout values.
 library;
 
-/// The primary Jaze payment domain used for WebView domain whitelisting.
+/// The primary Subscriber payment domain used for WebView domain whitelisting.
 /// The WebView allows navigation to this domain and 'justfiber' domains.
-const String kJazePaymentDomain = 'justfiber.in';
+const String kSubscriberPaymentDomain = 'justfiber.in';
 
 /// URL patterns that indicate a successful payment completion.
 /// The WebView navigation delegate checks URLs against these patterns

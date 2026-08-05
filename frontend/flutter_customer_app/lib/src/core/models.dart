@@ -276,7 +276,7 @@ class BillingPaymentItem {
     if (m == 'upi') return 'UPI';
     if (m == 'cash') return 'Cash';
     if (m.isEmpty) return 'Online';
-    // Recognized Jaze methods that map to Online
+    // Recognized Subscriber methods that map to Online
     if (m == 'onlinepayment' || m == 'online') return 'Online';
     return 'Online';
   }
@@ -284,7 +284,7 @@ class BillingPaymentItem {
   /// Returns notes truncated to 200 characters if longer.
   String get truncatedNotes {
     if (notes.length <= 200) return notes;
-    return '${notes.substring(0, 200)}…';
+    return '${notes.substring(0, 200)}â€¦';
   }
 }
 
@@ -887,10 +887,10 @@ class SupportDiagnosis {
   final double estimatedSpeedMbps;
 }
 
-// ─── Jaze-direct billing models ──────────────────────────────────────────────
+// â”€â”€â”€ Subscriber-direct billing models â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-class JazeBillingSummary {
-  const JazeBillingSummary({
+class SubscriberBillingSummary {
+  const SubscriberBillingSummary({
     required this.customerName,
     required this.username,
     required this.status,
@@ -927,10 +927,10 @@ class JazeBillingSummary {
   bool get isPaid => paymentStatus.toLowerCase() == 'paid';
   bool get hasDue => outstanding > 0;
 
-  /// Convenience getter to access bandwidth data as a JazeBandwidth object.
-  JazeBandwidth? get bandwidth =>
+  /// Convenience getter to access bandwidth data as a SubscriberBandwidth object.
+  SubscriberBandwidth? get bandwidth =>
       (downloadMbps > 0 || uploadMbps > 0 || usageBytes > 0)
-          ? JazeBandwidth(
+          ? SubscriberBandwidth(
               downloadMbps: downloadMbps,
               uploadMbps: uploadMbps,
               usageBytes: usageBytes,
@@ -938,8 +938,8 @@ class JazeBillingSummary {
           : null;
 }
 
-class JazeInvoice {
-  const JazeInvoice({
+class SubscriberInvoice {
+  const SubscriberInvoice({
     required this.invoiceId,
     required this.orderId,
     required this.periodStart,
@@ -968,21 +968,21 @@ class JazeInvoice {
   final String notes;
 }
 
-class JazeBillingView {
-  const JazeBillingView({
+class SubscriberBillingView {
+  const SubscriberBillingView({
     required this.summary,
     required this.invoices,
     required this.paymentLink,
   });
 
-  final JazeBillingSummary? summary;
-  final List<JazeInvoice> invoices;
+  final SubscriberBillingSummary? summary;
+  final List<SubscriberInvoice> invoices;
   final String paymentLink;
 }
 
-/// Bandwidth/usage data from Jaze billing summary.
-class JazeBandwidth {
-  const JazeBandwidth({
+/// Bandwidth/usage data from Subscriber billing summary.
+class SubscriberBandwidth {
+  const SubscriberBandwidth({
     required this.downloadMbps,
     required this.uploadMbps,
     required this.usageBytes,

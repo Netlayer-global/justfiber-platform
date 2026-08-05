@@ -45,4 +45,40 @@ const paymentTransactionSchema = new mongoose.Schema(
 paymentTransactionSchema.index({ customerId: 1, paidAt: -1 });
 paymentTransactionSchema.index({ status: 1, paidAt: -1 });
 
+paymentTransactionSchema.post("save", async function(doc) {
+  if (doc.status === "success") {
+    try {
+      const Customer = mongoose.model("Customer");
+      const FranchiseProfile = mongoose.model("FranchiseProfile");
+      const FranchiseCommission = mongoose.model("FranchiseCommission");
+
+      // Check if commission already exists for this paymentId
+      const exists = await FranchiseCommission.findOne({ paymentId: doc.transactionId, type: "commission" }).lean();
+      if (exists) return;
+
+      const customer = await Customer.findOne({ customerId: doc.customerId }).lean();
+      if (!customer || !customer.zoneCode) return;
+
+      const franchise = await FranchiseProfile.findOne({ franchiseCode: customer.zoneCode }).lean();
+      if (!franchise || !franchise.commissionPercent) return;
+
+      const commissionAmount = (doc.amount * franchise.commissionPercent) / 100;
+
+      await FranchiseCommission.create({
+        franchiseCode: franchise.franchiseCode,
+        invoiceId: doc.invoiceId,
+        paymentId: doc.transactionId,
+        customerId: doc.customerId,
+        type: "commission",
+        amount: commissionAmount,
+        commissionPercent: franchise.commissionPercent,
+        totalInvoiceAmount: doc.amount,
+        notes: `Commission credit (${franchise.commissionPercent}%) for customer payment ${doc.transactionId}`
+      });
+    } catch (error) {
+      console.error("Failed to automatically process franchise commission split hook:", error);
+    }
+  }
+});
+
 export const PaymentTransaction = mongoose.model("PaymentTransaction", paymentTransactionSchema);

@@ -70,8 +70,7 @@ const planCatalogSchema = new mongoose.Schema(
       pppoePrefix: String,
       pppoeRealm: String,
       defaultPppoePassword: String,
-      wifiNamePrefix: String,
-      jazeGroupId: String
+      wifiNamePrefix: String
     },
     merchandising: {
       featured: { type: Boolean, default: false },

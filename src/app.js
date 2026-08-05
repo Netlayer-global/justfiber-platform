@@ -25,7 +25,7 @@ import { customerPortalRouter } from "./modules/customerPortal/routes.js";
 import { installerAuthRouter } from "./modules/installerAuth/routes.js";
 import { installerAppRouter } from "./modules/installerApp/routes.js";
 import { salesAppRouter } from "./modules/salesApp/routes.js";
-import { jazeWebhookRouter } from "./modules/webhooks/jazeWebhookRoutes.js";
+
 import { smartfloWebhookRouter } from "./modules/webhooks/smartfloWebhookRoutes.js";
 import { ApiError } from "./common/ApiError.js";
 
@@ -125,7 +125,6 @@ export function createApp() {
   app.use("/api/v1/installer", installerAppRouter);
   app.use("/api/v1/customer", customerPortalRouter);
   app.use("/api/v1/sales", salesAppRouter);
-  app.use("/api/v1/webhooks", jazeWebhookRouter);
   app.use("/api/v1/webhooks", smartfloWebhookRouter);
 
   app.use((_req, _res, next) => {

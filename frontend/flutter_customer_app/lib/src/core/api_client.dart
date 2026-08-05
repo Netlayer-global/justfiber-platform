@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -1589,9 +1589,9 @@ class ApiClient {
     return null;
   }
 
-  Future<JazeBillingView> fetchJazeBilling(CustomerSession session,
+  Future<SubscriberBillingView> fetchSubscriberBilling(CustomerSession session,
       {String? customerId, String? fromDate, String? toDate}) async {
-    String path = _withCustomerId('/api/v1/customer/billing/jaze/view', customerId);
+    String path = _withCustomerId('/api/v1/customer/billing/subscriber/view', customerId);
     final queryParts = <String>[];
     if (fromDate != null) queryParts.add('fromDate=$fromDate');
     if (toDate != null) queryParts.add('toDate=$toDate');
@@ -1606,7 +1606,7 @@ class ApiClient {
     final summaryMap = _asMap(data['summary']);
     final summary = summaryMap.isEmpty
         ? null
-        : JazeBillingSummary(
+        : SubscriberBillingSummary(
             customerName: (summaryMap['customerName'] ?? '').toString(),
             username: (summaryMap['username'] ?? '').toString(),
             status: (summaryMap['status'] ?? '').toString(),
@@ -1626,7 +1626,7 @@ class ApiClient {
 
     final invoices = (_asList(data['invoices'])).map((item) {
       final map = item as Map<String, dynamic>;
-      return JazeInvoice(
+      return SubscriberInvoice(
         invoiceId: (map['invoiceId'] ?? '').toString(),
         orderId: (map['orderId'] ?? '').toString(),
         periodStart: (map['periodStart'] ?? '').toString(),
@@ -1644,20 +1644,20 @@ class ApiClient {
 
     final paymentLink = (_asMap(data['payment'])['paymentLink'] ?? '').toString();
 
-    return JazeBillingView(
+    return SubscriberBillingView(
       summary: summary,
       invoices: invoices,
       paymentLink: paymentLink,
     );
   }
 
-  /// Requests a fresh Jaze UPI payment link for the authenticated customer.
+  /// Requests a fresh Subscriber UPI payment link for the authenticated customer.
   /// Returns the payment link URL on success, or null if unavailable.
   Future<String?> requestPaymentLink(CustomerSession session) async {
     try {
       final data = _asMap(
         await _request(
-          '/api/v1/customer/billing/jaze/payment-link',
+          '/api/v1/customer/billing/subscriber/payment-link',
           method: 'POST',
           token: session.accessToken,
         ),

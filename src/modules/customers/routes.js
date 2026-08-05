@@ -30,6 +30,7 @@ import { BillingNote } from "../../models/BillingNote.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
 import { PlanCatalog } from "../../models/PlanCatalog.js";
 import { ConnectionBooking } from "../../models/ConnectionBooking.js";
+import { AuditLog } from "../../models/AuditLog.js";
 import { CustomerUser } from "../../models/CustomerUser.js";
 import { CustomerNotification } from "../../models/CustomerNotification.js";
 import { Installer } from "../../models/Installer.js";
@@ -52,8 +53,6 @@ import { NetworkNodeStatus } from "../../models/NetworkNodeStatus.js";
 import { SalesAgent } from "../../models/SalesAgent.js";
 import { applyBillingNoteAdjustment } from "../../common/billingAccounting.js";
 import { internalBillingEngine, repriceOpenInvoicesForCustomer } from "../../integrations/internalBillingEngine.js";
-import { jazeClient } from "../../integrations/jazeClient.js";
-import { env } from "../../config/env.js";
 
 export const customersRouter = Router();
 
@@ -1159,7 +1158,6 @@ customersRouter.post(
           zoneName: resolvedZoneName,
           zoneStateCode: resolvedZoneStateCode,
           zoneStateName: resolvedZoneStateName,
-          jazeStatus: "manual_admin",
           operationalStatus: toCustomerStatus(payload.operationalStatus),
           expiryAt: nextBillingDate,
           billingZoneCode: resolvedZoneCode,
@@ -1221,6 +1219,8 @@ customersRouter.post(
           accessProfileCode: accessProfile?.code || payload.accessProfileCode || "",
           billingProfileCode: billingProfile?.code || payload.billingProfileCode || "",
           bngNodeCode: bngNode?.nodeCode || payload.bngNodeCode || "",
+          currentIpv4: payload.currentIpv4 || null,
+          ipv4Pool: payload.currentIpv4 ? null : (payload.ipv4Pool || null),
           status: payload.createRadius === false ? "draft" : "active",
           activatedAt: payload.createRadius === false ? null : startDate,
           suspendedAt: null,
@@ -1261,6 +1261,8 @@ customersRouter.post(
           accessProfileCode: accessProfile?.code || payload.accessProfileCode,
           billingProfileCode: billingProfile?.code || payload.billingProfileCode,
           bngNodeCode: bngNode?.nodeCode || payload.bngNodeCode,
+          currentIpv4: payload.currentIpv4 || null,
+          ipv4Pool: payload.currentIpv4 ? null : (payload.ipv4Pool || null),
           metadata: {
             source: "admin_manual_create",
             networkProfile
@@ -2844,19 +2846,6 @@ customersRouter.post(
     const newPlan = await PlanCatalog.findOne({ planCode: newPlanCode.toUpperCase(), active: true }).lean();
     if (!newPlan) throw new ApiError(404, "Plan not found");
 
-    let jazeResult = null;
-    if (env.SERVICE_CONTROL_PROVIDER === "jaze") {
-      const jazeGroupId = newPlan.provisioning?.jazeGroupId;
-      if (!jazeGroupId) throw new ApiError(400, `Plan ${newPlanCode} has no jazeGroupId mapped`);
-      if (!customer.jazeUserId) throw new ApiError(400, "Customer has no jazeUserId — activate via installer first");
-
-      jazeResult = await jazeClient.editUser({
-        userId: customer.jazeUserId,
-        userGroupId: jazeGroupId,
-        comments: reason || `Plan changed to ${newPlanCode}`
-      });
-    }
-
     const oldPlanCode = customer.planCode;
     customer.planCode = newPlan.planCode;
     customer.planName = newPlan.name;
@@ -2866,7 +2855,7 @@ customersRouter.post(
       action: "customer.plan_changed",
       entityType: "customer",
       entityId: customer.customerId,
-      metadata: { oldPlanCode, newPlanCode: newPlan.planCode, jazeGroupId: newPlan.provisioning?.jazeGroupId, reason }
+      metadata: { oldPlanCode, newPlanCode: newPlan.planCode, accessProfileCode: newPlan.provisioning?.accessProfileCode || "", reason }
     });
 
     return ok(res, {
@@ -2874,8 +2863,126 @@ customersRouter.post(
       oldPlanCode,
       newPlanCode: newPlan.planCode,
       newPlanName: newPlan.name,
-      jazeGroupId: newPlan.provisioning?.jazeGroupId || null,
-      jazeResult
+      accessProfileCode: newPlan.provisioning?.accessProfileCode || ""
     });
   })
 );
+
+customersRouter.get(
+  "/:customerId/timeline",
+  requirePermission(permissions.customerRead),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.params.customerId }).lean();
+    if (!customer) throw new ApiError(404, "Customer not found");
+
+    const auditLogs = await AuditLog.find({
+      $or: [
+        { entityId: customer.customerId },
+        { "metadata.customerId": customer.customerId }
+      ]
+    }).sort({ createdAt: -1 }).limit(100).lean();
+
+    return ok(res, auditLogs.map(item => ({
+      id: String(item._id),
+      action: item.action,
+      actorName: item.actorName || "",
+      actorType: item.actorType || "",
+      result: item.result || "success",
+      reason: item.reason || "",
+      metadata: item.metadata || {},
+      createdAt: item.createdAt
+    })));
+  })
+);
+
+customersRouter.post(
+  "/:customerId/pppoe/disconnect",
+  requirePermission(permissions.deviceApplyPreset),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.params.customerId }).lean();
+    if (!customer) throw new ApiError(404, "Customer not found");
+    if (!customer.serviceId) throw new ApiError(400, "Customer serviceId is missing");
+
+    const result = await serviceControlAdapter.disconnectSubscriberSession({
+      serviceId: customer.serviceId,
+      reason: req.body?.reason || "manual_admin_disconnect"
+    });
+
+    await auditFromRequest(req, {
+      action: "customer.pppoe.force_disconnect",
+      entityType: "customer",
+      entityId: customer.customerId,
+      metadata: { result, reason: req.body?.reason || "manual_admin_disconnect" }
+    });
+
+    return ok(res, { disconnected: true, result });
+  })
+);
+
+customersRouter.post(
+  "/import-bulk",
+  requirePermission(permissions.customerCreate),
+  asyncHandler(async (req, res) => {
+    const list = z.array(z.object({
+      fullName: z.string(),
+      mobile: z.string(),
+      email: z.string().optional().nullable(),
+      planCode: z.string(),
+      zoneCode: z.string(),
+      address: z.string().optional().nullable(),
+      radiusUsername: z.string(),
+      radiusPassword: z.string()
+    })).parse(req.body);
+
+    const results = [];
+    for (const item of list) {
+      try {
+        // Generate IDs
+        const customerId = `CUST-${Math.floor(100000 + Math.random() * 900000)}`;
+        const serviceId = `SRV-${Math.floor(100000 + Math.random() * 900000)}`;
+
+        const plan = await PlanCatalog.findOne({ planCode: item.planCode.toUpperCase() }).lean();
+        const planName = plan ? plan.name : "Imported Plan";
+
+        // Create Customer
+        await Customer.create({
+          customerId,
+          fullName: item.fullName,
+          mobile: item.mobile,
+          email: item.email || "",
+          serviceId,
+          planCode: item.planCode.toUpperCase(),
+          planName,
+          zoneCode: item.zoneCode,
+          operationalStatus: "active",
+          address: { street: item.address || "", city: "Imported" }
+        });
+
+        // Setup RADIUS/BNG
+        await serviceControlAdapter.createSubscriberAccess({
+          serviceId,
+          customerId,
+          radiusUsername: item.radiusUsername,
+          radiusPassword: item.radiusPassword,
+          accessProfileCode: plan?.provisioning?.accessProfileCode || "default",
+          bngNodeCode: "bng-lko-01"
+        });
+
+        results.push({ customerId, fullName: item.fullName, status: "success" });
+      } catch (error) {
+        results.push({ fullName: item.fullName, status: "failed", error: error.message });
+      }
+    }
+
+    await auditFromRequest(req, {
+      action: "customer.bulk_import",
+      entityType: "customer",
+      entityId: "bulk",
+      metadata: { total: list.length, passed: results.filter(r => r.status === "success").length }
+    });
+
+    return ok(res, results);
+  })
+);
+
+

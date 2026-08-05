@@ -317,15 +317,6 @@ salesAppRouter.post(
 );
 
 salesAppRouter.post(
-  "/bookings/:bookingId/payment/link-jaze",
-  requireSalesAuth,
-  asyncHandler(async (req, res) => {
-    salesBookingPaymentLinkSchema.parse(req.body || {});
-    throw new ApiError(410, "Jaze sales payment has been removed. Use internal billing flow.");
-  })
-);
-
-salesAppRouter.post(
   "/bookings/:bookingId/payment/confirm",
   requireSalesAuth,
   asyncHandler(async (req, res) => {

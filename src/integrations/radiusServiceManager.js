@@ -175,6 +175,33 @@ export class RadiusServiceManager {
       throw new Error("Radius username is required for access snapshot");
     }
 
+    if (env.MOCK_EXTERNALS) {
+      const isSuspended = service?.status === "suspended";
+      const radcheck = [];
+      const radreply = [];
+      if (isSuspended) {
+        radcheck.push({ username, attribute: "Auth-Type", op: ":=", value: "Reject" });
+        radreply.push({ username, attribute: "Reply-Message", op: ":=", value: service?.metadata?.suspensionReason || "Service suspended" });
+      } else {
+        radcheck.push({ username, attribute: "Cleartext-Password", op: ":=", value: service?.metadata?.radiusPassword || "testing123" });
+        if (service?.currentIpv4) {
+          radreply.push({ username, attribute: "Framed-IP-Address", op: ":=", value: service.currentIpv4 });
+        } else if (service?.ipv4Pool) {
+          radreply.push({ username, attribute: "Framed-Pool", op: ":=", value: service.ipv4Pool });
+        } else {
+          radreply.push({ username, attribute: "Framed-IP-Address", op: ":=", value: "10.0.0.100" });
+        }
+      }
+      return {
+        serviceId: service?.serviceId || serviceId || null,
+        customerId: service?.customerId || null,
+        radiusUsername: username,
+        status: service?.status || null,
+        radcheck,
+        radreply
+      };
+    }
+
     const connection = await getPool().getConnection();
     try {
       const [checkRows] = await connection.execute(
@@ -206,6 +233,17 @@ export class RadiusServiceManager {
     if (!username) {
       throw new Error("Radius username is required for usage summary");
     }
+    if (env.MOCK_EXTERNALS) {
+      return {
+        username,
+        totalInputOctets: 4500000000,
+        totalOutputOctets: 9500000000,
+        totalOctets: 14000000000,
+        latestSessionStart: new Date(Date.now() - 1000 * 60 * 60 * 4),
+        latestUpdateAt: new Date()
+      };
+    }
+
     const connection = await getPool().getConnection();
     try {
       const [rows] = await connection.execute(
@@ -248,6 +286,37 @@ export class RadiusServiceManager {
       throw new Error("Radius username is required for session history");
     }
     const safeLimit = Math.max(1, Math.min(Number(limit || 5), 20));
+    if (env.MOCK_EXTERNALS) {
+      return [
+        {
+          sessionId: "8271A2F",
+          startedAt: new Date(Date.now() - 1000 * 60 * 60 * 4),
+          stoppedAt: null,
+          updatedAt: new Date(),
+          ipAddress: service?.currentIpv4 || "10.0.0.100",
+          macAddress: service?.macAddress || "00:1B:44:11:3A:B7",
+          sessionSeconds: 14400,
+          inputOctets: 4500000000,
+          outputOctets: 9500000000,
+          totalOctets: 14000000000,
+          live: true
+        },
+        {
+          sessionId: "8265B1E",
+          startedAt: new Date(Date.now() - 1000 * 60 * 60 * 28),
+          stoppedAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
+          updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
+          ipAddress: service?.currentIpv4 || "10.0.0.100",
+          macAddress: service?.macAddress || "00:1B:44:11:3A:B7",
+          sessionSeconds: 14400,
+          inputOctets: 3200000000,
+          outputOctets: 7100000000,
+          totalOctets: 10300000000,
+          live: false
+        }
+      ].slice(0, safeLimit);
+    }
+
     const connection = await getPool().getConnection();
     try {
       const [rows] = await connection.execute(
@@ -377,26 +446,28 @@ export class RadiusServiceManager {
       ? await AccessProfile.findOne({ code: effectiveAccessProfileCode, active: true }).lean()
       : null;
 
-    const connection = await getPool().getConnection();
-    try {
-      await connection.beginTransaction();
-      await replaceRadcheckEntries(connection, username, [
-        { attribute: "Cleartext-Password", op: ":=", value: password }
-      ]);
-      await replaceRadreplyEntries(
-        connection,
-        username,
-        buildReplyAttributes(accessProfile, effectiveMetadata.networkProfile, {
-          currentIpv4: effectiveCurrentIpv4,
-          ipv4Pool: effectiveIpv4Pool
-        })
-      );
-      await connection.commit();
-    } catch (error) {
-      await connection.rollback();
-      throw error;
-    } finally {
-      connection.release();
+    if (!env.MOCK_EXTERNALS) {
+      const connection = await getPool().getConnection();
+      try {
+        await connection.beginTransaction();
+        await replaceRadcheckEntries(connection, username, [
+          { attribute: "Cleartext-Password", op: ":=", value: password }
+        ]);
+        await replaceRadreplyEntries(
+          connection,
+          username,
+          buildReplyAttributes(accessProfile, effectiveMetadata.networkProfile, {
+            currentIpv4: effectiveCurrentIpv4,
+            ipv4Pool: effectiveIpv4Pool
+          })
+        );
+        await connection.commit();
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
     }
 
     const nextService =
@@ -431,6 +502,10 @@ export class RadiusServiceManager {
     };
     await nextService.save();
 
+    await mikrotikBngManager.syncSubscriberQueue({
+      serviceId: nextService.serviceId
+    }).catch(() => null);
+
     const usageSummary = await this.getSubscriberUsageSummary({
       serviceId: nextService.serviceId
     }).catch(() => null);
@@ -458,21 +533,23 @@ export class RadiusServiceManager {
 
   async suspendSubscriberAccess({ serviceId, reason }) {
     const service = await getServiceOrThrow(serviceId);
-    const connection = await getPool().getConnection();
-    try {
-      await connection.beginTransaction();
-      await replaceRadcheckEntries(connection, service.radiusUsername, [
-        { attribute: "Auth-Type", op: ":=", value: "Reject" }
-      ]);
-      await replaceRadreplyEntries(connection, service.radiusUsername, [
-        { attribute: "Reply-Message", op: ":=", value: reason || env.RADIUS_REJECT_MESSAGE }
-      ]);
-      await connection.commit();
-    } catch (error) {
-      await connection.rollback();
-      throw error;
-    } finally {
-      connection.release();
+    if (!env.MOCK_EXTERNALS) {
+      const connection = await getPool().getConnection();
+      try {
+        await connection.beginTransaction();
+        await replaceRadcheckEntries(connection, service.radiusUsername, [
+          { attribute: "Auth-Type", op: ":=", value: "Reject" }
+        ]);
+        await replaceRadreplyEntries(connection, service.radiusUsername, [
+          { attribute: "Reply-Message", op: ":=", value: reason || env.RADIUS_REJECT_MESSAGE }
+        ]);
+        await connection.commit();
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
     }
 
     service.status = "suspended";
@@ -534,27 +611,34 @@ export class RadiusServiceManager {
       throw new Error("Radius username is required for delete");
     }
 
-    const connection = await getPool().getConnection();
-    try {
-      await connection.beginTransaction();
-      await connection.execute("DELETE FROM radcheck WHERE username = ?", [username]);
-      await connection.execute("DELETE FROM radreply WHERE username = ?", [username]);
-      await connection.execute("DELETE FROM radusergroup WHERE username = ?", [username]);
-      if (purgeAccounting) {
-        await connection.execute("DELETE FROM radacct WHERE username = ?", [username]);
-        await connection.execute("DELETE FROM radpostauth WHERE username = ?", [username]);
+    if (!env.MOCK_EXTERNALS) {
+      const connection = await getPool().getConnection();
+      try {
+        await connection.beginTransaction();
+        await connection.execute("DELETE FROM radcheck WHERE username = ?", [username]);
+        await connection.execute("DELETE FROM radreply WHERE username = ?", [username]);
+        await connection.execute("DELETE FROM radusergroup WHERE username = ?", [username]);
+        if (purgeAccounting) {
+          await connection.execute("DELETE FROM radacct WHERE username = ?", [username]);
+          await connection.execute("DELETE FROM radpostauth WHERE username = ?", [username]);
+        }
+        await connection.commit();
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
       }
-      await connection.commit();
-    } catch (error) {
-      await connection.rollback();
-      throw error;
-    } finally {
-      connection.release();
     }
 
     if (service) {
       await SubscriberService.deleteOne({ _id: service._id });
     }
+
+    await mikrotikBngManager.deleteSubscriberQueue({
+      serviceId: service?.serviceId || serviceId,
+      radiusUsername: username
+    }).catch(() => null);
 
     return {
       deleted: true,
@@ -593,6 +677,97 @@ export class RadiusServiceManager {
         replyMessage: replyMessage?.value || null
       }
     };
+  }
+
+  async syncNasClient(node) {
+    if (env.MOCK_EXTERNALS) {
+      return { synced: true, reason: "mocked" };
+    }
+    const ipList = [
+      String(node.radiusClientIp || "").trim(),
+      ...(Array.isArray(node.additionalRadiusClientIps) ? node.additionalRadiusClientIps : [])
+    ].map((ip) => ip.trim()).filter(Boolean);
+
+    if (ipList.length === 0) {
+      return { synced: false, reason: "no_client_ips" };
+    }
+
+    const connection = await getPool().getConnection();
+    try {
+      await connection.beginTransaction();
+      await connection.execute("DELETE FROM nas WHERE shortname = ? OR shortname LIKE ?", [node.nodeCode, `${node.nodeCode}-%`]);
+      for (let i = 0; i < ipList.length; i++) {
+        const ip = ipList[i];
+        const shortname = i === 0 ? node.nodeCode : `${node.nodeCode}-${i + 1}`;
+        await connection.execute(
+          "INSERT INTO nas (nasname, shortname, type, secret, description) VALUES (?, ?, ?, ?, ?)",
+          [
+            ip,
+            shortname,
+            node.vendor || "mikrotik",
+            node.coaSecret || "testing123",
+            node.displayName || `BNG Node ${node.nodeCode}`
+          ]
+        );
+      }
+      await connection.commit();
+      return { synced: true, table: "nas", clientsCount: ipList.length };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  async removeNasClient(nodeCode) {
+    if (env.MOCK_EXTERNALS) {
+      return { deleted: true, reason: "mocked" };
+    }
+    const connection = await getPool().getConnection();
+    try {
+      await connection.execute("DELETE FROM nas WHERE shortname = ? OR shortname LIKE ?", [nodeCode, `${nodeCode}-%`]);
+      return { deleted: true, table: "nas" };
+    } catch (error) {
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  async disconnectSubscriberSession({ serviceId, radiusUsername, reason }) {
+    const service = await SubscriberService.findOne({
+      $or: [
+        { serviceId },
+        { radiusUsername }
+      ]
+    });
+    const username = radiusUsername || service?.radiusUsername;
+    if (!username) {
+      throw new Error("Service or RADIUS username not found");
+    }
+
+    const usageSummary = await this.getSubscriberUsageSummary({
+      serviceId: service?.serviceId || serviceId
+    }).catch(() => null);
+
+    const bngSession = await mikrotikBngManager.disconnectSubscriberSession({
+      serviceId: service?.serviceId || serviceId,
+      radiusUsername: username,
+      reason: reason || "manual_disconnect",
+      sessionHint: usageSummary
+    });
+
+    if (service) {
+      service.metadata = {
+        ...(service.metadata || {}),
+        lastBngDisconnect: summarizeBngSession(bngSession),
+        lastBngDisconnectAt: new Date()
+      };
+      await service.save();
+    }
+
+    return bngSession;
   }
 }
 

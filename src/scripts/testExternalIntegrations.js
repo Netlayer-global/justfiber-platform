@@ -1,8 +1,6 @@
 import { env } from "../config/env.js";
-import { jazeClient } from "../integrations/jazeClient.js";
 import { genieacsClient } from "../integrations/genieacsClient.js";
 
-const jazeCustomerId = process.env.TEST_JAZE_CUSTOMER_ID || "CUST-1001";
 const genieDeviceId = process.env.TEST_GENIE_DEVICE_ID || "ONT-1001";
 
 function printPass(message) {
@@ -19,15 +17,6 @@ async function main() {
   }
 
   const results = [];
-
-  try {
-    const jazeData = await jazeClient.getCustomerBilling(jazeCustomerId);
-    printPass(`JAZE billing fetch succeeded for customer ${jazeCustomerId}`);
-    results.push({ system: "jaze", ok: true, sampleKeys: Object.keys(jazeData || {}).slice(0, 8) });
-  } catch (error) {
-    printFail(`JAZE billing fetch failed: ${error.message}`);
-    results.push({ system: "jaze", ok: false, error: error.message });
-  }
 
   try {
     const genieData = await genieacsClient.getDeviceSummary(genieDeviceId);

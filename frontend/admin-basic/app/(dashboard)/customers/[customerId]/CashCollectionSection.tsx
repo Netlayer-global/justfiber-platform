@@ -27,9 +27,7 @@ export function CashCollectionSection({ customer }: CashCollectionSectionProps) 
     0
   )
   const numAmount = parseFloat(amount) || 0
-  const amountValid = numAmount >= 1 && numAmount <= outstanding
-  const hasJazeUser = Boolean(customer.jazeUserId)
-  const isValid = amountValid && hasJazeUser
+  const isValid = numAmount >= 1 && numAmount <= outstanding
 
   function getAmountError(): string | undefined {
     if (!amount) return undefined
@@ -58,19 +56,7 @@ export function CashCollectionSection({ customer }: CashCollectionSectionProps) 
             <span className="text-slate-500">Outstanding</span>
             <span className="font-semibold text-slate-900">{formatCurrency(outstanding)}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-slate-500">Jaze ID</span>
-            <span className="font-mono text-slate-700">
-              {customer.jazeUserId || <span className="text-rose-500 font-normal">Not linked</span>}
-            </span>
-          </div>
         </div>
-
-        {!hasJazeUser && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-            Cash collection is unavailable — this customer has no linked Jaze account. Activate via an installer first.
-          </div>
-        )}
 
         {/* Amount input */}
         <Input
@@ -84,7 +70,7 @@ export function CashCollectionSection({ customer }: CashCollectionSectionProps) 
           step="0.01"
           placeholder={outstanding > 0 ? `1 – ${outstanding.toFixed(2)}` : '0.00'}
           error={getAmountError()}
-          disabled={!hasJazeUser || outstanding <= 0}
+          disabled={outstanding <= 0}
         />
 
         {/* Notes textarea */}
@@ -96,7 +82,6 @@ export function CashCollectionSection({ customer }: CashCollectionSectionProps) 
           maxLength={500}
           placeholder="Receipt #, collector name, or other context..."
           hint={getNotesHint()}
-          disabled={!hasJazeUser}
         />
 
         {/* Submit button */}

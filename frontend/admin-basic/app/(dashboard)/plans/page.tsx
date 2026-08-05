@@ -27,7 +27,7 @@ interface EditFormState {
   name: string
   price: string
   billingPeriodMonths: string
-  jazeGroupId: string
+  accessProfileCode: string
   visibleInCustomerApp: boolean
   visibleInSalesApp: boolean
   active: boolean
@@ -61,7 +61,7 @@ export default function PlansPage() {
     name: '',
     price: '',
     billingPeriodMonths: '1',
-    jazeGroupId: '',
+    accessProfileCode: '',
     visibleInCustomerApp: true,
     visibleInSalesApp: true,
     active: true,
@@ -130,7 +130,7 @@ export default function PlansPage() {
       name: plan.name || '',
       price: String(plan.price || 0),
       billingPeriodMonths: String(plan.billingPeriodMonths || 1),
-      jazeGroupId: plan.provisioning?.jazeGroupId || '',
+      accessProfileCode: plan.provisioning?.accessProfileCode || '',
       visibleInCustomerApp: plan.visibleInCustomerApp !== false,
       visibleInSalesApp: plan.visibleInSalesApp !== false,
       active: plan.status !== 'inactive',
@@ -168,7 +168,7 @@ export default function PlansPage() {
         pricesExcludeGst: editForm.pricesExcludeGst,
         provisioning: {
           ...editingPlan.provisioning,
-          jazeGroupId: editForm.jazeGroupId,
+          accessProfileCode: editForm.accessProfileCode,
         },
         visibleInCustomerApp: editForm.visibleInCustomerApp,
         visibleInSalesApp: editForm.visibleInSalesApp,
@@ -369,10 +369,10 @@ export default function PlansPage() {
                   ₹{(plan.price || 0).toLocaleString('en-IN')}
                 </div>
 
-                {/* Jaze Group ID */}
-                {plan.provisioning?.jazeGroupId && (
-                  <div className="mt-1 text-xs text-slate-400 truncate" title={plan.provisioning.jazeGroupId}>
-                    Jaze: {plan.provisioning.jazeGroupId}
+                {/* Access profile */}
+                {plan.provisioning?.accessProfileCode && (
+                  <div className="mt-1 text-xs text-slate-400 truncate" title={plan.provisioning.accessProfileCode}>
+                    Profile: {plan.provisioning.accessProfileCode}
                   </div>
                 )}
 
@@ -503,15 +503,15 @@ export default function PlansPage() {
               <option value="12">12 Months (1 Year)</option>
             </Select>
 
-            {/* Jaze Group ID */}
+            {/* Access Profile */}
             <Input
-              label="Jaze Group ID"
+              label="Access Profile Code"
               type="text"
-              value={editForm.jazeGroupId}
+              value={editForm.accessProfileCode}
               onChange={(e) =>
-                setEditForm((f) => ({ ...f, jazeGroupId: e.target.value }))
+                setEditForm((f) => ({ ...f, accessProfileCode: e.target.value }))
               }
-              placeholder="e.g. 42"
+              placeholder="e.g. JF-300M"
             />
 
             {/* Toggles */}

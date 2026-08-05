@@ -138,7 +138,6 @@ export interface Plan {
     pppoeRealm?: string
     defaultPppoePassword?: string
     wifiNamePrefix?: string
-    jazeGroupId?: string
   }
   merchandising?: {
     featured?: boolean
@@ -191,7 +190,6 @@ export interface Customer {
   zoneName?: string
   zoneStateCode?: string
   zoneStateName?: string
-  jazeUserId?: string
   billingSnapshot?: Record<string, any>
   invoiceSummary?: Record<string, any>
   devices?: CustomerDevice[]
@@ -336,6 +334,8 @@ export interface ManualCustomerCreatePayload {
   accessProfileCode?: string
   billingProfileCode?: string
   bngNodeCode?: string
+  currentIpv4?: string | null
+  ipv4Pool?: string | null
   createRadius?: boolean
 }
 

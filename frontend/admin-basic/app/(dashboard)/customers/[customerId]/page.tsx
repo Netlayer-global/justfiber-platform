@@ -19,6 +19,7 @@ import {
   Ticket,
   Trash2,
   Wifi,
+  History,
 } from 'lucide-react'
 import { adminAPI, openProtectedDocument } from '@/lib/api'
 import type { Customer } from '@/lib/types'
@@ -33,6 +34,7 @@ import { SkeletonCard } from '@/components/ui/skeleton'
 import { Tabs } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { Modal } from '@/components/ui/modal'
+import { Input, Select } from '@/components/ui/input'
 import type { Plan } from '@/lib/types'
 import { CashCollectionSection } from './CashCollectionSection'
 
@@ -43,6 +45,84 @@ export default function CustomerDetailPage() {
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [bngNodes, setBngNodes] = useState<any[]>([])
+  const [ipPools, setIpPools] = useState<any[]>([])
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [editForm, setEditForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    address: '',
+    currentIpv4: '',
+    ipv4Pool: '',
+    bngNodeCode: '',
+    autoSelectBng: false,
+  })
+
+  // Load BNG Nodes and IP Pools
+  useEffect(() => {
+    if (editModalOpen) {
+      void Promise.allSettled([
+        adminAPI.getBngNodes().catch(() => ({ success: false, data: [] })),
+        adminAPI.getIpPools().catch(() => ({ success: false, data: [] }))
+      ]).then(([bngs, pools]) => {
+        if (bngs.status === 'fulfilled' && bngs.value.success && bngs.value.data) {
+          setBngNodes(bngs.value.data)
+        }
+        if (pools.status === 'fulfilled' && pools.value.success && pools.value.data) {
+          setIpPools(pools.value.data)
+        }
+      })
+    }
+  }, [editModalOpen])
+
+  function openEditModal() {
+    if (!customer) return
+    setEditForm({
+      name: customer.name || '',
+      phone: customer.phone || '',
+      email: customer.email || '',
+      address: customer.address || '',
+      currentIpv4: customer.radiusService?.currentIpv4 || '',
+      ipv4Pool: customer.radiusService?.ipv4Pool || '',
+      bngNodeCode: customer.radiusService?.bngNodeCode || '',
+      autoSelectBng: false,
+    })
+    setEditModalOpen(true)
+  }
+
+  async function handleSaveEdit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!customer?.id) return
+    setSavingEdit(true)
+    try {
+      const res = await adminAPI.updateCustomer(customer.id, {
+        name: editForm.name,
+        phone: editForm.phone,
+        email: editForm.email,
+        address: editForm.address,
+        radiusService: {
+          currentIpv4: editForm.currentIpv4 || null,
+          ipv4Pool: editForm.ipv4Pool || null,
+          bngNodeCode: editForm.bngNodeCode || null,
+          autoSelectBng: editForm.autoSelectBng,
+        }
+      })
+      if (res.success) {
+        toast.success('Customer profile and RADIUS parameters updated successfully')
+        setEditModalOpen(false)
+        await load()
+      } else {
+        toast.error(res.error || 'Failed to update customer details')
+      }
+    } catch (e) {
+      console.error(e)
+      toast.error('Error updating customer details')
+    } finally {
+      setSavingEdit(false)
+    }
+  }
 
   useEffect(() => { if (id) void load() }, [id])
 
@@ -156,6 +236,7 @@ export default function CustomerDetailPage() {
     { id: 'tickets', label: 'Tickets', icon: Ticket, badge: customer.tickets?.length || 0, content: <TicketsTab customer={customer} /> },
     { id: 'sessions', label: 'Sessions', icon: Wifi, content: <SessionsTab customer={customer} /> },
     { id: 'documents', label: 'Documents', icon: FileText, content: <DocumentsTab customer={customer} /> },
+    { id: 'timeline', label: 'Activity Log', icon: History, content: <TimelineTab customer={customer} /> },
   ]
 
   return (
@@ -174,7 +255,7 @@ export default function CustomerDetailPage() {
             <Link href={`/billing?customerId=${customer.id}`}>
               <Button variant="secondary" size="sm" icon={<CreditCard className="h-4 w-4" />}>Billing</Button>
             </Link>
-            <Button variant="secondary" size="sm" icon={<Edit className="h-4 w-4" />}>Edit</Button>
+            <Button variant="secondary" size="sm" onClick={openEditModal} icon={<Edit className="h-4 w-4" />}>Edit</Button>
             <Button variant="danger" size="sm" onClick={handleDelete} icon={<Trash2 className="h-4 w-4" />}>Delete</Button>
           </>
         }
@@ -220,6 +301,103 @@ export default function CustomerDetailPage() {
       </div>
 
       <Tabs items={tabs} />
+
+      {/* Edit Customer Modal */}
+      <Modal
+        open={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        title="Edit Customer Profile & RADIUS"
+        description="Update personal contact information, dynamic IP Pool, and static IP allocations."
+        size="md"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setEditModalOpen(false)} disabled={savingEdit}>
+              Cancel
+            </Button>
+            <Button onClick={(e) => void handleSaveEdit(e)} disabled={savingEdit}>
+              {savingEdit ? 'Saving...' : 'Save Profile'}
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleSaveEdit} className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Input
+              label="Full Name"
+              value={editForm.name}
+              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+              required
+            />
+            <Input
+              label="Phone Number"
+              value={editForm.phone}
+              onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+              required
+            />
+            <Input
+              label="Email Address"
+              value={editForm.email}
+              onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+            />
+            <Input
+              label="Installation Address"
+              value={editForm.address}
+              onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="border-t border-zinc-800 pt-4">
+            <h4 className="text-sm font-semibold text-zinc-300 mb-3">RADIUS & IP Routing Configuration</h4>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Input
+                label="Static IP Address (Framed-IP-Address)"
+                placeholder="e.g. 103.x.x.x (leave empty for dynamic)"
+                value={editForm.currentIpv4}
+                onChange={(e) => setEditForm({ ...editForm, currentIpv4: e.target.value })}
+              />
+              <Select
+                label="IP Address Subnet Pool"
+                value={editForm.ipv4Pool}
+                onChange={(e) => setEditForm({ ...editForm, ipv4Pool: e.target.value })}
+                disabled={Boolean(editForm.currentIpv4)}
+              >
+                <option value="">Select pool (dynamic IP)...</option>
+                {ipPools.map((pool) => (
+                  <option key={pool.id || pool.name} value={pool.name}>
+                    {pool.name} ({pool.networkCidr || `${pool.ipFrom} - ${pool.ipTo}`})
+                  </option>
+                ))}
+              </Select>
+              <Select
+                label="BNG / NAS Router Node"
+                value={editForm.bngNodeCode}
+                onChange={(e) => setEditForm({ ...editForm, bngNodeCode: e.target.value })}
+                disabled={editForm.autoSelectBng}
+              >
+                <option value="">Select BNG gateway node...</option>
+                {bngNodes.map((node) => (
+                  <option key={node.nodeCode} value={node.nodeCode}>
+                    {node.name || node.nodeCode} ({node.ipAddress})
+                  </option>
+                ))}
+              </Select>
+              <div className="flex items-center gap-2 pt-8">
+                <input
+                  type="checkbox"
+                  id="autoSelectBng"
+                  checked={editForm.autoSelectBng}
+                  onChange={(e) => setEditForm({ ...editForm, autoSelectBng: e.target.checked })}
+                  className="rounded border-zinc-700 bg-zinc-800 text-purple-600 focus:ring-purple-500 h-4.5 w-4.5"
+                />
+                <label htmlFor="autoSelectBng" className="text-xs font-semibold text-zinc-400">
+                  Auto-Select BNG Node based on Area Zone
+                </label>
+              </div>
+            </div>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }
@@ -324,7 +502,7 @@ function OverviewTab({ customer, onRefresh }: { customer: Customer; onRefresh: (
     if (!selectedPlanCode || !customer.customerId) return
     try {
       setChangingPlan(true)
-      const res = await adminAPI.changePlanJaze(customer.customerId, {
+      const res = await adminAPI.changeCustomerPlan(customer.customerId, {
         newPlanCode: selectedPlanCode,
         reason: planChangeReason || undefined,
       })
@@ -1060,34 +1238,86 @@ function TicketsTab({ customer }: { customer: Customer }) {
 
 function SessionsTab({ customer }: { customer: Customer }) {
   const sessions = customer.radiusService?.sessionHistory || []
+  const [disconnecting, setDisconnecting] = useState(false)
+
+  const activeSession = sessions.find((s) => s.live)
+
+  async function handleForceDisconnect() {
+    if (!customer.customerId) return
+    if (!confirm('Are you sure you want to force terminate this active session? The customer router will reconnect automatically.')) return
+    setDisconnecting(true)
+    try {
+      const res = await adminAPI.disconnectCustomerSession(customer.customerId, 'Force manual disconnect by administrator')
+      if (res.success) {
+        toast.success('Session termination signal sent successfully via RADIUS CoA')
+      } else {
+        toast.error(res.error || 'Failed to terminate session')
+      }
+    } catch (e) {
+      console.error(e)
+      toast.error('Network error requesting session disconnect')
+    } finally {
+      setDisconnecting(false)
+    }
+  }
+
   if (sessions.length === 0) return <Card><EmptyState icon={Wifi} title="No sessions" description="PPPoE session history will appear here." /></Card>
   return (
-    <Card padding="none">
-      <table className="w-full">
-        <thead>
-          <tr>
-            <th className="table-header">Session</th>
-            <th className="table-header">Started</th>
-            <th className="table-header">Duration</th>
-            <th className="table-header">IP Address</th>
-            <th className="table-header">Data</th>
-            <th className="table-header">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sessions.slice(0, 30).map((s, i) => (
-            <tr key={s.sessionId || i} className="table-row">
-              <td className="table-cell font-mono text-xs">{(s.sessionId || '').slice(-8) || '—'}</td>
-              <td className="table-cell text-sm">{formatDate(s.startedAt, true)}</td>
-              <td className="table-cell text-sm">{Math.round((s.sessionSeconds || 0) / 60)}m</td>
-              <td className="table-cell font-mono text-xs">{s.ipAddress || '—'}</td>
-              <td className="table-cell text-sm">{((s.totalOctets || 0) / 1024 / 1024).toFixed(1)} MB</td>
-              <td className="table-cell">{s.live ? <Badge variant="success" withDot pulse>Live</Badge> : <Badge variant="neutral">Ended</Badge>}</td>
+    <div className="space-y-4">
+      {activeSession && (
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <Wifi className="h-5 w-5" />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-900">Active PPPoE Session Online</h4>
+                <p className="text-xs text-slate-500">
+                  IP: <span className="font-mono font-bold text-slate-700">{activeSession.ipAddress || '—'}</span> · Started {formatDate(activeSession.startedAt, true)}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={disconnecting}
+              onClick={handleForceDisconnect}
+              className="border-red-200 text-red-650 hover:bg-red-50"
+            >
+              Force Disconnect Session (CoA)
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      <Card padding="none">
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className="table-header">Session</th>
+              <th className="table-header">Started</th>
+              <th className="table-header">Duration</th>
+              <th className="table-header">IP Address</th>
+              <th className="table-header">Data</th>
+              <th className="table-header">Status</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </Card>
+          </thead>
+          <tbody>
+            {sessions.slice(0, 30).map((s, i) => (
+              <tr key={s.sessionId || i} className="table-row">
+                <td className="table-cell font-mono text-xs">{(s.sessionId || '').slice(-8) || '—'}</td>
+                <td className="table-cell text-sm">{formatDate(s.startedAt, true)}</td>
+                <td className="table-cell text-sm">{Math.round((s.sessionSeconds || 0) / 60)}m</td>
+                <td className="table-cell font-mono text-xs">{s.ipAddress || '—'}</td>
+                <td className="table-cell text-sm">{((s.totalOctets || 0) / 1024 / 1024).toFixed(1)} MB</td>
+                <td className="table-cell">{s.live ? <Badge variant="success" withDot pulse>Live</Badge> : <Badge variant="neutral">Ended</Badge>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+    </div>
   )
 }
 
@@ -1192,5 +1422,98 @@ function DocumentsTab({ customer }: { customer: Customer }) {
         )}
       </Card>
     </div>
+  )
+}
+
+function TimelineTab({ customer }: { customer: Customer }) {
+  const [logs, setLogs] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchTimeline() {
+      if (!customer.customerId) return
+      setLoading(true)
+      try {
+        const res = await adminAPI.getCustomerTimeline(customer.customerId)
+        if (res.success && res.data) {
+          setLogs(res.data)
+        }
+      } catch (e) {
+        console.error(e)
+      } finally {
+        setLoading(false)
+      }
+    }
+    void fetchTimeline()
+  }, [customer.customerId])
+
+  if (loading) {
+    return (
+      <div className="flex h-32 items-center justify-center">
+        <RefreshCw className="h-6 w-6 animate-spin text-purple-600" />
+      </div>
+    )
+  }
+
+  if (logs.length === 0) {
+    return (
+      <EmptyState
+        icon={History}
+        title="No activity history"
+        description="Chronological audit records and billing alterations will appear here as they occur."
+      />
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Subscriber Activity Log</CardTitle>
+      </CardHeader>
+      <div className="mt-4 flow-root px-4 pb-6">
+        <ul className="-mb-8">
+          {logs.map((item, index) => {
+            const dateStr = item.createdAt ? new Date(item.createdAt).toLocaleString() : 'N/A'
+            return (
+              <li key={item.id}>
+                <div className="relative pb-8">
+                  {index !== logs.length - 1 ? (
+                    <span className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-slate-200" aria-hidden="true" />
+                  ) : null}
+                  <div className="relative flex space-x-3">
+                    <div>
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-50 text-purple-600 ring-8 ring-white">
+                        <History className="h-4 w-4" />
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0 pt-1.5 flex justify-between space-x-4">
+                      <div>
+                        <p className="text-sm text-slate-855 font-semibold capitalize text-slate-800">
+                          {item.action?.replace(/\./g, ' ') || 'Audit event'}
+                        </p>
+                        {item.reason && <p className="text-xs text-slate-500 mt-0.5">Reason: {item.reason}</p>}
+                        {item.actorName && (
+                          <p className="text-xs text-slate-400 mt-1">
+                            By {item.actorName} ({item.actorType})
+                          </p>
+                        )}
+                        {item.metadata && Object.keys(item.metadata).length > 0 && (
+                          <pre className="mt-2 text-xxs bg-slate-50 p-2 rounded border border-slate-100 max-h-40 overflow-auto font-mono text-slate-600">
+                            {JSON.stringify(item.metadata, null, 2)}
+                          </pre>
+                        )}
+                      </div>
+                      <div className="text-right text-xs whitespace-nowrap text-slate-400">
+                        <time dateTime={item.createdAt}>{dateStr}</time>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      </div>
+    </Card>
   )
 }

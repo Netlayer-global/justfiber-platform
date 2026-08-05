@@ -225,8 +225,25 @@ const settingsSectionDefaults = {
     teams: ["support", "noc", "field_ops"]
   },
   external_integrations: {
-    sms: { enabled: false, providerKey: "" },
-    email: { enabled: false, providerKey: "" },
+    sms: {
+      enabled: false,
+      providerKey: "",
+      twilioSid: "",
+      twilioToken: "",
+      twilioFrom: "",
+      msg91Key: "",
+      msg91Sender: ""
+    },
+    email: {
+      enabled: false,
+      providerKey: "smtp",
+      smtpHost: "",
+      smtpPort: 587,
+      smtpSecure: false,
+      smtpUser: "",
+      smtpPass: "",
+      smtpSender: ""
+    },
     whatsapp: { enabled: false, providerKey: "" },
     acsGateway: { enabled: true, providerKey: "genieacs" },
     paymentGateway: {

@@ -25,9 +25,7 @@ export const salesKycSchema = z.object({
   selfieImageUrl: z.string().url().optional()
 });
 
-export const salesBookingPaymentLinkSchema = z.object({
-  jazeUserId: z.string().min(1).optional()
-});
+export const salesBookingPaymentLinkSchema = z.object({}).passthrough();
 
 export const salesBookingPaymentConfirmSchema = z.object({
   status: z.enum(["paid", "failed"]),

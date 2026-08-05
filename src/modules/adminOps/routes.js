@@ -2475,6 +2475,59 @@ adminOpsRouter.get(
 );
 
 adminOpsRouter.get(
+  "/billing/exports/gstr1.csv",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const { invoiceFilter } = await buildBillingExportFilters(req.query || {}, req.admin);
+    const invoices = await BillingInvoice.find(invoiceFilter).sort({ generatedAt: -1 }).lean();
+
+    const rows = invoices.map((inv) => {
+      const taxable = Number(inv.amount || 0);
+      const tax = Number(inv.taxAmount || 0);
+      const total = Number(inv.totalAmount || 0);
+
+      // Determine state alignment (IGST vs CGST/SGST)
+      const isInterState = String(inv.billingStateCode || "09") !== "09";
+      const igst = isInterState ? tax : 0;
+      const cgst = isInterState ? 0 : tax / 2;
+      const sgst = isInterState ? 0 : tax / 2;
+
+      // Extract tax rate from invoice metadata or fallback to standard 18%
+      const taxRate = inv.metadata?.taxRate ?? 18;
+
+      const invoiceDate = inv.generatedAt
+        ? new Date(inv.generatedAt).toLocaleDateString("en-IN", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric"
+          }).replace(/ /g, "-")
+        : "";
+
+      return {
+        "GSTIN of Receiver": inv.metadata?.customerGst || "",
+        "Receiver Name": inv.metadata?.customerName || inv.customerId,
+        "Invoice Number": inv.invoiceNumber || inv.invoiceId,
+        "Invoice Date": invoiceDate,
+        "Invoice Value": total.toFixed(2),
+        "Place Of Supply": `${inv.billingStateCode || "09"}-${inv.billingStateName || "Uttar Pradesh"}`,
+        "Reverse Charge": "N",
+        "Applicable % of Tax Rate": taxRate,
+        "Taxable Value": taxable.toFixed(2),
+        "Integrated Tax (IGST)": igst.toFixed(2),
+        "Central Tax (CGST)": cgst.toFixed(2),
+        "State/UT Tax (SGST)": sgst.toFixed(2),
+        "Cess Amount": "0.00"
+      };
+    });
+
+    const csv = buildCsv(rows);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", "attachment; filename=\"gstr1-export.csv\"");
+    return res.send(csv);
+  })
+);
+
+adminOpsRouter.get(
   "/billing/exports/collections.csv",
   requirePermission(permissions.billingRead),
   asyncHandler(async (req, res) => {
@@ -3849,25 +3902,6 @@ adminOpsRouter.post(
       amount: customer.billingSnapshot?.lastInvoiceAmount || customer.billingSnapshot?.dueAmount || 0,
       paymentUrl: null,
       nextAction: "Use /customers/:customerId/billing/payment/confirm to post a manual or externally collected payment."
-    });
-  })
-);
-
-adminOpsRouter.post(
-  "/customers/:customerId/billing/payment/link-jaze",
-  requirePermission(permissions.billingRead),
-  asyncHandler(async (req, res) => {
-    const customer = await Customer.findOne({ customerId: req.params.customerId });
-    if (!customer) {
-      throw new ApiError(404, "Customer not found");
-    }
-    return ok(res, {
-      customerId: customer.customerId,
-      provider: "manual_admin",
-      amount: customer.billingSnapshot?.lastInvoiceAmount || customer.billingSnapshot?.dueAmount || 0,
-      paymentUrl: null,
-      nextAction: "Use /customers/:customerId/billing/payment/confirm to post a manual or externally collected payment.",
-      deprecatedRoute: true
     });
   })
 );

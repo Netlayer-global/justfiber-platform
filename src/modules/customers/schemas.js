@@ -89,5 +89,7 @@ export const manualCreateCustomerSchema = z.object({
   accessProfileCode: z.string().min(2).max(64).optional(),
   billingProfileCode: z.string().min(2).max(64).optional(),
   bngNodeCode: z.string().min(2).max(64).optional(),
+  currentIpv4: z.string().max(64).nullable().optional(),
+  ipv4Pool: z.string().max(128).nullable().optional(),
   createRadius: z.boolean().default(true)
 });

@@ -52,16 +52,16 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final billing = appState.billing;
-    final jazeBilling = appState.jazeBilling;
+    final subscriberBilling = appState.subscriberBilling;
 
-    // Prefer Jaze billing if available, otherwise fall back to legacy
-    final useJaze = jazeBilling != null && jazeBilling.summary != null;
-    final jazeSummary = jazeBilling?.summary;
-    final jazeInvoices = jazeBilling?.invoices ?? [];
+    // Prefer Subscriber billing if available, otherwise fall back to legacy
+    final useSubscriberBilling = subscriberBilling != null && subscriberBilling.summary != null;
+    final subscriberSummary = subscriberBilling?.summary;
+    final subscriberInvoices = subscriberBilling?.invoices ?? [];
 
     final latestInvoice =
-        useJaze && jazeInvoices.isNotEmpty
-            ? null // Jaze invoices have different structure, handle separately
+        useSubscriberBilling && subscriberInvoices.isNotEmpty
+            ? null // Subscriber invoices have different structure, handle separately
             : (billing.invoices.isEmpty ? null : billing.invoices.first);
     final latestPayment =
         billing.payments.isEmpty ? null : billing.payments.first;
@@ -70,15 +70,15 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
         : (billing.dueAmount > 0
             ? billing.dueAmount
             : billing.lastPaymentAmount);
-    final hasDue = useJaze
-        ? (jazeSummary?.hasDue ?? false)
+    final hasDue = useSubscriberBilling
+        ? (subscriberSummary?.hasDue ?? false)
         : billing.dueAmount > 0;
     final hasAlert = billing.lastSuspensionWarningAt.isNotEmpty ||
         billing.lastOverdueReminderAt.isNotEmpty;
 
     final isFirstLoad = appState.busy &&
-        (!useJaze && billing.currentPlan.isEmpty && billing.invoices.isEmpty) ||
-        (useJaze && jazeSummary == null);
+        (!useSubscriberBilling && billing.currentPlan.isEmpty && billing.invoices.isEmpty) ||
+        (useSubscriberBilling && subscriberSummary == null);
 
     return Scaffold(
       backgroundColor: kBg,
@@ -90,17 +90,17 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
             ? const _BillingShimmer()
             : CustomScrollView(
           slivers: [
-            // ── Gradient header ──────────────────────────────────────
+            // â”€â”€ Gradient header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             SliverToBoxAdapter(
               child: _BillingHeader(
                 billing: billing,
-                jazeSummary: jazeSummary,
-                useJaze: useJaze,
+                subscriberSummary: subscriberSummary,
+                useSubscriberBilling: useSubscriberBilling,
                 hasDue: hasDue,
                 hasAlert: hasAlert,
                 onPayNow: !hasDue || appState.busy
                     ? null
-                    : () => _payNow(context, appState, jazeBilling),
+                    : () => _payNow(context, appState, subscriberBilling),
                 onHistory: () => Navigator.of(context).push(
                   MaterialPageRoute(
                       builder: (_) => const PaymentsHistoryScreen()),
@@ -108,7 +108,7 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
               ),
             ),
 
-            // ── Post-payment refresh status banner ─────────────────────
+            // â”€â”€ Post-payment refresh status banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             if (_refreshState != _BillingRefreshState.idle)
               SliverToBoxAdapter(
                 child: _BillingRefreshBanner(
@@ -117,7 +117,7 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
                 ),
               ),
 
-            // ── Bill Summary ─────────────────────────────────────────
+            // â”€â”€ Bill Summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(22, 4, 22, 0),
@@ -130,57 +130,57 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
                       child: Column(
                         children: [
                           _row('Plan',
-                              useJaze
-                                  ? (jazeSummary?.currentPlanName ?? '—')
+                              useSubscriberBilling
+                                  ? (subscriberSummary?.currentPlanName ?? 'â€”')
                                   : (billing.currentPlan.isEmpty
-                                      ? '—'
+                                      ? 'â€”'
                                       : billing.currentPlan)),
                           _row(
                               'Monthly',
-                              useJaze
-                                  ? '—' // Jaze doesn't separate monthly, shows total per duration
+                              useSubscriberBilling
+                                  ? 'â€”' // Subscriber doesn't separate monthly, shows total per duration
                                   : (recurringAmt > 0
                                       ? 'Rs ${recurringAmt.toStringAsFixed(0)}'
-                                      : '—')),
+                                      : 'â€”')),
                           _row('Bill Cycle',
-                              useJaze
-                                  ? (jazeInvoices.isNotEmpty
-                                      ? jazeInvoices.first.durationLabel
-                                      : '—')
+                              useSubscriberBilling
+                                  ? (subscriberInvoices.isNotEmpty
+                                      ? subscriberInvoices.first.durationLabel
+                                      : 'â€”')
                                   : (billing.billCycle.isEmpty
-                                      ? '—'
+                                      ? 'â€”'
                                       : billing.billCycle)),
                           _row('Bill Mode',
-                              useJaze
-                                  ? 'Pay As You Go (Jaze)'
+                              useSubscriberBilling
+                                  ? 'Pay As You Go (Subscriber)'
                                   : (billing.billMode.isEmpty
-                                      ? '—'
+                                      ? 'â€”'
                                       : billing.billMode)),
                           _row(
                               'Generated',
-                              useJaze && jazeInvoices.isNotEmpty
-                                  ? _fmtDate(jazeInvoices.first.issuedAt)
+                              useSubscriberBilling && subscriberInvoices.isNotEmpty
+                                  ? _fmtDate(subscriberInvoices.first.issuedAt)
                                   : (billing.generatedDate.isEmpty
-                                      ? '—'
+                                      ? 'â€”'
                                       : _fmtDate(billing.generatedDate))),
                           _row(
                               'Expiry',
-                              useJaze
-                                  ? ((jazeSummary?.expiryDate.isNotEmpty == true)
-                                      ? _fmtDate(jazeSummary!.expiryDate)
-                                      : '—')
+                              useSubscriberBilling
+                                  ? ((subscriberSummary?.expiryDate.isNotEmpty == true)
+                                      ? _fmtDate(subscriberSummary!.expiryDate)
+                                      : 'â€”')
                                   : (billing.nextBillDate.isEmpty
-                                      ? '—'
+                                      ? 'â€”'
                                       : _fmtDate(billing.nextBillDate))),
                           _row(
                               'Last Payment',
                               billing.lastPaymentAmount > 0
                                   ? 'Rs ${billing.lastPaymentAmount.toStringAsFixed(0)}'
-                                  : '—'),
+                                  : 'â€”'),
                           _row(
                               'Last Paid On',
                               billing.lastPaymentDate.isEmpty
-                                  ? '—'
+                                  ? 'â€”'
                                   : _fmtDate(billing.lastPaymentDate),
                               last: true),
                         ],
@@ -188,25 +188,25 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // ── Quick Access Buttons ─────────────────────────
+                    // â”€â”€ Quick Access Buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                     Row(
                       children: [
                         Expanded(
                           child: PressableScale(
                             onTap: () {
-                              if (useJaze && jazeInvoices.isNotEmpty) {
+                              if (useSubscriberBilling && subscriberInvoices.isNotEmpty) {
                                 final session = appState.session;
                                 if (session == null) return;
                                 final base = appState.api.baseUrl.replaceAll(RegExp(r'/$'), '');
-                                final url = '$base/api/v1/customer/billing/jaze/invoice-pdf?invoiceId=${jazeInvoices.first.invoiceId}';
+                                final url = '$base/api/v1/customer/billing/subscriber/invoice-pdf?invoiceId=${subscriberInvoices.first.invoiceId}';
                                 Navigator.of(context).push(MaterialPageRoute(
                                   builder: (_) => _InvoiceViewerScreen(
-                                    title: 'Invoice #${jazeInvoices.first.invoiceId}',
+                                    title: 'Invoice #${subscriberInvoices.first.invoiceId}',
                                     url: url,
                                     accessToken: session.accessToken,
                                   ),
                                 ));
-                              } else if (!useJaze && latestInvoice != null) {
+                              } else if (!useSubscriberBilling && latestInvoice != null) {
                                 final docUrl = latestInvoice.pdfUrl.isNotEmpty
                                     ? latestInvoice.pdfUrl
                                     : latestInvoice.viewUrl;
@@ -247,8 +247,8 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    useJaze && jazeInvoices.isNotEmpty
-                                        ? '#${jazeInvoices.first.invoiceId}'
+                                    useSubscriberBilling && subscriberInvoices.isNotEmpty
+                                        ? '#${subscriberInvoices.first.invoiceId}'
                                         : (latestInvoice != null
                                             ? '#${latestInvoice.invoiceNumber}'
                                             : 'None'),
@@ -319,14 +319,14 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // ── All Invoices button ──────────────────────────
-                    if ((useJaze && jazeInvoices.length > 1) || billing.invoices.length > 1)
+                    // â”€â”€ All Invoices button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                    if ((useSubscriberBilling && subscriberInvoices.length > 1) || billing.invoices.length > 1)
                       PressableScale(
                         onTap: () {
-                          if (useJaze && jazeInvoices.length > 1) {
+                          if (useSubscriberBilling && subscriberInvoices.length > 1) {
                             Navigator.of(context).push(MaterialPageRoute(
-                              builder: (_) => _AllJazeInvoicesScreen(
-                                invoices: jazeInvoices,
+                              builder: (_) => _AllSubscriberInvoicesScreen(
+                                invoices: subscriberInvoices,
                                 apiBaseUrl: appState.api.baseUrl,
                                 accessToken: appState.session?.accessToken ?? '',
                               ),
@@ -368,7 +368,7 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
 
                     const SizedBox(height: 20),
 
-                    // ── More Options ─────────────────────────────────
+                    // â”€â”€ More Options â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                     _sectionLabel('MORE'),
                     const SizedBox(height: 8),
                     _card(
@@ -399,7 +399,7 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
     );
   }
 
-  // ─── UI helpers ────────────────────────────────────────────────────────────
+  // â”€â”€â”€ UI helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _sectionLabel(String text) => Text(
         text,
@@ -484,13 +484,13 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
         ),
       );
 
-  // ─── Actions ──────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /// Performs a billing refresh with a 10-second timeout.
   /// Returns `true` if the refresh succeeded, `false` otherwise.
   Future<bool> _refreshBillingWithTimeout(AppState appState) async {
     try {
-      await appState.loadJazeBilling().timeout(_refreshTimeout);
+      await appState.loadSubscriberBilling().timeout(_refreshTimeout);
       return true;
     } on TimeoutException {
       return false;
@@ -514,13 +514,13 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
     }
 
     // Check for stale data
-    final newOutstanding = appState.jazeBilling?.summary?.outstanding;
+    final newOutstanding = appState.subscriberBilling?.summary?.outstanding;
     if (_prePaymentOutstanding != null &&
         newOutstanding != null &&
         (newOutstanding - _prePaymentOutstanding!).abs() < 0.01) {
       setState(() => _refreshState = _BillingRefreshState.staleData);
     } else {
-      // Data updated successfully — clear refresh state
+      // Data updated successfully â€” clear refresh state
       setState(() {
         _refreshState = _BillingRefreshState.idle;
         _prePaymentOutstanding = null;
@@ -529,7 +529,7 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
   }
 
   Future<void> _payNow(
-      BuildContext context, AppState appState, JazeBillingView? jazeBilling) async {
+      BuildContext context, AppState appState, SubscriberBillingView? subscriberBilling) async {
     final messenger = ScaffoldMessenger.of(context);
     if (appState.session == null) {
       messenger.showSnackBar(
@@ -538,12 +538,12 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
     }
 
     // Store pre-payment outstanding amount for stale data detection (Req 3.3)
-    _prePaymentOutstanding = jazeBilling?.summary?.outstanding;
+    _prePaymentOutstanding = subscriberBilling?.summary?.outstanding;
 
     // Create Razorpay order and open native checkout
     try {
-      // Use Jaze outstanding as amount
-      final amount = jazeBilling?.summary?.outstanding ?? 0;
+      // Use Subscriber outstanding as amount
+      final amount = subscriberBilling?.summary?.outstanding ?? 0;
       final order = await appState.api.createBillingPaymentOrder(
         appState.session!,
         customerId: appState.selectedCustomerId,
@@ -562,10 +562,10 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
       // After returning, refresh billing
       if (!mounted) return;
       setState(() => _refreshState = _BillingRefreshState.refreshing);
-      await appState.loadJazeBilling();
+      await appState.loadSubscriberBilling();
       if (!mounted) return;
 
-      final newOutstanding = appState.jazeBilling?.summary?.outstanding;
+      final newOutstanding = appState.subscriberBilling?.summary?.outstanding;
       if (_prePaymentOutstanding != null &&
           newOutstanding != null &&
           (newOutstanding - _prePaymentOutstanding!).abs() < 0.01) {
@@ -602,7 +602,7 @@ class _BillingHistoryScreenState extends State<BillingHistoryScreen> {
   }
 }
 
-// ── Billing shimmer skeleton ──────────────────────────────────────────────────
+// â”€â”€ Billing shimmer skeleton â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _BillingShimmer extends StatelessWidget {
   const _BillingShimmer();
@@ -668,9 +668,9 @@ class _BillingShimmer extends StatelessWidget {
   }
 }
 
-// ── Billing gradient header ───────────────────────────────────────────────────
+// â”€â”€ Billing gradient header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-// ── Post-payment refresh status banner ────────────────────────────────────────
+// â”€â”€ Post-payment refresh status banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _BillingRefreshBanner extends StatelessWidget {
   const _BillingRefreshBanner({
@@ -834,13 +834,13 @@ class _RefreshButton extends StatelessWidget {
   }
 }
 
-// ── Billing gradient header (continued) ──────────────────────────────────────
+// â”€â”€ Billing gradient header (continued) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _BillingHeader extends StatelessWidget {
   const _BillingHeader({
     required this.billing,
-    this.jazeSummary,
-    required this.useJaze,
+    this.subscriberSummary,
+    required this.useSubscriberBilling,
     required this.hasDue,
     required this.hasAlert,
     required this.onPayNow,
@@ -848,8 +848,8 @@ class _BillingHeader extends StatelessWidget {
   });
 
   final BillingData billing;
-  final JazeBillingSummary? jazeSummary;
-  final bool useJaze;
+  final SubscriberBillingSummary? subscriberSummary;
+  final bool useSubscriberBilling;
   final bool hasDue;
   final bool hasAlert;
   final VoidCallback? onPayNow;
@@ -863,7 +863,7 @@ class _BillingHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Title ──────────────────────────────────────────────
+          // â”€â”€ Title â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           Text(
             'Billing',
             style: GoogleFonts.inter(
@@ -875,7 +875,7 @@ class _BillingHeader extends StatelessWidget {
           ),
           const SizedBox(height: 18),
 
-          // ── Hero card — accent gradient with due/plan info ─────
+          // â”€â”€ Hero card â€” accent gradient with due/plan info â”€â”€â”€â”€â”€
           ClipRRect(
             borderRadius: BorderRadius.circular(kRCard),
             child: Container(
@@ -945,12 +945,12 @@ class _BillingHeader extends StatelessWidget {
 
                         // Amount
                         Text(
-                          useJaze
+                          useSubscriberBilling
                               ? (hasDue
-                                  ? '₹${jazeSummary?.outstanding.abs().toStringAsFixed(0) ?? "0"}'
+                                  ? 'â‚¹${subscriberSummary?.outstanding.abs().toStringAsFixed(0) ?? "0"}'
                                   : 'No Due')
                               : (hasDue
-                                  ? '₹${billing.dueAmount.abs().toStringAsFixed(0)}'
+                                  ? 'â‚¹${billing.dueAmount.abs().toStringAsFixed(0)}'
                                   : 'No Due'),
                           style: GoogleFonts.inter(
                             color: Colors.white,
@@ -962,10 +962,10 @@ class _BillingHeader extends StatelessWidget {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          useJaze
-                              ? (jazeSummary?.expiryDate.isNotEmpty ?? false
-                                  ? 'Expires ${_fmtDate(jazeSummary!.expiryDate)}'
-                                  : (jazeSummary?.currentPlanName ?? ''))
+                          useSubscriberBilling
+                              ? (subscriberSummary?.expiryDate.isNotEmpty ?? false
+                                  ? 'Expires ${_fmtDate(subscriberSummary!.expiryDate)}'
+                                  : (subscriberSummary?.currentPlanName ?? ''))
                               : (billing.nextBillDate.isEmpty
                                   ? 'No outstanding dues'
                                   : (hasDue
@@ -1049,7 +1049,7 @@ class _BillingHeader extends StatelessWidget {
             ),
           ),
 
-          // ── Alert banner ───────────────────────────────────────────
+          // â”€â”€ Alert banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           if (hasAlert) ...[
             const SizedBox(height: 12),
             Container(
@@ -1068,8 +1068,8 @@ class _BillingHeader extends StatelessWidget {
                   Expanded(
                     child: Text(
                       billing.lastSuspensionWarningAt.isNotEmpty
-                          ? 'Suspension warning — clear dues to avoid disconnection.'
-                          : 'Overdue reminder — please pay to keep service active.',
+                          ? 'Suspension warning â€” clear dues to avoid disconnection.'
+                          : 'Overdue reminder â€” please pay to keep service active.',
                       style: GoogleFonts.inter(
                         color: const Color(0xFFFF8A8A),
                         fontSize: 12,
@@ -1087,7 +1087,7 @@ class _BillingHeader extends StatelessWidget {
   }
 }
 
-// ── Receipt-style invoice card ────────────────────────────────────────────────
+// â”€â”€ Receipt-style invoice card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _ReceiptCard extends StatelessWidget {
   const _ReceiptCard({required this.invoice, this.onOpen});
@@ -1120,7 +1120,7 @@ class _ReceiptCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // ── Receipt header ───────────────────────────────────────
+          // â”€â”€ Receipt header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           Container(
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
             decoration: BoxDecoration(
@@ -1165,7 +1165,7 @@ class _ReceiptCard extends StatelessWidget {
                       ),
                       Text(
                         invoice.invoiceNumber.isEmpty
-                            ? '—'
+                            ? 'â€”'
                             : invoice.invoiceNumber,
                         style: GoogleFonts.inter(
                           fontSize: 14,
@@ -1202,10 +1202,10 @@ class _ReceiptCard extends StatelessWidget {
             ),
           ),
 
-          // ── Perforated divider ───────────────────────────────────
+          // â”€â”€ Perforated divider â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           const _PerforatedDivider(color: kBorder),
 
-          // ── Receipt body ─────────────────────────────────────────
+          // â”€â”€ Receipt body â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
             child: Column(
@@ -1215,16 +1215,16 @@ class _ReceiptCard extends StatelessWidget {
                     large: true),
                 const SizedBox(height: 10),
                 _receiptRow('Due Date',
-                    invoice.dueDate.isEmpty ? '—' : _fmtDate(invoice.dueDate)),
+                    invoice.dueDate.isEmpty ? 'â€”' : _fmtDate(invoice.dueDate)),
                 const SizedBox(height: 6),
                 _receiptRow('Invoice No.',
-                    invoice.invoiceNumber.isEmpty ? '—' : invoice.invoiceNumber,
+                    invoice.invoiceNumber.isEmpty ? 'â€”' : invoice.invoiceNumber,
                     mono: true),
               ],
             ),
           ),
 
-          // ── Open button ──────────────────────────────────────────
+          // â”€â”€ Open button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           if (onOpen != null) ...[
             const SizedBox(height: 14),
             Padding(
@@ -1266,7 +1266,7 @@ class _ReceiptCard extends StatelessWidget {
   }
 }
 
-// ── Payment receipt card ──────────────────────────────────────────────────────
+// â”€â”€ Payment receipt card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _PaymentReceiptCard extends StatelessWidget {
   const _PaymentReceiptCard({required this.payment, this.onOpen});
@@ -1362,7 +1362,7 @@ class _PaymentReceiptCard extends StatelessWidget {
               children: [
                 _row2('Method',
                     payment.provider.isEmpty
-                        ? '—'
+                        ? 'â€”'
                         : payment.provider.toUpperCase()),
                 const SizedBox(height: 8),
                 _row2(
@@ -1372,7 +1372,7 @@ class _PaymentReceiptCard extends StatelessWidget {
                         : _fmtDate(payment.paidAt)),
                 const SizedBox(height: 6),
                 _row2('Transaction ID',
-                    payment.transactionId.isEmpty ? '—' : payment.transactionId,
+                    payment.transactionId.isEmpty ? 'â€”' : payment.transactionId,
                     mono: true),
                 if (onOpen != null) ...[
                   const SizedBox(height: 14),
@@ -1439,7 +1439,7 @@ class _PaymentReceiptCard extends StatelessWidget {
   }
 }
 
-// ── Show all invoices link card ──────────────────────────────────────────────
+// â”€â”€ Show all invoices link card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _ShowAllInvoicesCard extends StatelessWidget {
   const _ShowAllInvoicesCard({required this.count, required this.onTap});
@@ -1505,7 +1505,7 @@ class _ShowAllInvoicesCard extends StatelessWidget {
 }
 
 
-// ── Open invoice button ───────────────────────────────────────────────────────
+// â”€â”€ Open invoice button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _OpenInvoiceBtn extends StatefulWidget {
   const _OpenInvoiceBtn({required this.onTap});
@@ -1574,7 +1574,7 @@ class _OpenInvoiceBtnState extends State<_OpenInvoiceBtn>
   }
 }
 
-// ── Perforated divider ────────────────────────────────────────────────────────
+// â”€â”€ Perforated divider â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _PerforatedDivider extends StatelessWidget {
   const _PerforatedDivider({required this.color});
@@ -1623,7 +1623,7 @@ class _DashedLinePainter extends CustomPainter {
       oldDelegate.color != color;
 }
 
-// ── Date formatter ─────────────────────────────────────────────────────────────
+// â”€â”€ Date formatter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 String _fmtDate(String raw) {
   try {
@@ -1639,12 +1639,12 @@ String _fmtDate(String raw) {
   }
 }
 
-// ── Data Usage card (FUP) ────────────────────────────────────────────────────
+// â”€â”€ Data Usage card (FUP) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-class _JazeUsageCard extends StatelessWidget {
-  const _JazeUsageCard({required this.bandwidth});
+class _SubscriberUsageCard extends StatelessWidget {
+  const _SubscriberUsageCard({required this.bandwidth});
 
-  final JazeBandwidth bandwidth;
+  final SubscriberBandwidth bandwidth;
 
   @override
   Widget build(BuildContext context) {
@@ -1840,7 +1840,7 @@ class _UsageCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       capReached
-                          ? 'FUP limit reached — speeds throttled'
+                          ? 'FUP limit reached â€” speeds throttled'
                           : '${remaining.toStringAsFixed(1)} GB remaining ($pct% used)',
                       style: GoogleFonts.inter(
                           color: capReached ? barColor : kMuted,
@@ -1925,12 +1925,12 @@ class _UsageCard extends StatelessWidget {
 }
 
 
-// ── Jaze Invoice Card ─────────────────────────────────────────────────────────
+// â”€â”€ Subscriber Invoice Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-class _JazeInvoiceCard extends StatelessWidget {
-  const _JazeInvoiceCard({required this.invoice, this.onDownloadPdf});
+class _SubscriberInvoiceCard extends StatelessWidget {
+  const _SubscriberInvoiceCard({required this.invoice, this.onDownloadPdf});
 
-  final JazeInvoice invoice;
+  final SubscriberInvoice invoice;
   final VoidCallback? onDownloadPdf;
 
   @override
@@ -2063,7 +2063,7 @@ class _JazeInvoiceCard extends StatelessWidget {
 }
 
 
-// ── Invoice HTML Viewer ───────────────────────────────────────────────────────
+// â”€â”€ Invoice HTML Viewer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _InvoiceViewerScreen extends StatefulWidget {
   const _InvoiceViewerScreen({
@@ -2157,16 +2157,16 @@ class _InvoiceViewerScreenState extends State<_InvoiceViewerScreen> {
 }
 
 
-// ── All Jaze Invoices Screen ──────────────────────────────────────────────────
+// â”€â”€ All Subscriber Invoices Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-class _AllJazeInvoicesScreen extends StatelessWidget {
-  const _AllJazeInvoicesScreen({
+class _AllSubscriberInvoicesScreen extends StatelessWidget {
+  const _AllSubscriberInvoicesScreen({
     required this.invoices,
     required this.apiBaseUrl,
     required this.accessToken,
   });
 
-  final List<JazeInvoice> invoices;
+  final List<SubscriberInvoice> invoices;
   final String apiBaseUrl;
   final String accessToken;
 
@@ -2187,7 +2187,7 @@ class _AllJazeInvoicesScreen extends StatelessWidget {
           return GestureDetector(
             onTap: () {
               final base = apiBaseUrl.replaceAll(RegExp(r'/$'), '');
-              final url = '$base/api/v1/customer/billing/jaze/invoice-pdf?invoiceId=${inv.invoiceId}';
+              final url = '$base/api/v1/customer/billing/subscriber/invoice-pdf?invoiceId=${inv.invoiceId}';
               Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) => _InvoiceViewerScreen(
                   title: 'Invoice #${inv.invoiceId}',
@@ -2225,7 +2225,7 @@ class _AllJazeInvoicesScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          '${inv.durationLabel} • ${_fmtShort(inv.issuedAt)}',
+                          '${inv.durationLabel} â€¢ ${_fmtShort(inv.issuedAt)}',
                           style: GoogleFonts.inter(color: kMuted, fontSize: 11),
                         ),
                       ],

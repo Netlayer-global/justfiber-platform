@@ -31,16 +31,8 @@ import { SupportTicket } from "../../models/SupportTicket.js";
 import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { AccessProfile } from "../../models/AccessProfile.js";
 import { SubscriberService } from "../../models/SubscriberService.js";
-import { JazeUserCache } from "../../models/JazeUserCache.js";
 import { buildPagination } from "../../common/pagination.js";
 import { razorpayClient } from "../../integrations/razorpayClient.js";
-import { jazeClient } from "../../integrations/jazeClient.js";
-import {
-  fetchBillingSummary,
-  fetchInvoiceHistory,
-  fetchFullBillingView,
-  generatePaymentLink
-} from "../../integrations/jazeBillingAdapter.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
 import { internalBillingEngine, repriceOpenInvoicesForCustomer } from "../../integrations/internalBillingEngine.js";
 import { buildBillingNotificationContent, notificationDispatcher } from "../../integrations/notificationDispatcher.js";
@@ -2437,61 +2429,6 @@ customerPortalRouter.post(
     ];
     let user = identityClauses.length ? await CustomerUser.findOne({ $or: identityClauses }) : null;
     if (!user) {
-      // Auto-link: check JazeUserCache for matching phone before creating a new user
-      let autoLinkedCustomerId = null;
-      if (identity.mobile) {
-        const normalizedPhone = identity.mobile.replace(/\D/g, "").slice(-10);
-        const jazeCache = await JazeUserCache.findOne({ phone: normalizedPhone });
-        if (jazeCache && jazeCache.jazeUserId) {
-          // Check if a Customer already exists for this Jaze user
-          const existingCustomer = await Customer.findOne({ jazeUserId: jazeCache.jazeUserId });
-          if (existingCustomer) {
-            autoLinkedCustomerId = existingCustomer.customerId;
-          } else {
-            // Match plan by jazeGroupId
-            const matchedPlan = jazeCache.groupId
-              ? await PlanCatalog.findOne({ "provisioning.jazeGroupId": jazeCache.groupId }).lean()
-              : null;
-
-            const customerId = `JF${Math.floor(100000 + Math.random() * 900000)}`;
-            const pppoeUsername = jazeCache.username || "";
-
-            await Customer.create({
-              customerId,
-              fullName: jazeCache.name || "JustFiber Customer",
-              mobile: identity.mobile,
-              email: jazeCache.email || "",
-              serviceId: pppoeUsername || customerId,
-              pppoeUsername: pppoeUsername,
-              jazeUserId: jazeCache.jazeUserId,
-              jazeStatus: jazeCache.status || "active",
-              operationalStatus: jazeCache.status === "active" ? "active" : "suspended",
-              status: jazeCache.status === "active" ? "active" : "suspended",
-              planCode: matchedPlan?.planCode || "",
-              planName: matchedPlan?.name || jazeCache.groupName || "",
-              zoneCode: "",
-            });
-
-            // Auto-attach device by pppoeUsername
-            if (pppoeUsername) {
-              const { DeviceOperationalCache } = await import("../../models/DeviceOperationalCache.js");
-              const device = await DeviceOperationalCache.findOne({
-                $or: [
-                  { "wanInfo.pppoeUsername": pppoeUsername },
-                  { "wanInfo.pppoeUsernameMasked": pppoeUsername },
-                ]
-              });
-              if (device && !device.customerId) {
-                device.customerId = customerId;
-                device.serviceId = pppoeUsername;
-                await device.save();
-              }
-            }
-
-            autoLinkedCustomerId = customerId;
-          }
-        }
-      }
       user = await CustomerUser.create({
         mobile: identity.mobile || undefined,
         email: identity.email || undefined,
@@ -2500,11 +2437,9 @@ customerPortalRouter.post(
         linkedCustomerIds: Array.from(
           new Set([
             ...linkedCustomerIds,
-            ...(identity.linkedCustomerId ? [identity.linkedCustomerId] : []),
-            ...(autoLinkedCustomerId ? [autoLinkedCustomerId] : [])
+            ...(identity.linkedCustomerId ? [identity.linkedCustomerId] : [])
           ])
-        ),
-        state: autoLinkedCustomerId ? "active_customer" : undefined,
+        )
       });
     } else {
       user.linkedCustomerIds = Array.from(
@@ -2868,15 +2803,6 @@ customerPortalRouter.post(
       receipt: order.receipt,
       notes: order.notes || {}
     });
-  })
-);
-
-customerPortalRouter.post(
-  "/bookings/:bookingNumber/payment/link-jaze",
-  requireCustomerAuth,
-  asyncHandler(async (req, res) => {
-    bookingPaymentLinkSchema.parse(req.body || {});
-    throw new ApiError(410, "Jaze booking payment has been removed. Use Razorpay or cash payment.");
   })
 );
 
@@ -3260,33 +3186,10 @@ customerPortalRouter.post(
       }
     );
 
-    // Record payment in Jaze so invoice gets marked paid + service resumes
-    if (customer.jazeUserId && amount > 0) {
-      try {
-        await jazeClient.makePayment({
-          userId: customer.jazeUserId,
-          amount,
-          method: "onlinePayment",
-          notes: `Paid via JustFiber app (Razorpay: ${payload.razorpayPaymentId})`
-        });
-      } catch (jazeErr) {
-        console.error(`[billing-verify] Jaze makePayment failed for ${customer.customerId}:`, jazeErr.message);
-      }
-    }
-
     return ok(res, {
       customerId: customer.customerId,
       ...result
     });
-  })
-);
-
-customerPortalRouter.post(
-  "/billing/payment/link-jaze",
-  requireCustomerAuth,
-  asyncHandler(async (req, res) => {
-    billingPaymentLinkSchema.parse(req.body || {});
-    throw new ApiError(410, "Jaze billing payment has been removed. Use /billing/payment/order instead.");
   })
 );
 
@@ -3403,23 +3306,6 @@ customerPortalRouter.post(
           }
         }
       );
-    }
-
-    // Record payment in Jaze so invoice gets marked paid + service resumes
-    if (customer.jazeUserId) {
-      const paymentAmount = Number(payment.amount || 0) / 100;
-      if (paymentAmount > 0) {
-        try {
-          await jazeClient.makePayment({
-            userId: customer.jazeUserId,
-            amount: paymentAmount,
-            method: "onlinePayment",
-            notes: `Paid via JustFiber app (Razorpay webhook: ${payment.id})`
-          });
-        } catch (jazeErr) {
-          console.error(`[razorpay-webhook] Jaze makePayment failed for ${customerId}:`, jazeErr.message);
-        }
-      }
     }
 
     await IntegrationEventLog.create({
@@ -3712,9 +3598,8 @@ customerPortalRouter.get(
   })
 );
 
-// ─── Jaze-direct billing endpoints ───────────────────────────────────────────
-// Source of truth: Jaze. JustFiber acts as a thin proxy/adapter so customer apps
-// see real renewals, outstanding amounts, and payment links from Jaze.
+// ─── Subscriber billing endpoints ───────────────────────────────────────────
+// JustFiber's internal billing engine is the source of truth for customer apps.
 
 function buildDefaultBillingDateRange() {
   const to = new Date();
@@ -3724,310 +3609,221 @@ function buildDefaultBillingDateRange() {
   return { fromDate: fmt(from), toDate: fmt(to) };
 }
 
-async function resolveJazeCustomer(req) {
-  const customer = await getOwnedLinkedCustomer({
-    customerUser: req.customerUser,
-    requestedCustomerId: getRequestedCustomerId(req)
-  }).then((item) => (item?.toObject ? item.toObject() : item));
-  if (!customer) {
-    throw new ApiError(404, "Customer not found");
-  }
-  if (!customer.jazeUserId) {
-    throw new ApiError(400, "Customer is not linked to a Jaze user. Activate via installer first.");
-  }
-  return customer;
-}
-
 customerPortalRouter.get(
-  "/billing/jaze/summary",
+  "/billing/subscriber/summary",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const customer = await resolveJazeCustomer(req);
-    const summary = await fetchBillingSummary(customer.jazeUserId);
+    const customer = await getOwnedLinkedCustomer({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    }).then((item) => (item?.toObject ? item.toObject() : item));
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+
+    const [service, billingView] = await Promise.all([
+      SubscriberService.findOne({ customerId: customer.customerId, status: { $in: ["active", "suspended", "expired"] } })
+        .sort({ updatedAt: -1 })
+        .lean(),
+      getLiveBillingView(customer)
+    ]);
+    const { latestInvoice, dueAmount, paymentStatus } = billingView;
+    const expiryDate = service?.nextBillingDate || customer.expiryAt || latestInvoice?.dueDate || null;
+
     return ok(res, {
       customerId: customer.customerId,
-      jazeUserId: customer.jazeUserId,
-      ...summary
+      subscriberId: customer.customerId,
+      customerName: customer.fullName || "",
+      username: customer.pppoeUsername || "",
+      status: service?.status || customer.operationalStatus || "active",
+      currentPlan: {
+        name: customer.planName || "",
+        groupId: "",
+        profileId: ""
+      },
+      activationDate: customer.createdAt || null,
+      expiryDate,
+      outstanding: dueAmount,
+      lifetimeRevenue: 0,
+      lastInvoiceDate: latestInvoice?.generatedAt || null,
+      lastPaymentDate: customer.billingSnapshot?.lastPaidAt || null,
+      paymentStatus,
+      bandwidth: {
+        uploadMbps: 0,
+        downloadMbps: 0,
+        usageBytes: 0
+      }
     });
   })
 );
 
 customerPortalRouter.get(
-  "/billing/jaze/invoices",
+  "/billing/subscriber/invoices",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const customer = await resolveJazeCustomer(req);
-    const defaults = buildDefaultBillingDateRange();
-    const fromDate = String(req.query.fromDate || defaults.fromDate);
-    const toDate = String(req.query.toDate || defaults.toDate);
-    const invoices = await fetchInvoiceHistory(customer.jazeUserId, { fromDate, toDate });
-    return ok(res, { fromDate, toDate, count: invoices.length, invoices });
+    const customer = await getOwnedLinkedCustomer({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const invoices = await BillingInvoice.find({ customerId: customer.customerId })
+      .sort({ generatedAt: -1, createdAt: -1 })
+      .limit(20)
+      .lean();
+
+    const adapted = invoices.map((inv) => {
+      const durationMonths = Number(inv.metadata?.durationMonths || 1);
+      const days = durationMonths * 30;
+      return {
+        invoiceId: inv.invoiceId || inv.invoiceNumber,
+        orderId: inv.invoiceNumber || "",
+        periodStart: inv.generatedAt || null,
+        periodEnd: inv.dueDate || null,
+        issuedAt: inv.generatedAt || null,
+        amount: inv.totalAmount || 0,
+        baseAmount: inv.amount || 0,
+        taxAmount: inv.taxAmount || 0,
+        durationDays: days,
+        durationLabel: `${durationMonths} Month${durationMonths > 1 ? "s" : ""}`,
+        planGroupId: "",
+        planGroupName: inv.metadata?.planName || customer.planName || "",
+        notes: inv.metadata?.note || "",
+        adminUsername: "system"
+      };
+    });
+
+    return ok(res, { fromDate: "", toDate: "", count: adapted.length, invoices: adapted });
   })
 );
 
 customerPortalRouter.post(
-  "/billing/jaze/payment-link",
+  "/billing/subscriber/payment-link",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
     const customerUser = req.customerUser;
     const linkedIds = customerUser.linkedCustomerIds || [];
     if (!linkedIds.length) {
-      throw new ApiError(400, "No linked customer account found. Contact support.");
+      throw new ApiError(400, "No linked customer account found.");
     }
-
-    // Resolve the first linked customer with a jazeUserId
-    const customer = await Customer.findOne({
-      customerId: { $in: linkedIds },
-      jazeUserId: { $exists: true, $ne: "" }
-    }).lean();
-
-    if (!customer?.jazeUserId) {
-      throw new ApiError(400, "Customer must be activated via an installer first.");
+    const customer = await Customer.findOne({ customerId: { $in: linkedIds } }).lean();
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
     }
+    const billingView = await getLiveBillingView(customer);
+    const amount = billingView.dueAmount || customer.billingSnapshot?.dueAmount || 10;
+    
+    const transactionId = `ORD-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    await PaymentTransaction.create({
+      transactionId,
+      customerId: customer.customerId,
+      serviceId: customer.serviceId,
+      provider: "razorpay",
+      amount,
+      status: "created",
+      paidAt: null,
+      method: "onlinePayment",
+      reference: "internal_order",
+      unallocatedAmount: amount,
+      metadata: {
+        source: "internal_subscriber_billing"
+      }
+    });
 
-    let result;
-    try {
-      result = await generatePaymentLink(customer.jazeUserId);
-    } catch (err) {
-      throw new ApiError(502, "Payment link could not be generated. Try again later.");
-    }
-
-    const { paymentLink } = result || {};
-    if (!paymentLink || !paymentLink.startsWith("https://")) {
-      throw new ApiError(502, "Payment link could not be generated. Try again later.");
-    }
-
+    const paymentLink = `http://localhost:3000/billing/checkout?orderId=${transactionId}`;
     return ok(res, { paymentLink, customerId: customer.customerId });
   })
 );
 
 customerPortalRouter.get(
-  "/billing/jaze/view",
+  "/billing/subscriber/view",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const customer = await resolveJazeCustomer(req);
-    const defaults = buildDefaultBillingDateRange();
-    const fromDate = String(req.query.fromDate || defaults.fromDate);
-    const toDate = String(req.query.toDate || defaults.toDate);
-    const view = await fetchFullBillingView(customer.jazeUserId, { fromDate, toDate });
+    const customer = await getOwnedLinkedCustomer({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    }).then((item) => (item?.toObject ? item.toObject() : item));
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const invoices = await BillingInvoice.find({ customerId: customer.customerId })
+      .sort({ generatedAt: -1, createdAt: -1 })
+      .limit(10)
+      .lean();
+    const adaptedInvoices = invoices.map((inv) => {
+      const durationMonths = Number(inv.metadata?.durationMonths || 1);
+      const days = durationMonths * 30;
+      return {
+        invoiceId: inv.invoiceId || inv.invoiceNumber,
+        orderId: inv.invoiceNumber || "",
+        periodStart: inv.generatedAt || null,
+        periodEnd: inv.dueDate || null,
+        issuedAt: inv.generatedAt || null,
+        amount: inv.totalAmount || 0,
+        baseAmount: inv.amount || 0,
+        taxAmount: inv.taxAmount || 0,
+        durationDays: days,
+        durationLabel: `${durationMonths} Month${durationMonths > 1 ? "s" : ""}`,
+        planGroupId: "",
+        planGroupName: inv.metadata?.planName || customer.planName || "",
+        notes: inv.metadata?.note || "",
+        adminUsername: "system"
+      };
+    });
     return ok(res, {
       customerId: customer.customerId,
-      jazeUserId: customer.jazeUserId,
-      ...view
+      subscriberId: customer.customerId,
+      summary: {
+        customerName: customer.fullName || "",
+        username: customer.pppoeUsername || "",
+        status: customer.operationalStatus || "active",
+        currentPlan: {
+          name: customer.planName || "",
+          groupId: "",
+          profileId: ""
+        },
+        outstanding: customer.billingSnapshot?.dueAmount || 0,
+        lifetimeRevenue: 0,
+        paymentStatus: customer.billingSnapshot?.lastPaymentStatus || "paid"
+      },
+      invoices: adaptedInvoices,
+      payment: {
+        paymentLink: ""
+      }
     });
   })
 );
 
-// ─── Invoice PDF Generation ──────────────────────────────────────────────────
-
 customerPortalRouter.get(
-  "/billing/jaze/invoice-pdf",
+  "/billing/subscriber/invoice-pdf",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const customer = await resolveJazeCustomer(req);
-    const invoices = await fetchInvoiceHistory(customer.jazeUserId);
+    const customer = await getOwnedLinkedCustomer({ customerUser: req.customerUser });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const invoiceId = req.query.invoiceId;
+    const filter = invoiceId
+      ? { customerId: customer.customerId, $or: [{ invoiceId }, { invoiceNumber: invoiceId }] }
+      : { customerId: customer.customerId };
+    const invoice = await BillingInvoice.findOne(filter)
+      .sort({ generatedAt: -1, createdAt: -1 })
+      .lean();
     
-    if (!invoices.length) {
-      throw new ApiError(404, "No invoices found");
+    if (!invoice) {
+      throw new ApiError(404, "No invoice found");
     }
 
-    const invoiceId = req.query.invoiceId;
-    const invoice = invoiceId 
-      ? invoices.find(i => i.invoiceId === invoiceId) || invoices[0]
-      : invoices[0];
-
-    // Fetch full user details from Jaze
-    let jazeUser = {};
-    try {
-      const details = await jazeClient.getSingleUserDetails(customer.jazeUserId);
-      jazeUser = details?.data?.[0]?.User || {};
-    } catch (_) {}
-
-    const fmtDate = (raw) => {
-      if (!raw) return "-";
-      const d = new Date(raw);
-      if (isNaN(d.getTime())) return raw;
-      return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+    const profile = await BillingProfile.findOne({ active: true }).sort({ updatedAt: -1 }).lean();
+    const templateBranding = await getCustomerInvoiceTemplateBranding(customer, invoice);
+    const invoiceProfile = {
+      ...(profile || {}),
+      ...templateBranding
     };
 
-    const customerName = customer.fullName || jazeUser.name || "Customer";
-    const customerPhone = customer.mobile || jazeUser.phone || "";
-    const customerEmail = customer.email || jazeUser.email || "";
-    const customerAddress = jazeUser.address_line1 || customer.address?.fullAddress || "";
-    const customerCity = jazeUser.address_city || "";
-    const customerPin = jazeUser.address_pin || "";
-    const customerId = customer.customerId || "";
-    const planName = invoice.planGroupName || customer.planName || "Internet Service";
-    const circuitId = customer.jazeUserId || "";
-
-    // Use Jaze User ID as invoice reference
-    const invoiceNumber = customer.jazeUserId || customer.customerId;
-
-    const issueDate = new Date(invoice.issuedAt || Date.now());
-
-    // Due date = issue date + 30 days
-    const dueDate = new Date(issueDate);
-    dueDate.setDate(dueDate.getDate() + 30);
-
-    // Split into 2 line items: Internet service (25%) + Platform fee (75%)
-    const internetRate = Math.round(invoice.baseAmount * 0.25 * 100) / 100;
-    const platformRate = Math.round((invoice.baseAmount - internetRate) * 100) / 100;
-    const internetCgst = Math.round(internetRate * 0.09 * 100) / 100;
-    const internetSgst = internetCgst;
-    const platformCgst = Math.round(platformRate * 0.09 * 100) / 100;
-    const platformSgst = platformCgst;
-    const subTotal = invoice.baseAmount;
-    const totalCgst = Math.round((internetCgst + platformCgst) * 100) / 100;
-    const totalSgst = Math.round((internetSgst + platformSgst) * 100) / 100;
-    const total = invoice.amount;
-    const durationLabel = invoice.durationLabel || "Monthly";
-    const balanceDue = total;
-
     res.setHeader("Content-Type", "text/html; charset=utf-8");
-    res.send(`<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8f9fa; color: #1a1a1a; padding: 16px; font-size: 12px; }
-.invoice { max-width: 100%; margin: 0 auto; background: #fff; border-radius: 16px; padding: 22px; box-shadow: 0 2px 16px rgba(0,0,0,0.06); }
-.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 2px solid #f0f0f0; }
-.brand { font-size: 28px; font-weight: 900; letter-spacing: -1px; }
-.brand .just { color: #1a1a1a; }
-.brand .fiber { color: #7c3aed; }
-.header-right { text-align: right; }
-.header-right h1 { font-size: 12px; color: #7c3aed; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
-.header-right .inv-num { font-size: 11px; font-weight: 600; color: #6b7280; margin-top: 3px; }
-.balance-box { margin-top: 8px; background: #7c3aed; border-radius: 8px; padding: 8px 12px; text-align: center; }
-.balance-label { font-size: 9px; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 1px; }
-.balance-amount { font-size: 18px; font-weight: 900; color: #fff; margin-top: 1px; }
-.divider { height: 1px; background: #f0f0f0; margin: 14px 0; }
-.company-info { font-size: 10px; color: #374151; line-height: 1.6; }
-.company-info strong { color: #111827; font-size: 11px; }
-.bill-section { display: flex; flex-direction: column; gap: 12px; margin: 14px 0; }
-.bill-to h3 { font-size: 9px; color: #7c3aed; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; }
-.bill-to .name { font-size: 14px; font-weight: 700; color: #1a1a1a; margin-bottom: 3px; }
-.bill-to p { font-size: 11px; color: #374151; line-height: 1.5; }
-.meta-table { background: #f9fafb; border-radius: 10px; padding: 10px 12px; border: 1px solid #f0f0f0; }
-.meta-table .row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 11px; }
-.meta-table .row .l { color: #374151; }
-.meta-table .row .v { color: #1a1a1a; font-weight: 600; }
-table.items { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 11px; }
-table.items th { background: #f9fafb; padding: 8px 6px; font-size: 9px; font-weight: 700; color: #6b7280; text-align: left; text-transform: uppercase; letter-spacing: 0.3px; border-bottom: 2px solid #e5e7eb; }
-table.items th:last-child { text-align: right; }
-table.items td { border-bottom: 1px solid #f3f4f6; padding: 10px 6px; color: #374151; vertical-align: top; }
-table.items td:last-child { text-align: right; font-weight: 700; color: #1a1a1a; }
-table.items .item-name { font-weight: 700; color: #1a1a1a; font-size: 11px; }
-table.items .item-sub { font-size: 9px; color: #6b7280; margin-top: 2px; }
-.summary { margin-top: 14px; }
-.totals { background: #f9fafb; border-radius: 12px; padding: 12px; border: 1px solid #f0f0f0; }
-.totals .row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 11px; }
-.totals .row .l { color: #374151; }
-.totals .row .v { color: #1a1a1a; font-weight: 600; }
-.totals .row.total { border-top: 2px solid #7c3aed; padding-top: 8px; margin-top: 6px; }
-.totals .row.total .l, .totals .row.total .v { color: #1a1a1a; font-weight: 800; font-size: 13px; }
-.totals .row.balance .l, .totals .row.balance .v { color: #7c3aed; font-weight: 800; }
-.notes { font-size: 10px; color: #374151; margin-top: 14px; }
-.notes strong { color: #111827; display: block; margin-bottom: 3px; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; }
-.payment-info { font-size: 10px; color: #374151; margin-top: 10px; }
-.payment-info strong { color: #111827; display: block; margin-bottom: 3px; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; }
-.footer { margin-top: 18px; padding-top: 12px; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: flex-end; font-size: 9px; color: #9ca3af; }
-.footer .sign { text-align: right; border-top: 1px solid #1a1a1a; padding-top: 4px; font-weight: 600; color: #1a1a1a; font-size: 10px; }
-</style>
-</head>
-<body>
-<div class="invoice">
-  <div class="header">
-    <div class="brand"><span class="just">Just</span><span class="fiber">Fiber</span></div>
-    <div class="header-right">
-      <h1>Tax Invoice</h1>
-      <div class="inv-num"># ${invoiceNumber}</div>
-      <div class="balance-box">
-        <div class="balance-label">Amount Due</div>
-        <div class="balance-amount">Rs ${balanceDue.toFixed(0)}</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="company-info">
-    <strong>Netlayer India Private Limited</strong><br>
-    76D Udhyog Vihar Phase 4, Sector 18, Gurgram 122015<br>
-    GSTIN 06AAICN3717E1ZN | +919240204444 | accounts@netlayer.net
-  </div>
-
-  <div class="divider"></div>
-
-  <div class="bill-section">
-    <div class="bill-to">
-      <h3>Bill To</h3>
-      <div class="name">${customerName}</div>
-      <p>
-        ${customerAddress}${customerCity ? ', ' + customerCity : ''}, HARYANA ${customerPin || ''}<br>
-        Phone: ${customerPhone}${customerEmail ? ' | ' + customerEmail : ''}<br>
-        Customer ID: ${customerId} | Plan: ${planName}
-      </p>
-    </div>
-    <div class="meta-table">
-      <div class="row"><span class="l">Invoice Date</span><span class="v">${fmtDate(invoice.issuedAt)}</span></div>
-      <div class="row"><span class="l">Terms</span><span class="v">${durationLabel}</span></div>
-      <div class="row"><span class="l">Due Date</span><span class="v">${fmtDate(dueDate.toISOString())}</span></div>
-      <div class="row"><span class="l">Place of Supply</span><span class="v">HARYANA</span></div>
-    </div>
-  </div>
-
-  <table class="items">
-    <thead>
-      <tr><th>#</th><th>Description</th><th>HSN</th><th>Qty</th><th>Amount</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>1</td>
-        <td><span class="item-name">Internet service charge - ${durationLabel}</span><br><span class="item-sub">CGST @9%: Rs ${internetCgst.toFixed(2)} | SGST @9%: Rs ${internetSgst.toFixed(2)}</span></td>
-        <td>9984</td>
-        <td>1</td>
-        <td>Rs ${internetRate.toFixed(2)}</td>
-      </tr>
-      <tr>
-        <td>2</td>
-        <td><span class="item-name">Platform fee - ${durationLabel}</span><br><span class="item-sub">CGST @9%: Rs ${platformCgst.toFixed(2)} | SGST @9%: Rs ${platformSgst.toFixed(2)}</span></td>
-        <td>9984</td>
-        <td>1</td>
-        <td>Rs ${platformRate.toFixed(2)}</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <div class="summary">
-    <div class="totals">
-      <div class="row"><span class="l">Sub Total</span><span class="v">Rs ${subTotal.toFixed(2)}</span></div>
-      <div class="row"><span class="l">CGST (9%)</span><span class="v">Rs ${totalCgst.toFixed(2)}</span></div>
-      <div class="row"><span class="l">SGST (9%)</span><span class="v">Rs ${totalSgst.toFixed(2)}</span></div>
-      <div class="row total"><span class="l">Total</span><span class="v">Rs ${total.toFixed(2)}</span></div>
-      <div class="row balance"><span class="l">Balance Due</span><span class="v">Rs ${balanceDue.toFixed(2)}</span></div>
-    </div>
-
-    <div class="notes">
-      <strong>Notes</strong>
-      Please pay before the due date to avoid service interruption.
-    </div>
-    <div class="payment-info">
-      <strong>Payment Info</strong>
-      Bank: HDFC Bank | A/C: Netlayer India Pvt Ltd | IFSC: HDFC0000250
-    </div>
-  </div>
-
-  <div class="footer">
-    <div>+919240204444 | justfiber.in</div>
-    <div class="sign">Authorised Signatory</div>
-  </div>
-
-  <div style="margin-top:16px;text-align:center">
-    <button onclick="window.print()" style="background:#7c3aed;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Download / Print Invoice</button>
-  </div>
-</div>
-</body>
-</html>`);
+    return res.send(buildInvoiceHtml(invoice, customer, invoiceProfile));
   })
 );
 

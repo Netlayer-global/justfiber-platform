@@ -17,10 +17,10 @@ import '../lead_booking_flow_screen.dart';
 import '../plan_catalog_screen.dart';
 import '../public_plan_catalog_screen.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  HOME TAB — JustFiber Design System (see /design-system/MASTER.md)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  HOME TAB â€” JustFiber Design System (see /design-system/MASTER.md)
 //  Pure black canvas, translucent surfaces, single purple accent, big type.
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key, required this.onNavigate});
@@ -87,7 +87,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
         dashboard.serviceStatus.toLowerCase().contains('active') ||
             dashboard.serviceStatus.isEmpty;
     final isNewUser =
-        appState.connections.isEmpty && appState.jazeBilling?.summary == null;
+        appState.connections.isEmpty && appState.subscriberBilling?.summary == null;
 
     return RefreshIndicator(
       onRefresh: appState.refresh,
@@ -99,7 +99,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
           bottom: 140,
         ),
         children: [
-          // ── Top Bar ─────────────────────────────────────────
+          // â”€â”€ Top Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           SlideTransition(
             position: _slide(0.0, 0.35),
             child: FadeTransition(
@@ -109,7 +109,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 20),
 
-          // ── Connection switcher ───────────────────────────────
+          // â”€â”€ Connection switcher â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           if (appState.connections.length > 1)
             SlideTransition(
               position: _slide(0.1, 0.45),
@@ -126,7 +126,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
               ),
             ),
 
-          // ── Plan hero card (full-bleed accent gradient + glassy panel) ─
+          // â”€â”€ Plan hero card (full-bleed accent gradient + glassy panel) â”€
           SlideTransition(
             position: _slide(0.15, 0.5),
             child: FadeTransition(
@@ -155,13 +155,13 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                             : null,
                       )
                     : _PlanHero(
-                        planName: appState.jazeBilling?.summary
+                        planName: appState.subscriberBilling?.summary
                                         ?.currentPlanName.isNotEmpty ==
                                     true
-                                ? appState.jazeBilling!.summary!.currentPlanName
+                                ? appState.subscriberBilling!.summary!.currentPlanName
                                 : billing.currentPlan,
                         isOnline: isOnline ||
-                            (appState.jazeBilling?.summary?.status == 'active'),
+                            (appState.subscriberBilling?.summary?.status == 'active'),
                         activeDays: dashboard.activeDays,
                         nextBillDate: billing.nextBillDate,
                         pulseCtrl: _pulseCtrl,
@@ -175,7 +175,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 22),
 
-          // ── Data usage card (translucent surface, accent ring) ─────
+          // â”€â”€ Data usage card (translucent surface, accent ring) â”€â”€â”€â”€â”€
           if (!isNewUser)
             SlideTransition(
               position: _slide(0.25, 0.6),
@@ -195,7 +195,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
             ),
           if (!isNewUser) const SizedBox(height: 22),
 
-          // ── Banner carousel (auto-scroll offers) ──────────────
+          // â”€â”€ Banner carousel (auto-scroll offers) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           if (appState.banners.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 22),
@@ -205,7 +205,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
               ),
             ),
 
-          // ── Pending payment booking ───────────────────────────
+          // â”€â”€ Pending payment booking â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           if (appState.pendingPaymentBooking != null) ...[
             SlideTransition(
               position: _slide(0.4, 0.75),
@@ -224,7 +224,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
             const SizedBox(height: 22),
           ],
 
-          // ── Billing due (translucent + accent text, NOT a colored block) ─
+          // â”€â”€ Billing due (translucent + accent text, NOT a colored block) â”€
           if (billing.hasActionableDue) ...[
             SlideTransition(
               position: _slide(0.4, 0.75),
@@ -243,7 +243,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
             const SizedBox(height: 28),
           ],
 
-          // ── Explore section — two modern pill buttons ──────
+          // â”€â”€ Explore section â€” two modern pill buttons â”€â”€â”€â”€â”€â”€
           SlideTransition(
             position: _slide(0.5, 0.85),
             child: FadeTransition(
@@ -300,7 +300,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
     );
   }
 
-  // ─── Actions ─────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   void _handleBannerTap(
       BuildContext context, AppState appState, AppBannerItem banner) {
     switch (banner.targetType) {
@@ -378,9 +378,9 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  TOP BAR — time-based greeting + name (no avatar, no notification icon)
-// ═══════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  TOP BAR â€” time-based greeting + name (no avatar, no notification icon)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class _TopBar extends StatelessWidget {
   const _TopBar({required this.name});
@@ -430,10 +430,10 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════════════════════
-//  PLAN HERO — Premium: brand mark + glassy info strip
-// ═══════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  PLAN HERO â€” Premium: brand mark + glassy info strip
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class _PlanHero extends StatefulWidget {
   const _PlanHero({
@@ -490,7 +490,7 @@ class _PlanHeroState extends State<_PlanHero> {
               ),
             ),
 
-            // ─── Foreground content (single Column, no overlapping Positioned) ─
+            // â”€â”€â”€ Foreground content (single Column, no overlapping Positioned) â”€
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -552,7 +552,7 @@ class _PlanHeroState extends State<_PlanHero> {
                       ),
                       const SizedBox(height: 8),
 
-                      // Plan name — large and breathable
+                      // Plan name â€” large and breathable
                       Text(
                         widget.planName.isEmpty
                             ? 'No active plan'
@@ -571,7 +571,7 @@ class _PlanHeroState extends State<_PlanHero> {
                   ),
                 ),
 
-                // Bottom info strip + Upgrade CTA — own row in flow, no overlap
+                // Bottom info strip + Upgrade CTA â€” own row in flow, no overlap
                 Container(
                   padding:
                       const EdgeInsets.fromLTRB(22, 16, 14, 16),
@@ -722,9 +722,9 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  DATA USAGE CARD — premium ring + clean used/total stats
-// ═══════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  DATA USAGE CARD â€” premium ring + clean used/total stats
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class _DataUsageCard extends StatelessWidget {
   const _DataUsageCard({
@@ -892,7 +892,7 @@ class _DataUsageCard extends StatelessWidget {
             ],
           ),
 
-          // (Speed pills removed — speed shown elsewhere via plan/services screens)
+          // (Speed pills removed â€” speed shown elsewhere via plan/services screens)
         ],
       ),
     );
@@ -909,7 +909,7 @@ class _UsageRingPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width - strokeWidth) / 2;
 
-    // Track — translucent white, no second color
+    // Track â€” translucent white, no second color
     final track = Paint()
       ..color = const Color(0x14FFFFFF)
       ..style = PaintingStyle.stroke
@@ -919,7 +919,7 @@ class _UsageRingPainter extends CustomPainter {
 
     if (progress > 0) {
       final rect = Rect.fromCircle(center: center, radius: radius);
-      // Subtle gradient on the arc — accent → light purple → accent
+      // Subtle gradient on the arc â€” accent â†’ light purple â†’ accent
       // (single hue family, no rainbow)
       final shader = ui.Gradient.sweep(
         center,
@@ -966,9 +966,9 @@ class _UsageRingPainter extends CustomPainter {
   bool shouldRepaint(_UsageRingPainter o) => o.progress != progress;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  BILLING DUE ROW — translucent + accent text + Pay CTA
-// ═══════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  BILLING DUE ROW â€” translucent + accent text + Pay CTA
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class _BillingDueRow extends StatelessWidget {
   const _BillingDueRow({
@@ -1021,7 +1021,7 @@ class _BillingDueRow extends StatelessWidget {
                   textBaseline: TextBaseline.alphabetic,
                   children: [
                     Text(
-                      '₹${dueAmount.toStringAsFixed(0)}',
+                      'â‚¹${dueAmount.toStringAsFixed(0)}',
                       style: GoogleFonts.inter(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
@@ -1032,7 +1032,7 @@ class _BillingDueRow extends StatelessWidget {
                     if (nextBillDate.isNotEmpty) ...[
                       const SizedBox(width: 8),
                       Text(
-                        '· due ${_fmtDate(nextBillDate)}',
+                        'Â· due ${_fmtDate(nextBillDate)}',
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           color: kTextMuted,
@@ -1078,9 +1078,9 @@ class _BillingDueRow extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  PAYMENT TICKET CARD — pending booking
-// ═══════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  PAYMENT TICKET CARD â€” pending booking
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class _PaymentTicketCard extends StatelessWidget {
   const _PaymentTicketCard({required this.booking, required this.onPayNow});
@@ -1153,7 +1153,7 @@ class _PaymentTicketCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       booking.amount > 0
-                          ? '₹${booking.amount.toInt()}'
+                          ? 'â‚¹${booking.amount.toInt()}'
                           : 'TBD',
                       style: GoogleFonts.inter(
                         color: kText,
@@ -1207,7 +1207,7 @@ class _PaymentTicketCard extends StatelessWidget {
               child: Center(
                 child: Text(
                   booking.amount > 0
-                      ? 'Pay Now  ₹${booking.amount.toInt()}'
+                      ? 'Pay Now  â‚¹${booking.amount.toInt()}'
                       : 'Pay Now',
                   style: GoogleFonts.inter(
                     fontSize: 14,
@@ -1225,9 +1225,9 @@ class _PaymentTicketCard extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  NEW USER HERO — when no connections yet
-// ═══════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  NEW USER HERO â€” when no connections yet
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class _NewUserHero extends StatelessWidget {
   const _NewUserHero({
@@ -1383,9 +1383,9 @@ class _NewUserHero extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  CONNECTION SWITCHER
-// ═══════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class _ConnectionSwitcher extends StatelessWidget {
   const _ConnectionSwitcher({
@@ -1459,9 +1459,9 @@ class _ConnectionSwitcher extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  BANNER CAROUSEL — auto-scrolling offer banners
-// ═══════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  BANNER CAROUSEL â€” auto-scrolling offer banners
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class _BannerCarousel extends StatefulWidget {
   const _BannerCarousel({required this.banners, required this.onTap});
@@ -1507,7 +1507,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
     return Column(
       children: [
         AspectRatio(
-          aspectRatio: 1080 / 400, // 2.7:1 — matches recommended banner size
+          aspectRatio: 1080 / 400, // 2.7:1 â€” matches recommended banner size
           child: PageView.builder(
             controller: _pageCtrl,
             itemCount: widget.banners.length,
@@ -1586,9 +1586,9 @@ class _BannerCarouselState extends State<_BannerCarousel> {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  UTILITIES
-// ═══════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 String _fmtDate(String raw) {
   try {

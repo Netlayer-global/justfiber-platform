@@ -20,10 +20,17 @@ authRouter.post(
     const payload = loginSchema.parse(req.body);
     const loginValue = String(payload.login || "").trim();
     const normalizedLogin = loginValue.toLowerCase();
+    console.log(`[auth/login] Attempting login for value: "${loginValue}" (normalized: "${normalizedLogin}")`);
     const admin = await AdminUser.findOne({
       $or: [{ email: normalizedLogin }, { username: normalizedLogin }, { email: loginValue }, { username: loginValue }]
     });
-    if (!admin || !(await argon2.verify(admin.passwordHash, payload.password))) {
+    if (!admin) {
+      console.log(`[auth/login] Admin user not found for: "${loginValue}"`);
+      throw new ApiError(401, "Invalid username/email or password");
+    }
+    const isPasswordMatch = await argon2.verify(admin.passwordHash, payload.password);
+    console.log(`[auth/login] Admin found: "${admin.username}", password match: ${isPasswordMatch}`);
+    if (!isPasswordMatch) {
       throw new ApiError(401, "Invalid username/email or password");
     }
     if (admin.status !== "active") {

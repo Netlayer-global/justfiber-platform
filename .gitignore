@@ -9,3 +9,13 @@ npm-debug.log*
 coverage
 .worktrees/
 build-release.log
+
+.claude/
+.claude-flow/
+.swarm/
+.mcp.json
+CLAUDE.md
+final.md
+.code-review-graph/
+.codex/
+.tmp-appdata/

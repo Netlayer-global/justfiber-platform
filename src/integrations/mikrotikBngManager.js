@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import mongoose from "mongoose";
 import axios from "axios";
 import https from "node:https";
 import { promisify } from "node:util";
@@ -618,6 +619,116 @@ export class MikrotikBngManager {
       });
     }
     return results;
+  }
+
+  async syncSubscriberQueue({ serviceId, radiusUsername } = {}) {
+    const service =
+      (serviceId && (await SubscriberService.findOne({ serviceId }))) ||
+      (radiusUsername && (await SubscriberService.findOne({ radiusUsername })));
+    if (!service) {
+      return { attempted: false, status: "skipped", reason: "service_not_found" };
+    }
+    const username = radiusUsername || service.radiusUsername;
+    if (!username) {
+      return { attempted: false, status: "skipped", reason: "missing_radius_username" };
+    }
+
+    const resolved = await resolveMikrotikNodeForSubscriber(service, username);
+    const bngNode = resolved.node;
+    if (!bngNode) {
+      return { attempted: false, status: "skipped", reason: "bng_node_not_found" };
+    }
+    if (bngNode.vendor !== "mikrotik") {
+      return { attempted: false, status: "skipped", reason: "unsupported_vendor", vendor: bngNode.vendor };
+    }
+
+    const PlanCatalog = mongoose.model("PlanCatalog");
+    const Customer = mongoose.model("Customer");
+
+    const customer = await Customer.findOne({ customerId: service.customerId }).lean();
+    const plan = customer?.planCode
+      ? await PlanCatalog.findOne({ planCode: customer.planCode }).lean()
+      : null;
+
+    const downloadSpeed = Number(plan?.speedMbps || service.metadata?.networkProfile?.speedMbps || 10);
+    const uploadSpeed = Number(plan?.uploadSpeedMbps || service.metadata?.networkProfile?.uploadSpeedMbps || 10);
+
+    const limitString = `${uploadSpeed}M/${downloadSpeed}M`;
+    const target = service.currentIpv4 || username;
+
+    try {
+      const list = await mikrotikRestRequest(
+        bngNode,
+        "GET",
+        `/queue/simple?.proplist=.id,name,target,max-limit&name=${encodeURIComponent(username)}`
+      ).catch(() => null);
+      const existingQueue = Array.isArray(list) ? list.find((item) => String(item?.name || "").trim() === username) : null;
+
+      if (existingQueue?.[".id"]) {
+        await mikrotikRestRequest(bngNode, "PATCH", `/queue/simple/${encodeURIComponent(existingQueue[".id"])}`, {
+          name: username,
+          target,
+          "max-limit": limitString,
+          comment: `Sync for service ${service.serviceId} (${downloadSpeed}M/${uploadSpeed}M)`
+        });
+        return {
+          routerNodeCode: bngNode.nodeCode,
+          status: "synced",
+          action: "updated",
+          limit: limitString,
+          target
+        };
+      } else {
+        await mikrotikRestRequest(bngNode, "PUT", "/queue/simple", {
+          name: username,
+          target,
+          "max-limit": limitString,
+          comment: `Sync for service ${service.serviceId} (${downloadSpeed}M/${uploadSpeed}M)`
+        });
+        return {
+          routerNodeCode: bngNode.nodeCode,
+          status: "synced",
+          action: "created",
+          limit: limitString,
+          target
+        };
+      }
+    } catch (error) {
+      return {
+        routerNodeCode: bngNode.nodeCode,
+        status: "failed",
+        error: error instanceof Error ? error.message : "MikroTik queue sync failed"
+      };
+    }
+  }
+
+  async deleteSubscriberQueue({ serviceId, radiusUsername } = {}) {
+    const service =
+      (serviceId && (await SubscriberService.findOne({ serviceId }))) ||
+      (radiusUsername && (await SubscriberService.findOne({ radiusUsername })));
+    const username = radiusUsername || service?.radiusUsername;
+    if (!username) return { status: "skipped", reason: "missing_radius_username" };
+
+    const resolved = await resolveMikrotikNodeForSubscriber(service, username);
+    const bngNode = resolved.node;
+    if (!bngNode || bngNode.vendor !== "mikrotik") return { status: "skipped" };
+
+    try {
+      const list = await mikrotikRestRequest(
+        bngNode,
+        "GET",
+        `/queue/simple?.proplist=.id,name&name=${encodeURIComponent(username)}`
+      ).catch(() => null);
+      const existingQueue = Array.isArray(list) ? list.find((item) => String(item?.name || "").trim() === username) : null;
+
+      if (existingQueue?.[".id"]) {
+        await mikrotikRestRequest(bngNode, "DELETE", `/queue/simple/${encodeURIComponent(existingQueue[".id"])}`);
+        return { status: "deleted", routerNodeCode: bngNode.nodeCode };
+      }
+      return { status: "not_found" };
+    } catch (error) {
+      return { status: "failed", error: error instanceof Error ? error.message : "MikroTik queue delete failed" };
+    }
   }
 }
 

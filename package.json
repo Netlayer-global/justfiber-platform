@@ -22,7 +22,6 @@
     "test:customer": "node src/scripts/testCustomerFeatures.js",
     "test:installer": "node src/scripts/testInstallerModules.js",
     "test:provisioning": "node src/scripts/testProvisioningFlow.js",
-    "test:jaze": "node src/scripts/testJazeModules.js",
     "test:radius": "node src/scripts/testRadiusModules.js",
     "test:genie": "node src/scripts/testGenieModules.js",
     "test:externals": "node src/scripts/testExternalIntegrations.js",

@@ -22,6 +22,10 @@ import { PlanCatalog } from "../models/PlanCatalog.js";
 import { SalesAgent } from "../models/SalesAgent.js";
 import { ServiceRequest } from "../models/ServiceRequest.js";
 import { ServiceabilityZone } from "../models/ServiceabilityZone.js";
+import { BngNode } from "../models/BngNode.js";
+import { SubscriberService } from "../models/SubscriberService.js";
+import { AccessProfile } from "../models/AccessProfile.js";
+import { BillingProfile } from "../models/BillingProfile.js";
 import argon2 from "argon2";
 
 const customers = [
@@ -34,7 +38,6 @@ const customers = [
     serviceId: "SVC-1001",
     planCode: "PLAN-100",
     planName: "100 Mbps Unlimited",
-    jazeStatus: "active",
     operationalStatus: "active",
     expiryAt: new Date("2026-03-28T00:00:00.000Z"),
     billingSnapshot: {
@@ -65,7 +68,6 @@ const customers = [
     serviceId: "SVC-1002",
     planCode: "PLAN-200",
     planName: "200 Mbps Family",
-    jazeStatus: "suspended",
     operationalStatus: "suspended",
     expiryAt: new Date("2026-03-10T00:00:00.000Z"),
     billingSnapshot: {
@@ -96,7 +98,6 @@ const customers = [
     serviceId: "SVC-1003",
     planCode: "PLAN-300",
     planName: "300 Mbps Pro",
-    jazeStatus: "active",
     operationalStatus: "active",
     expiryAt: new Date("2026-04-02T00:00:00.000Z"),
     billingSnapshot: {
@@ -941,6 +942,112 @@ async function main() {
     },
     generatedAt: new Date()
   });
+
+  // Seed Access Profiles
+  const accessProfiles = [
+    { code: "AP-100M", name: "100 Mbps Profile", downMbps: 100, upMbps: 100, active: true },
+    { code: "AP-200M", name: "200 Mbps Profile", downMbps: 200, upMbps: 200, active: true },
+    { code: "AP-300M", name: "300 Mbps Profile", downMbps: 300, upMbps: 300, active: true }
+  ];
+  for (const ap of accessProfiles) {
+    await AccessProfile.updateOne({ code: ap.code }, { $set: ap }, { upsert: true });
+  }
+
+  // Seed Billing Profiles
+  const billingProfiles = [
+    { code: "standard", name: "Standard Prepaid Profile", active: true, billMode: "prepaid" }
+  ];
+  for (const bp of billingProfiles) {
+    await BillingProfile.updateOne({ code: bp.code }, { $set: bp }, { upsert: true });
+  }
+
+  // Seed Bng Nodes
+  const bngNodesList = [
+    {
+      nodeCode: "LKO-BNG-01",
+      displayName: "Lucknow BNG 01",
+      nodeType: "bng",
+      vendor: "mikrotik",
+      status: "active",
+      zoneCode: "LKO",
+      radiusClientIp: "127.0.0.1",
+      coaPort: 3799,
+      coaSecret: "testing123"
+    },
+    {
+      nodeCode: "LKO-BNG-02",
+      displayName: "Lucknow BNG 02",
+      nodeType: "bng",
+      vendor: "mikrotik",
+      status: "active",
+      zoneCode: "LKO",
+      radiusClientIp: "10.0.0.2",
+      coaPort: 3799,
+      coaSecret: "testing123"
+    }
+  ];
+  for (const node of bngNodesList) {
+    await BngNode.updateOne({ nodeCode: node.nodeCode }, { $set: node }, { upsert: true });
+  }
+
+  // Seed Subscriber Services
+  const subscriberServicesList = [
+    {
+      serviceId: "SVC-1001",
+      customerId: "CUST-1001",
+      accountNumber: "AC-77821",
+      radiusUsername: "amit@justfiber",
+      radiusPasswordMasked: "********",
+      authType: "pppoe",
+      accessProfileCode: "AP-100M",
+      billingProfileCode: "standard",
+      bngNodeCode: "LKO-BNG-01",
+      status: "active",
+      activatedAt: new Date(),
+      billingPeriodMonths: 1,
+      nextBillingDate: new Date("2026-04-01T00:00:00.000Z"),
+      expiresAt: new Date("2026-04-01T00:00:00.000Z"),
+      metadata: { radiusPassword: "amitpassword", source: "seeded_data" }
+    },
+    {
+      serviceId: "SVC-1002",
+      customerId: "CUST-1002",
+      accountNumber: "AC-77822",
+      radiusUsername: "sara@justfiber",
+      radiusPasswordMasked: "********",
+      authType: "pppoe",
+      accessProfileCode: "AP-200M",
+      billingProfileCode: "standard",
+      bngNodeCode: "LKO-BNG-01",
+      status: "suspended",
+      activatedAt: new Date(),
+      suspendedAt: new Date(),
+      billingPeriodMonths: 1,
+      nextBillingDate: new Date("2026-03-10T00:00:00.000Z"),
+      expiresAt: new Date("2026-03-10T00:00:00.000Z"),
+      metadata: { radiusPassword: "sarapassword", suspensionReason: "Overdue payment", source: "seeded_data" }
+    },
+    {
+      serviceId: "SVC-1003",
+      customerId: "CUST-1003",
+      accountNumber: "AC-77823",
+      radiusUsername: "rohit@justfiber",
+      radiusPasswordMasked: "********",
+      authType: "pppoe",
+      accessProfileCode: "AP-300M",
+      billingProfileCode: "standard",
+      bngNodeCode: "LKO-BNG-02",
+      status: "active",
+      activatedAt: new Date(),
+      billingPeriodMonths: 1,
+      nextBillingDate: new Date("2026-04-02T00:00:00.000Z"),
+      expiresAt: new Date("2026-04-02T00:00:00.000Z"),
+      metadata: { radiusPassword: "rohitpassword", source: "seeded_data" }
+    }
+  ];
+  for (const svc of subscriberServicesList) {
+    await SubscriberService.updateOne({ serviceId: svc.serviceId }, { $set: svc }, { upsert: true });
+  }
 
   console.log("Sample admin preview data seeded.");
   process.exit(0);

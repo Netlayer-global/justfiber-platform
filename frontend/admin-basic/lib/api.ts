@@ -279,6 +279,24 @@ export async function openProtectedDocument(endpoint: string) {
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
 }
 
+export async function downloadProtectedFile(endpoint: string, filename: string) {
+  const token = typeof window !== 'undefined' ? (window.localStorage.getItem('token') || document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1]) : null
+  const res = await fetch(endpoint, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  })
+  if (!res.ok) throw new Error(`Download failed: ${res.statusText}`)
+  const blob = await res.blob()
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  window.URL.revokeObjectURL(url)
+}
+
+
 function mapSalesLead(lead: any): SalesLeadItem {
   return {
     id: lead._id || lead.leadNumber || '',
@@ -486,7 +504,6 @@ function mapPlan(plan: any): Plan {
       pppoeRealm: plan.provisioning?.pppoeRealm || '',
       defaultPppoePassword: plan.provisioning?.defaultPppoePassword || '',
       wifiNamePrefix: plan.provisioning?.wifiNamePrefix || '',
-      jazeGroupId: plan.provisioning?.jazeGroupId || '',
     },
     merchandising: {
       featured: Boolean(plan.merchandising?.featured),
@@ -2112,6 +2129,34 @@ export const adminAPI = {
         data: res.data ? mapCustomer(res.data) : undefined,
       }
     },
+  getCustomerTimeline: async (customerId: string) => {
+    const res = await request<any[]>(`/api/v1/admin/customers/${encodeURIComponent(customerId)}/timeline`)
+    return {
+      ...res,
+      data: Array.isArray(res.data) ? res.data : [],
+    }
+  },
+  disconnectCustomerSession: async (customerId: string, reason?: string) =>
+    request<any>(`/api/v1/admin/customers/${encodeURIComponent(customerId)}/pppoe/disconnect`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+  importBulkCustomers: async (list: Array<{
+    fullName: string
+    mobile: string
+    email?: string | null
+    planCode: string
+    zoneCode: string
+    address?: string | null
+    radiusUsername: string
+    radiusPassword: string
+  }>) => {
+    const res = await request<any[]>('/api/v1/admin/customers/import-bulk', {
+      method: 'POST',
+      body: JSON.stringify(list),
+    })
+    return res
+  },
   createCustomer: async (data: ManualCustomerCreatePayload) => {
     const res = await request<any>('/api/v1/admin/customers', {
       method: 'POST',
@@ -2955,6 +3000,20 @@ export const adminAPI = {
     })
     return res
   },
+  getFranchiseCommissions: async (franchiseCode: string) => {
+    const res = await request<any>(`/api/v1/admin/foundation/franchises/${encodeURIComponent(franchiseCode)}/commissions`)
+    return res
+  },
+  recordFranchisePayout: async (
+    franchiseCode: string,
+    data: { amount: number; notes?: string; payoutReference?: string }
+  ) => {
+    const res = await request<any>(`/api/v1/admin/foundation/franchises/${encodeURIComponent(franchiseCode)}/payouts`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    return res
+  },
 
   // Billing
   getBillingData: async (
@@ -3509,13 +3568,16 @@ export const adminAPI = {
   },
   getCustomerLeadKyc: async (customerId: string) =>
     request<any>(`/api/v1/admin/customers/${encodeURIComponent(customerId)}/lead-kyc`),
-  getJazeGroups: async () =>
-    request<any[]>('/api/v1/admin/catalog/jaze-groups'),
-  syncJazePlans: async () =>
-    request<{ total: number; created: number; updated: number; details: any }>('/api/v1/admin/catalog/plans/sync-jaze', {
+  getKycReviewList: async () =>
+    request<any[]>('/api/v1/admin/sales/kyc-review'),
+  approveKycReview: async (id: string) =>
+    request<any>(`/api/v1/admin/sales/kyc-review/${encodeURIComponent(id)}/approve`, { method: 'POST' }),
+  rejectKycReview: async (id: string, reason?: string) =>
+    request<any>(`/api/v1/admin/sales/kyc-review/${encodeURIComponent(id)}/reject`, {
       method: 'POST',
+      body: JSON.stringify({ reason }),
     }),
-  changePlanJaze: async (customerId: string, data: { newPlanCode: string; reason?: string }) =>
+  changeCustomerPlan: async (customerId: string, data: { newPlanCode: string; reason?: string }) =>
     request<any>(`/api/v1/admin/customers/${encodeURIComponent(customerId)}/plan-change`, {
       method: 'POST',
       body: JSON.stringify(data),
@@ -3617,4 +3679,46 @@ export const adminAPI = {
     request('/api/v1/admin/catalog/new-user-hero', { method: 'DELETE' }),
   getCustomerAppSettings: async () =>
     request<{ wifiHeroImageUrl: string }>('/api/v1/admin/configs/settings/customer_app'),
+  getInventoryOverview: () =>
+    request<any>('/api/v1/admin/foundation/inventory/overview'),
+  getInventoryLocations: () =>
+    request<any[]>('/api/v1/admin/foundation/inventory/locations'),
+  createInventoryLocation: (data: any) =>
+    request<any>('/api/v1/admin/foundation/inventory/locations', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+  getInventoryItems: (page = 1, limit = 100, filters?: { category?: string; status?: string; locationCode?: string }) => {
+    const q = new URLSearchParams()
+    q.set('page', String(page))
+    q.set('limit', String(limit))
+    if (filters?.category) q.set('category', filters.category || '')
+    if (filters?.status) q.set('status', filters.status || '')
+    if (filters?.locationCode) q.set('locationCode', filters.locationCode || '')
+    return request<any>(`/api/v1/admin/foundation/inventory/items?${q.toString()}`)
+  },
+  createInventoryItem: (data: any) =>
+    request<any>('/api/v1/admin/foundation/inventory/items', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+  moveInventoryItem: (itemCode: string, toLocationCode: string, note?: string) =>
+    request<any>(`/api/v1/admin/foundation/inventory/items/${encodeURIComponent(itemCode)}/move`, {
+      method: 'POST',
+      body: JSON.stringify({ toLocationCode, note })
+    }),
+  getVendors: () =>
+    request<any[]>('/api/v1/admin/foundation/vendors'),
+  createVendor: (data: any) =>
+    request<any>('/api/v1/admin/foundation/vendors', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+  getNotificationEvents: () =>
+    request<any[]>('/api/v1/admin/configs/notification-events'),
+  updateNotificationEvent: (eventKey: string, data: any) =>
+    request<any>(`/api/v1/admin/configs/notification-events/${encodeURIComponent(eventKey)}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    }),
 }
